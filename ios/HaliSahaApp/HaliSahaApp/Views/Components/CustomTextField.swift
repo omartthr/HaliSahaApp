@@ -52,7 +52,7 @@ struct CustomTextField: View {
                 }
                 
                 // Text Field
-                Group {
+                SwiftUI.Group {
                     if isSecure && !isSecureTextVisible {
                         SecureField(placeholder, text: $text)
                             .textContentType(textContentType)
