@@ -16,6 +16,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
+import android.app.Activity
+import com.google.firebase.auth.OAuthProvider
+
 
 // MARK: - Auth Service
 object AuthService {
@@ -53,6 +56,72 @@ object AuthService {
                 _isAuthenticated.value = false
             }
         }
+    }
+
+    suspend fun signInWithApple(activity: Activity) {
+        _isLoading.value = true
+        _authError.value = null
+
+        val provider = OAuthProvider.newBuilder("apple.com")
+        provider.scopes = listOf("email", "name")
+        provider.addCustomParameter("locale", "tr") // Türkçe arayüz için
+
+        try {
+            // Varsa bekleyen bir işlemi kontrol et
+            val pendingResultTask = auth.pendingAuthResult
+            if (pendingResultTask != null) {
+                val authResult = pendingResultTask.await()
+                handleSocialLoginResult(authResult)
+            } else {
+                // Yeni giriş başlat
+                val authResult = auth.startActivityForSignInWithProvider(activity, provider.build()).await()
+                handleSocialLoginResult(authResult)
+            }
+        } catch (e: Exception) {
+            _authError.value = mapAuthError(e)
+            _isLoading.value = false // Hata durumunda loading'i kapat
+            throw _authError.value!!
+        }
+    }
+
+    // Sosyal giriş sonrası kullanıcıyı kaydetme/çekme işlemi
+    private suspend fun handleSocialLoginResult(authResult: com.google.firebase.auth.AuthResult) {
+        val user = authResult.user ?: throw AuthError.Unknown("Kullanıcı bilgisi alınamadı")
+        val userId = user.uid
+
+        // Yeni kullanıcı mı?
+        val isNewUser = authResult.additionalUserInfo?.isNewUser ?: false
+
+        if (isNewUser) {
+            // Apple bazen ismi sadece ilk girişte verir, profil bilgisinden çekmeye çalışalım
+            val displayName = user.displayName ?: "Apple User"
+            val firstName = displayName.split(" ").firstOrNull() ?: "Apple"
+            val lastName = displayName.split(" ").drop(1).joinToString(" ")
+
+            val newUser = User(
+                id = userId,
+                email = user.email ?: "",
+                firstName = firstName,
+                lastName = lastName,
+                username = generateUsername(user.email ?: "apple"),
+                phone = "",
+                userType = UserType.PLAYER
+            )
+
+            firebaseService.createDocument(
+                collection = firebaseService.usersCollection,
+                data = newUser,
+                documentId = userId
+            )
+
+            _currentUser.value = newUser
+        } else {
+            // Mevcut kullanıcı ise veriyi çek
+            fetchUserProfile(userId)
+        }
+
+        _isAuthenticated.value = true
+        _isLoading.value = false
     }
 
     // MARK: - Fetch User Profile
