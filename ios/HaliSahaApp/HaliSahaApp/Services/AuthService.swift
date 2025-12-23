@@ -11,6 +11,7 @@ import Foundation
 import FirebaseAuth
 import FirebaseFirestore
 import AuthenticationServices // Apple Sign In için
+import CryptoKit
 // import GoogleSignIn // Google Sign In için (SPM ile eklenecek)
 
 // MARK: - Auth Service
@@ -422,7 +423,6 @@ extension AuthService {
     
     /// SHA256 hash (Apple Sign In için)
     func sha256(_ input: String) -> String {
-        import CryptoKit
         let inputData = Data(input.utf8)
         let hashedData = SHA256.hash(data: inputData)
         return hashedData.compactMap { String(format: "%02x", $0) }.joined()
