@@ -9,6 +9,7 @@
 
 import SwiftUI
 import FirebaseCore
+import GoogleSignIn
 
 // MARK: - App Delegate
 class AppDelegate: NSObject, UIApplicationDelegate {
@@ -24,6 +25,15 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         configureAppearance()
         
         return true
+    }
+    
+    // MARK: - Google Sign In URL Handling
+    func application(
+        _ app: UIApplication,
+        open url: URL,
+        options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+    ) -> Bool {
+        return GIDSignIn.sharedInstance.handle(url)
     }
     
     private func configureAppearance() {
@@ -68,6 +78,10 @@ struct HaliSahaApp: App {
         WindowGroup {
             ContentView()
                 .preferredColorScheme(nil) // Sistem ayarlarına uy
+                .onOpenURL { url in
+                    // Google Sign In URL handling
+                    GIDSignIn.sharedInstance.handle(url)
+                }
         }
         .onChange(of: scenePhase) { _, newPhase in
             handleScenePhaseChange(newPhase)

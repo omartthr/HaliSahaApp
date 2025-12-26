@@ -260,11 +260,7 @@ final class AuthViewModel: ObservableObject {
         do {
             try await authService.signInWithGoogle()
         } catch let error as AuthError {
-            if case .notImplemented = error {
-                showError(message: "Google ile giriş yakında aktif olacak.")
-            } else {
-                showError(message: error.localizedDescription)
-            }
+            showError(message: error.localizedDescription)
         } catch {
             showError(message: "Google ile giriş yapılamadı.")
         }

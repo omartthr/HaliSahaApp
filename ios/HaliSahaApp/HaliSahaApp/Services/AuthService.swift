@@ -9,10 +9,12 @@
 
 import Foundation
 import FirebaseAuth
+import FirebaseCore
 import FirebaseFirestore
 import AuthenticationServices // Apple Sign In için
+import GoogleSignIn // Google Sign In için
 import CryptoKit
-// import GoogleSignIn // Google Sign In için (SPM ile eklenecek)
+import UIKit
 
 // MARK: - Auth Service
 final class AuthService: ObservableObject {
@@ -220,12 +222,85 @@ final class AuthService: ObservableObject {
         }
     }
     
-    // MARK: - Google Sign In (Taslak)
+    // MARK: - Google Sign In
     @MainActor
     func signInWithGoogle() async throws {
-        // Google Sign In implementasyonu ADIM 2'de eklenecek
-        // GIDSignIn kullanılacak
-        throw AuthError.notImplemented
+        // Root view controller'ı al
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let rootViewController = windowScene.windows.first?.rootViewController else {
+            throw AuthError.unknown("Uygulama penceresi bulunamadı.")
+        }
+        
+        // Google Sign In configuration
+        guard let clientID = FirebaseApp.app()?.options.clientID else {
+            throw AuthError.unknown("Firebase client ID bulunamadı.")
+        }
+        
+        let config = GIDConfiguration(clientID: clientID)
+        GIDSignIn.sharedInstance.configuration = config
+        
+        do {
+            // Google Sign In akışını başlat
+            let result = try await GIDSignIn.sharedInstance.signIn(withPresenting: rootViewController)
+            
+            guard let idToken = result.user.idToken?.tokenString else {
+                throw AuthError.invalidCredential
+            }
+            
+            let accessToken = result.user.accessToken.tokenString
+            
+            // Firebase credential oluştur
+            let credential = GoogleAuthProvider.credential(
+                withIDToken: idToken,
+                accessToken: accessToken
+            )
+            
+            // Firebase ile giriş yap
+            let authResult = try await auth.signIn(with: credential)
+            let userId = authResult.user.uid
+            
+            // Yeni kullanıcı mı kontrol et
+            let isNewUser = authResult.additionalUserInfo?.isNewUser ?? false
+            
+            if isNewUser {
+                // Yeni kullanıcı profili oluştur
+                let profile = result.user.profile
+                let firstName = profile?.givenName ?? ""
+                let lastName = profile?.familyName ?? ""
+                let email = profile?.email ?? authResult.user.email ?? ""
+                
+                let newUser = User(
+                    id: userId,
+                    email: email,
+                    firstName: firstName,
+                    lastName: lastName,
+                    username: generateUsername(from: email),
+                    phone: "",
+                    profileImageURL: profile?.imageURL(withDimension: 200)?.absoluteString
+                )
+                
+                _ = try await firebaseService.createDocument(
+                    in: firebaseService.usersCollection,
+                    data: newUser,
+                    documentId: userId
+                )
+                
+                self.currentUser = newUser
+            } else {
+                await fetchUserProfile(userId: userId)
+            }
+            
+            self.isAuthenticated = true
+            
+        } catch let error as GIDSignInError {
+            // Kullanıcı iptal ettiyse hata fırlatma
+            if error.code == .canceled {
+                return
+            }
+            throw AuthError.unknown(error.localizedDescription)
+        } catch let error as NSError {
+            throw mapAuthError(error)
+        }
     }
     
     // MARK: - Guest Mode

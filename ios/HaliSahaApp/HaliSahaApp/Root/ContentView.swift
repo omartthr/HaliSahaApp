@@ -72,7 +72,7 @@ struct SplashView: View {
                 
                 // App Name
                 VStack(spacing: 8) {
-                    Text("HaliSaha")
+                    Text("HalıSaha")
                         .font(.system(size: 36, weight: .bold))
                         .foregroundColor(.white)
                     
@@ -115,32 +115,13 @@ struct MainTabViewPlaceholder: View {
                     Text("Hoş Geldiniz!")
                         .font(.title)
                         .fontWeight(.bold)
-                    
-                    if let user = authService.currentUser {
-                        Text("Merhaba, \(user.firstName)!")
-                            .font(.title3)
-                            .foregroundColor(.secondary)
-                        
-                        if user.userType == .guest {
-                            Label("Misafir Modu", systemImage: "eye")
-                                .font(.caption)
-                                .foregroundColor(.orange)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(Color.orange.opacity(0.1))
-                                .cornerRadius(20)
-                        }
-                    }
                 }
                 
                 Spacer()
                 
                 // Info
                 VStack(spacing: 8) {
-                    Text("🎉 ADIM 2 Tamamlandı!")
-                        .font(.headline)
-                    
-                    Text("Ana sayfa ADIM 3'te eklenecek")
+                    Text("Ana sayfa eklencek beklemede kallll")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
