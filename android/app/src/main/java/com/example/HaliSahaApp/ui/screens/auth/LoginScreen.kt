@@ -44,11 +44,23 @@ fun LoginScreen(
     val email by viewModel.email.collectAsState()
     val password by viewModel.password.collectAsState()
 
-    // Hata Mesajları
-    LaunchedEffect(uiState.error) {
+    // ✅ Hata VE Başarı Mesajları
+    LaunchedEffect(uiState) {
+        // Hata durumu
         if (uiState.error != null) {
             Toast.makeText(context, uiState.error, Toast.LENGTH_LONG).show()
             viewModel.clearError()
+        }
+
+        // ✅ Başarı durumu - Main ekrana yönlendir
+        if (uiState.isSuccess) {
+            Toast.makeText(context, "Giriş Başarılı!", Toast.LENGTH_SHORT).show()
+            viewModel.clearError()
+
+            // Tüm navigation stack'i temizle ve main ekrana git
+            navController.navigate(Screen.Main.route) {
+                popUpTo(0) { inclusive = true }
+            }
         }
     }
 
@@ -91,7 +103,13 @@ fun LoginScreen(
 
             // 5. Guest Mode
             LoginGuestSection(
-                onGuestClick = { viewModel.continueAsGuest() }
+                onGuestClick = {
+                    viewModel.continueAsGuest()
+                    // Guest mode için de yönlendirme
+                    navController.navigate(Screen.Main.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
             )
 
             // 6. Register Link

@@ -170,6 +170,8 @@ object AuthService {
         _isAuthenticated.value = false
     }
 
+
+
     // MARK: - Admin Registration
     suspend fun registerAsAdmin(
         email: String,

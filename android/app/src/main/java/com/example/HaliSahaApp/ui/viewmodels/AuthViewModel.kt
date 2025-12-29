@@ -181,4 +181,8 @@ class AuthViewModel : ViewModel() {
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null, successMessage = null)
     }
+    fun isRegisterFormValid(): Boolean {
+        // Tüm adımların (1 ve 2) geçerli olup olmadığını kontrol eder
+        return isStep1Valid() && isStep2Valid()
+    }
 }

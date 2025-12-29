@@ -2,7 +2,6 @@ package com.example.HaliSahaApp.ui.screens.auth
 
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -39,12 +38,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.HaliSahaApp.data.models.PlayerPosition
-import com.example.HaliSahaApp.ui.components.*
-import com.example.HaliSahaApp.ui.viewmodels.AuthUiState
+import com.example.HaliSahaApp.ui.components.* // Kendi componentlerini import ettiğinden emin ol
 import com.example.HaliSahaApp.ui.viewmodels.AuthViewModel
 import com.example.HaliSahaApp.ui.viewmodels.PasswordStrength
 import com.example.HaliSahaApp.utils.AppColors
-import com.example.HaliSahaApp.utils.AppStrings
 
 @Composable
 fun RegisterScreen(
@@ -56,21 +53,51 @@ fun RegisterScreen(
     val totalSteps = 3
     val uiState by viewModel.uiState.collectAsState()
 
+    // ✅ Tüm form alanlarını dinle (recomposition için gerekli)
+    val email by viewModel.email.collectAsState()
+    val password by viewModel.password.collectAsState()
+    val confirmPassword by viewModel.confirmPassword.collectAsState()
+    val firstName by viewModel.firstName.collectAsState()
+    val lastName by viewModel.lastName.collectAsState()
+    val username by viewModel.username.collectAsState()
+    val phone by viewModel.phone.collectAsState()
+    val preferredPosition by viewModel.preferredPosition.collectAsState()
+
+    // ✅ Validation state'lerini computed olarak hesapla
+    val isStep1Valid = remember(email, password, confirmPassword) {
+        // Basit email validasyonu
+        val isEmailValid = email.contains("@") && email.contains(".")
+        isEmailValid &&
+                password.length >= 6 &&
+                password == confirmPassword
+    }
+
+    val isStep2Valid = remember(firstName, lastName, username, phone) {
+        firstName.isNotEmpty() &&
+                lastName.isNotEmpty() &&
+                username.isNotEmpty() &&
+                phone.isNotEmpty()
+    }
+
+    val isRegisterFormValid = remember(isStep1Valid, isStep2Valid) {
+        isStep1Valid && isStep2Valid
+    }
+
     // Hata/Başarı Mesajları
     LaunchedEffect(uiState) {
         if (uiState.error != null) {
             Toast.makeText(context, uiState.error, Toast.LENGTH_LONG).show()
             viewModel.clearError()
         }
-        if (uiState.successMessage != null) {
-            Toast.makeText(context, uiState.successMessage, Toast.LENGTH_LONG).show()
+        if (uiState.isSuccess) {
+            Toast.makeText(context, uiState.successMessage ?: "İşlem Başarılı", Toast.LENGTH_SHORT).show()
             viewModel.clearError()
+            navController.popBackStack()
         }
     }
 
     Scaffold(
         topBar = {
-            // Basit bir geri butonu
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -143,21 +170,26 @@ fun RegisterScreen(
                     PrimaryButton(
                         text = "Devam Et",
                         onClick = { currentStep++ },
-                        isEnabled = if (currentStep == 0) viewModel.isStep1Valid() else viewModel.isStep2Valid()
+                        // ✅ Artık computed state'leri kullanıyoruz
+                        isEnabled = when (currentStep) {
+                            0 -> isStep1Valid
+                            1 -> isStep2Valid
+                            else -> false
+                        }
                     )
                 } else {
                     PrimaryButton(
                         text = "Kayıt Ol",
                         onClick = { viewModel.register() },
                         isLoading = uiState.isLoading,
-                        icon = Icons.Default.Check
+                        icon = Icons.Default.Check,
+                        isEnabled = isRegisterFormValid
                     )
                 }
             }
         }
     }
 }
-
 // MARK: - Steps
 
 @Composable
@@ -186,7 +218,6 @@ fun AccountInfoStep(viewModel: AuthViewModel) {
             onValueChange = { viewModel.password.value = it }
         )
 
-        // Şifre Gücü
         if (password.isNotEmpty()) {
             val strength = viewModel.getPasswordStrength()
             PasswordStrengthIndicator(strength)
@@ -310,8 +341,6 @@ fun PreferencesStep(viewModel: AuthViewModel) {
         }
     }
 }
-
-// MARK: - Components for Register
 
 @Composable
 fun ProgressBar(currentStep: Int, totalSteps: Int) {
