@@ -311,15 +311,15 @@ struct AdminRegisterView: View {
         switch currentStep {
         case 0:
             return !viewModel.firstName.trimmed.isEmpty &&
-                   !viewModel.lastName.trimmed.isEmpty &&
-                   viewModel.email.isValidEmail &&
-                   viewModel.password.count >= AppConstants.minPasswordLength &&
-                   viewModel.passwordsMatch
+            !viewModel.lastName.trimmed.isEmpty &&
+            FormValidator.validateEmail(viewModel.email).isValid &&
+            FormValidator.validatePassword(viewModel.password).isValid &&
+            viewModel.passwordsMatch
         case 1:
             return !viewModel.businessName.trimmed.isEmpty &&
-                   !viewModel.taxNumber.trimmed.isEmpty &&
-                   !viewModel.phone.trimmed.isEmpty &&
-                   agreedToTerms
+            FormValidator.taxNumber.validate(viewModel.taxNumber).isValid &&
+            FormValidator.validatePhone(viewModel.phone).isValid &&
+            agreedToTerms
         default:
             return false
         }

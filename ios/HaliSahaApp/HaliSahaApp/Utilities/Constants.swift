@@ -40,8 +40,8 @@ struct AppConstants {
     static let maxImagesPerReview = 5
     
     // MARK: - Map
-    static let defaultLatitude = 41.0082  // İstanbul
-    static let defaultLongitude = 28.9784
+    static let defaultLatitude = 39.9334  // Angaram
+    static let defaultLongitude = 32.8597
     static let defaultMapSpan = 0.05      // Harita zoom seviyesi
     static let nearbyRadiusKm: Double = 10.0
     

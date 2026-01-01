@@ -23,9 +23,9 @@ struct ContentView: View {
                 SplashView()
                     .transition(.opacity)
             } else {
-                if authService.isAuthenticated {
-                    // Ana sayfa - ADIM 3'te MainTabView olacak
-                    MainTabViewPlaceholder()
+                if authService.isAuthenticated || authService.currentUser?.userType == .guest {
+                    // Ana Tab Bar Navigasyonu
+                    MainTabView()
                         .transition(.opacity)
                 } else {
                     LoginView()
@@ -92,57 +92,6 @@ struct SplashView: View {
             withAnimation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true)) {
                 isAnimating = true
             }
-        }
-    }
-}
-
-// MARK: - Main Tab View Placeholder (ADIM 3'te değiştirilecek)
-struct MainTabViewPlaceholder: View {
-    
-    @StateObject private var authService = AuthService.shared
-    
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 24) {
-                Spacer()
-                
-                // Welcome
-                VStack(spacing: 12) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 60))
-                        .foregroundColor(.green)
-                    
-                    Text("Hoş Geldiniz!")
-                        .font(.title)
-                        .fontWeight(.bold)
-                }
-                
-                Spacer()
-                
-                // Info
-                VStack(spacing: 8) {
-                    Text("Ana sayfa eklencek beklemede kallll")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                .padding()
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
-                
-                Spacer()
-                
-                // Logout Button
-                PrimaryButton(
-                    title: "Çıkış Yap",
-                    icon: "rectangle.portrait.and.arrow.right",
-                    style: .outline
-                ) {
-                    try? authService.signOut()
-                }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 32)
-            }
-            .navigationTitle("Ana Sayfa")
         }
     }
 }

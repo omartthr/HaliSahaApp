@@ -315,13 +315,14 @@ struct RegisterView: View {
     private var isCurrentStepValid: Bool {
         switch currentStep {
         case 0:
-            return viewModel.email.isValidEmail &&
-                   viewModel.password.count >= AppConstants.minPasswordLength &&
-                   viewModel.passwordsMatch
+            return FormValidator.validateEmail(viewModel.email).isValid &&
+            FormValidator.validatePassword(viewModel.password).isValid &&
+            viewModel.passwordsMatch
         case 1:
             return !viewModel.firstName.trimmed.isEmpty &&
-                   !viewModel.lastName.trimmed.isEmpty &&
-                   !viewModel.username.trimmed.isEmpty
+            !viewModel.lastName.trimmed.isEmpty &&
+            FormValidator.validateUsername(viewModel.username).isValid &&
+            FormValidator.validatePhone(viewModel.phone).isValid
         case 2:
             return true
         default:

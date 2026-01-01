@@ -52,25 +52,29 @@ final class AuthViewModel: ObservableObject {
     
     // MARK: - Computed Properties
     var isLoginFormValid: Bool {
-        !email.trimmed.isEmpty && !password.isEmpty
+        FormValidator.validateEmail(email).isValid  &&
+        FormValidator.validatePassword(password).isValid
     }
     
     var isRegisterFormValid: Bool {
-        !email.trimmed.isEmpty &&
-        !password.isEmpty &&
-        password == confirmPassword &&
-        password.count >= AppConstants.minPasswordLength &&
+        FormValidator.validateEmail(email).isValid &&
+        FormValidator.validatePassword(password).isValid &&
+        passwordsMatch &&
         !firstName.trimmed.isEmpty &&
         !lastName.trimmed.isEmpty &&
-        !username.trimmed.isEmpty &&
-        username.count >= AppConstants.minUsernameLength
+        FormValidator.validateUsername(username).isValid &&
+        FormValidator.validatePhone(phone).isValid
     }
     
     var isAdminRegisterFormValid: Bool {
-        isRegisterFormValid &&
+        FormValidator.validateEmail(email).isValid &&
+        FormValidator.validatePassword(password).isValid &&
+        passwordsMatch &&
+        !firstName.trimmed.isEmpty &&
+        !lastName.trimmed.isEmpty &&
         !businessName.trimmed.isEmpty &&
-        !taxNumber.trimmed.isEmpty &&
-        !phone.trimmed.isEmpty
+        FormValidator.taxNumber.validate(taxNumber).isValid && // 10 veya 11 hane kontrolü
+        FormValidator.validatePhone(phone).isValid // 5XX XXX XX XX kontrolü
     }
     
     var passwordStrength: PasswordStrength {
