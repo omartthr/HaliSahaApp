@@ -33,10 +33,22 @@ fun AdminRegisterScreen(
     navController: NavController,
     viewModel: AuthViewModel
 ) {
-    var currentStep by remember { mutableStateOf(0) }
+    var currentStep by remember { mutableIntStateOf(0) }
     var agreedToTerms by remember { mutableStateOf(false) }
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+
+    // Validasyon için state'leri burada dinliyoruz ki buton güncellensin
+    // Not: Bu değişkenleri doğrudan UI'da kullanmasak bile collect ettiğimiz için
+    // değerler değişince ekran yeniden çizilir (recomposition) ve buton aktifleşir.
+    val businessName by viewModel.businessName.collectAsState()
+    val taxNumber by viewModel.taxNumber.collectAsState()
+    val phone by viewModel.phone.collectAsState()
+    val firstName by viewModel.firstName.collectAsState()
+    val lastName by viewModel.lastName.collectAsState()
+    val email by viewModel.email.collectAsState()
+    val password by viewModel.password.collectAsState()
+    val confirmPassword by viewModel.confirmPassword.collectAsState()
 
     LaunchedEffect(uiState) {
         if (uiState.error != null) {
@@ -104,14 +116,16 @@ fun AdminRegisterScreen(
                     PrimaryButton(
                         text = "Devam Et",
                         onClick = { currentStep++ },
-                        isEnabled = viewModel.isStep1Valid() && viewModel.isStep2Valid()
+                        // ViewModel'e eklediğimiz yeni computed property'i kullanıyoruz
+                        isEnabled = viewModel.isAdminStep1Valid
                     )
                 } else {
                     PrimaryButton(
                         text = "İşletme Kaydı Oluştur",
                         onClick = { viewModel.registerAsAdmin() },
                         isLoading = uiState.isLoading,
-                        isEnabled = viewModel.businessName.value.isNotEmpty() && viewModel.taxNumber.value.isNotEmpty() && agreedToTerms,
+                        // ViewModel kontrolü + Sözleşme onayı
+                        isEnabled = viewModel.isAdminStep2Valid && agreedToTerms,
                         icon = Icons.Default.Check
                     )
                 }

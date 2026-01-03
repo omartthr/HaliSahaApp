@@ -1,17 +1,20 @@
 package com.example.HaliSahaApp.ui.viewmodels
 
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.HaliSahaApp.data.models.PlayerPosition
 import com.example.HaliSahaApp.data.remote.AuthError
 import com.example.HaliSahaApp.data.remote.AuthService
+import com.example.HaliSahaApp.utils.AppColors
+import com.example.HaliSahaApp.utils.AppConstants
 import com.example.HaliSahaApp.utils.FormValidator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-// UI State
+// MARK: - UI State
 data class AuthUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
@@ -19,14 +22,16 @@ data class AuthUiState(
     val isSuccess: Boolean = false
 )
 
-enum class PasswordStrength(val score: Int, val label: String, val color: Long) {
-    WEAK(1, "Zayıf", 0xFFF44336),   // Red
-    MEDIUM(2, "Orta", 0xFFFF9800),  // Orange
-    STRONG(3, "Güçlü", 0xFF4CAF50); // Green
+// MARK: - Password Strength Enum
+enum class PasswordStrength(val score: Int, val label: String, val color: Color) { // <-- Değişiklik burada
+    WEAK(1, "Zayıf", AppColors.Error),
+    MEDIUM(2, "Orta", AppColors.Warning),
+    STRONG(3, "Güçlü", AppColors.Success);
 
     companion object {
         fun evaluate(password: String): PasswordStrength {
             var score = 0
+
             if (password.length >= 6) score++
             if (password.length >= 10) score++
             if (password.any { it.isUpperCase() }) score++
@@ -43,68 +48,102 @@ enum class PasswordStrength(val score: Int, val label: String, val color: Long) 
     }
 }
 
+// MARK: - Auth ViewModel
 class AuthViewModel : ViewModel() {
 
     private val authService = AuthService
 
-    // UI State
+    // MARK: - UI State
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
-    // Form Fields
-    var email = MutableStateFlow("")
-    var password = MutableStateFlow("")
-    var confirmPassword = MutableStateFlow("")
-    var firstName = MutableStateFlow("")
-    var lastName = MutableStateFlow("")
-    var username = MutableStateFlow("")
-    var phone = MutableStateFlow("")
-    var preferredPosition = MutableStateFlow(PlayerPosition.UNSPECIFIED)
+    // MARK: - Form Properties (MutableStateFlow)
+    val email = MutableStateFlow("")
+    val password = MutableStateFlow("")
+    val confirmPassword = MutableStateFlow("")
+    val firstName = MutableStateFlow("")
+    val lastName = MutableStateFlow("")
+    val username = MutableStateFlow("")
+    val phone = MutableStateFlow("")
+    val preferredPosition = MutableStateFlow(PlayerPosition.UNSPECIFIED)
 
-    // Admin Fields
-    var businessName = MutableStateFlow("")
-    var taxNumber = MutableStateFlow("")
+    // Admin Properties
+    val businessName = MutableStateFlow("")
+    val taxNumber = MutableStateFlow("")
 
-    // Computed Properties (Devam edilebilir mi?)
-    fun isStep1Valid(): Boolean {
-        return FormValidator.validateEmail(email.value).isValid &&
-                password.value.length >= 6 &&
-                password.value == confirmPassword.value
-    }
+    // MARK: - Auth State Observer
+    // (Android'de NavController ve MainActivity bu durumu zaten AuthService üzerinden dinliyor,
+    // ancak ViewModel içinde de lokal bir state tutmak istersek:)
+    val isAuthenticated = authService.isAuthenticated
 
-    fun isStep2Valid(): Boolean {
-        return firstName.value.isNotEmpty() &&
+    // MARK: - Computed Properties (Validations)
+
+    val isAdminStep1Valid: Boolean
+        get() = firstName.value.isNotEmpty() &&
                 lastName.value.isNotEmpty() &&
-                username.value.isNotEmpty()
-    }
+                FormValidator.validateEmail(email.value).isValid &&
+                password.value.length >= AppConstants.MIN_PASSWORD_LENGTH &&
+                passwordsMatch
+
+    // Admin Kayıt Adım 2 Kontrolü (İşletme)
+    val isAdminStep2Valid: Boolean
+        get() = businessName.value.isNotEmpty() &&
+                FormValidator.taxNumber.validate(taxNumber.value).isValid &&
+                FormValidator.validatePhone(phone.value).isValid
+
+    // Swift'teki computed property'ler gibi anlık değerleri kontrol eder
+    val isLoginFormValid: Boolean
+        get() = FormValidator.validateEmail(email.value).isValid &&
+                password.value.isNotEmpty()
+
+    val isRegisterFormValid: Boolean
+        get() = FormValidator.validateEmail(email.value).isValid &&
+                FormValidator.validatePassword(password.value).isValid &&
+                passwordsMatch &&
+                password.value.length >= AppConstants.MIN_PASSWORD_LENGTH &&
+                firstName.value.trim().isNotEmpty() &&
+                lastName.value.trim().isNotEmpty() &&
+                FormValidator.validateUsername(username.value).isValid &&
+                FormValidator.validatePhone(phone.value).isValid
+
+    val isAdminRegisterFormValid: Boolean
+        get() = isRegisterFormValid &&
+                businessName.value.trim().isNotEmpty() &&
+                FormValidator.taxNumber.validate(taxNumber.value).isValid
+
+    val passwordsMatch: Boolean
+        get() = confirmPassword.value.isNotEmpty() && password.value == confirmPassword.value
 
     fun getPasswordStrength(): PasswordStrength {
         return PasswordStrength.evaluate(password.value)
     }
 
-    // MARK: - Login
+    // MARK: - Actions
+
+    // 1. Email/Password Login
     fun login() {
-        if (email.value.isBlank() || password.value.isBlank()) {
-            _uiState.value = AuthUiState(error = "Lütfen tüm alanları doldurun.")
+        if (!isLoginFormValid) {
+            _uiState.value = AuthUiState(error = "Lütfen tüm alanları doğru şekilde doldurun.")
             return
         }
 
         viewModelScope.launch {
             _uiState.value = AuthUiState(isLoading = true)
             try {
-                authService.signIn(email.value, password.value)
+                authService.signIn(email.value.trim(), password.value)
                 _uiState.value = AuthUiState(isSuccess = true)
+                clearForm()
             } catch (e: Exception) {
-                val msg = (e as? AuthError)?.message ?: "Giriş başarısız."
-                _uiState.value = AuthUiState(error = msg)
+                val errorMsg = (e as? AuthError)?.message ?: "Giriş başarısız."
+                _uiState.value = AuthUiState(error = errorMsg)
             }
         }
     }
 
-    // MARK: - Register
+    // 2. Email/Password Register
     fun register() {
-        if (!isStep1Valid() || !isStep2Valid()) {
-            _uiState.value = AuthUiState(error = "Lütfen bilgileri kontrol edin.")
+        if (!isRegisterFormValid) {
+            _uiState.value = AuthUiState(error = "Lütfen tüm alanları doğru şekilde doldurun.")
             return
         }
 
@@ -112,26 +151,27 @@ class AuthViewModel : ViewModel() {
             _uiState.value = AuthUiState(isLoading = true)
             try {
                 authService.signUp(
-                    email = email.value,
+                    email = email.value.trim(),
                     password = password.value,
-                    firstName = firstName.value,
-                    lastName = lastName.value,
-                    username = username.value,
-                    phone = phone.value,
+                    firstName = firstName.value.trim(),
+                    lastName = lastName.value.trim(),
+                    username = username.value.trim().lowercase(),
+                    phone = phone.value.trim(),
                     preferredPosition = preferredPosition.value
                 )
                 _uiState.value = AuthUiState(isSuccess = true)
+                clearForm()
             } catch (e: Exception) {
-                val msg = (e as? AuthError)?.message ?: "Kayıt başarısız."
-                _uiState.value = AuthUiState(error = msg)
+                val errorMsg = (e as? AuthError)?.message ?: "Kayıt başarısız."
+                _uiState.value = AuthUiState(error = errorMsg)
             }
         }
     }
 
-    // MARK: - Admin Register
+    // 3. Admin Register
     fun registerAsAdmin() {
-        if (!isStep1Valid() || !isStep2Valid() || businessName.value.isBlank()) {
-            _uiState.value = AuthUiState(error = "Lütfen tüm alanları doldurun.")
+        if (!isAdminRegisterFormValid) {
+            _uiState.value = AuthUiState(error = "Lütfen tüm alanları doğru şekilde doldurun.")
             return
         }
 
@@ -139,50 +179,77 @@ class AuthViewModel : ViewModel() {
             _uiState.value = AuthUiState(isLoading = true)
             try {
                 authService.registerAsAdmin(
-                    email = email.value,
+                    email = email.value.trim(),
                     password = password.value,
-                    firstName = firstName.value,
-                    lastName = lastName.value,
-                    phone = phone.value,
-                    businessName = businessName.value,
-                    taxNumber = taxNumber.value
+                    firstName = firstName.value.trim(),
+                    lastName = lastName.value.trim(),
+                    phone = phone.value.trim(),
+                    businessName = businessName.value.trim(),
+                    taxNumber = taxNumber.value.trim()
                 )
-                _uiState.value = AuthUiState(isSuccess = true, successMessage = "Kayıt başarılı! İşletmeniz onay sürecindedir.")
+                _uiState.value = AuthUiState(
+                    isSuccess = true,
+                    successMessage = "Kayıt başarılı! İşletmeniz onay sürecindedir."
+                )
+                clearForm()
             } catch (e: Exception) {
-                val msg = (e as? AuthError)?.message ?: "Kayıt başarısız."
-                _uiState.value = AuthUiState(error = msg)
+                val errorMsg = (e as? AuthError)?.message ?: "Kayıt başarısız."
+                _uiState.value = AuthUiState(error = errorMsg)
             }
         }
     }
 
-    // MARK: - Password Reset
+    // 4. Forgot Password
     fun resetPassword() {
-        if (email.value.isBlank()) {
-            _uiState.value = AuthUiState(error = "Lütfen e-posta adresinizi girin.")
+        if (email.value.trim().isEmpty() || !FormValidator.validateEmail(email.value).isValid) {
+            _uiState.value = AuthUiState(error = "Geçerli bir e-posta adresi girin.")
             return
         }
 
         viewModelScope.launch {
             _uiState.value = AuthUiState(isLoading = true)
             try {
-                authService.sendPasswordReset(email.value)
+                authService.sendPasswordReset(email.value.trim())
                 _uiState.value = AuthUiState(successMessage = "Şifre sıfırlama bağlantısı gönderildi.")
             } catch (e: Exception) {
-                _uiState.value = AuthUiState(error = e.localizedMessage)
+                val errorMsg = (e as? AuthError)?.message ?: "İşlem başarısız."
+                _uiState.value = AuthUiState(error = errorMsg)
             }
         }
     }
 
-    // MARK: - Guest Mode
+    // 5. Google Sign In
+    fun signInWithGoogle() {
+        // Google Sign In implementasyonu eklendiğinde burası dolacak
+        _uiState.value = AuthUiState(error = "Google ile giriş yakında aktif olacak.")
+    }
+
+    // 6. Guest Mode
     fun continueAsGuest() {
         authService.continueAsGuest()
     }
 
+    // 7. Sign Out
+    fun signOut() {
+        authService.signOut()
+        clearForm()
+    }
+
+    // MARK: - Helpers
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null, successMessage = null)
     }
-    fun isRegisterFormValid(): Boolean {
-        // Tüm adımların (1 ve 2) geçerli olup olmadığını kontrol eder
-        return isStep1Valid() && isStep2Valid()
+
+    private fun clearForm() {
+        email.value = ""
+        password.value = ""
+        confirmPassword.value = ""
+        firstName.value = ""
+        lastName.value = ""
+        username.value = ""
+        phone.value = ""
+        businessName.value = ""
+        taxNumber.value = ""
+        preferredPosition.value = PlayerPosition.UNSPECIFIED
     }
 }
