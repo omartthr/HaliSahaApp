@@ -75,7 +75,7 @@ struct MainTabView: View {
             
             // 2: Harita
             NavigationStack {
-                MapViewPlaceholder()
+                MapView()
             }
             .tag(TabItem.map)
             .tabItem {
@@ -209,28 +209,6 @@ struct GuestRestrictionSheet: View {
 }
 
 // MARK: - (Sonraki adımlarda güncellicez bunları)
-
-// Map View Placeholder
-struct MapViewPlaceholder: View {
-    var body: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "map.fill")
-                .font(.system(size: 60))
-                .foregroundColor(Color(hex: "2E7D32").opacity(0.5))
-            
-            Text("Harita")
-                .font(.title2)
-                .fontWeight(.semibold)
-            
-            Text("ADIM 4'te eklenecek")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.systemGroupedBackground))
-        .navigationTitle("Harita")
-    }
-}
 
 // Bookings View Placeholder
 struct BookingsViewPlaceholder: View {

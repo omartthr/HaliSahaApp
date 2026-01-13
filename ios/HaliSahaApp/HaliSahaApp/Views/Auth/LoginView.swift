@@ -67,10 +67,6 @@ struct LoginView: View {
             .navigationDestination(isPresented: $viewModel.showForgotPassword) {
                 ForgotPasswordView(viewModel: viewModel)
             }
-            .navigationDestination(isPresented: $viewModel.isAuthenticated) {
-                // Ana sayfa - ADIM 3'te eklenecek
-                Text("Ana Sayfa - MainTabView")
-            }
         }
     }
     
