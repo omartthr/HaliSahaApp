@@ -1,12 +1,9 @@
 //
 //  HomeView.swift
-//  HaliSahaApp
+//  HaliSaha
 //
 //  Keşfet Ana Sayfası
 //
-//  Created by Mehmet Mert Mazıcı on 26.12.2025.
-//
-
 
 import SwiftUI
 
@@ -18,6 +15,7 @@ struct HomeView: View {
     @StateObject private var authService = AuthService.shared
     @State private var showNotifications = false
     @State private var showFilters = false
+    @State private var showAllFacilities = false
     
     // MARK: - Body
     var body: some View {
@@ -59,6 +57,9 @@ struct HomeView: View {
         }
         .sheet(isPresented: $showNotifications) {
             NotificationsSheetView()
+        }
+        .navigationDestination(isPresented: $showAllFacilities) {
+            FacilityListView()
         }
     }
     
@@ -272,9 +273,13 @@ struct HomeView: View {
             SectionHeader(
                 title: viewModel.hasActiveFilters ? "Sonuçlar" : "Yakındaki Sahalar",
                 icon: viewModel.hasActiveFilters ? "line.3.horizontal.decrease.circle" : "location.fill",
-                actionTitle: viewModel.hasActiveFilters ? "Temizle" : nil
+                actionTitle: viewModel.hasActiveFilters ? "Temizle" : "Tümünü Gör"
             ) {
-                viewModel.clearFilters()
+                if viewModel.hasActiveFilters {
+                    viewModel.clearFilters()
+                } else {
+                    showAllFacilities = true
+                }
             }
             
             if viewModel.filteredFacilities.isEmpty {
@@ -289,7 +294,8 @@ struct HomeView: View {
                 .padding(.horizontal)
             } else {
                 VStack(spacing: 12) {
-                    ForEach(viewModel.filteredFacilities) { facility in
+                    // Sadece ilk 5 sahayı göster
+                    ForEach(viewModel.filteredFacilities.prefix(5)) { facility in
                         NavigationLink {
                             FacilityDetailPlaceholder(facility: facility)
                         } label: {
@@ -300,6 +306,26 @@ struct HomeView: View {
                             )
                         }
                         .buttonStyle(.plain)
+                    }
+                    
+                    // Daha fazla varsa "Tümünü Gör" butonu
+                    if viewModel.filteredFacilities.count > 5 {
+                        Button {
+                            showAllFacilities = true
+                        } label: {
+                            HStack {
+                                Text("Tüm Sahaları Gör (\(viewModel.filteredFacilities.count))")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                            }
+                            .foregroundColor(Color(hex: "2E7D32"))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Color(hex: "2E7D32").opacity(0.1))
+                            .cornerRadius(10)
+                        }
                     }
                 }
                 .padding(.horizontal)
@@ -464,4 +490,3 @@ struct MatchPostDetailPlaceholder: View {
         HomeView()
     }
 }
-
