@@ -360,7 +360,7 @@ struct FacilityMapCard: View {
             
             // Detail Button
             NavigationLink {
-                FacilityDetailPlaceholder(facility: facility)
+                FacilityDetailView(facility: facility)
             } label: {
                 Text("Detayları Gör")
                     .font(.subheadline)
@@ -392,7 +392,7 @@ struct FacilityListSheet: View {
                 LazyVStack(spacing: 12) {
                     ForEach(viewModel.filteredFacilities) { facility in
                         NavigationLink {
-                            FacilityDetailPlaceholder(facility: facility)
+                            FacilityDetailView(facility: facility)
                         } label: {
                             FacilityCard(
                                 facility: facility,
