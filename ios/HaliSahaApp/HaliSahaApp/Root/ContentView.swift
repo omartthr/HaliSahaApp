@@ -1,10 +1,8 @@
 //
 //  ContentView.swift
-//  HaliSahaApp
+//  HaliSaha
 //
 //  Root View - Kimlik doğrulama durumuna göre yönlendirme yapar
-//
-//  Created by Mehmet Mert Mazıcı on 22.12.2025.
 //
 
 import SwiftUI
@@ -24,9 +22,14 @@ struct ContentView: View {
                     .transition(.opacity)
             } else {
                 if authService.isAuthenticated || authService.currentUser?.userType == .guest {
-                    // Ana Tab Bar Navigasyonu
-                    MainTabView()
-                        .transition(.opacity)
+                    // Kullanıcı tipine göre farklı Tab Bar
+                    if authService.currentUser?.userType == .admin {
+                        AdminTabView()
+                            .transition(.opacity)
+                    } else {
+                        MainTabView()
+                            .transition(.opacity)
+                    }
                 } else {
                     LoginView()
                         .transition(.opacity)
@@ -72,7 +75,7 @@ struct SplashView: View {
                 
                 // App Name
                 VStack(spacing: 8) {
-                    Text("HalıSaha")
+                    Text("HaliSaha")
                         .font(.system(size: 36, weight: .bold))
                         .foregroundColor(.white)
                     

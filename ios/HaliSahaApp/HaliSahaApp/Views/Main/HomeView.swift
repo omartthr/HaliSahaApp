@@ -230,7 +230,7 @@ struct HomeView: View {
                 HStack(spacing: 16) {
                     ForEach(viewModel.featuredFacilities) { facility in
                         NavigationLink {
-                            FacilityDetailPlaceholder(facility: facility)
+                            FacilityDetailView(facility: facility)
                         } label: {
                             FeaturedFacilityCard(facility: facility)
                         }
@@ -297,7 +297,7 @@ struct HomeView: View {
                     // Sadece ilk 5 sahayı göster
                     ForEach(viewModel.filteredFacilities.prefix(5)) { facility in
                         NavigationLink {
-                            FacilityDetailPlaceholder(facility: facility)
+                            FacilityDetailView(facility: facility)
                         } label: {
                             FacilityCard(
                                 facility: facility,
@@ -432,31 +432,6 @@ struct NotificationsSheetView: View {
     }
 }
 
-// MARK: - Placeholder Views (Sonraki adımlarda güncellenecek)
-
-struct FacilityDetailPlaceholder: View {
-    let facility: Facility
-    
-    var body: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "sportscourt.fill")
-                .font(.system(size: 60))
-                .foregroundColor(Color(hex: "2E7D32").opacity(0.5))
-            
-            Text(facility.name)
-                .font(.title2)
-                .fontWeight(.semibold)
-            
-            Text("Detay sayfası ADIM 5'te eklenecek")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.systemGroupedBackground))
-        .navigationTitle(facility.name)
-        .navigationBarTitleDisplayMode(.inline)
-    }
-}
 
 struct MatchPostDetailPlaceholder: View {
     let matchPost: MatchPost

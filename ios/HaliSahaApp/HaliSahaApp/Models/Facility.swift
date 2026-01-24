@@ -11,6 +11,7 @@
 import Foundation
 import FirebaseFirestore
 import CoreLocation
+import SwiftUI
 
 // MARK: - Facility Model
 struct Facility: Identifiable, Codable, Hashable {
@@ -93,10 +94,10 @@ struct Facility: Identifiable, Codable, Hashable {
 
 // MARK: - Facility Status
 enum FacilityStatus: String, Codable, CaseIterable {
-    case pending = "pending"       // Onay bekliyor
-    case approved = "approved"     // Onaylandı
-    case rejected = "rejected"     // Reddedildi
-    case suspended = "suspended"   // Askıya alındı
+    case pending = "pending"
+    case approved = "approved"
+    case rejected = "rejected"
+    case suspended = "suspended"
     
     var displayName: String {
         switch self {
@@ -107,12 +108,13 @@ enum FacilityStatus: String, Codable, CaseIterable {
         }
     }
     
-    var color: String {
+    // Rengi direkt SwiftUI Color olarak tanımlıyoruz
+    var color: Color {
         switch self {
-        case .pending: return "orange"
-        case .approved: return "green"
-        case .rejected: return "red"
-        case .suspended: return "gray"
+        case .pending: return .orange
+        case .approved: return .green
+        case .rejected: return .red
+        case .suspended: return .gray
         }
     }
 }

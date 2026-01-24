@@ -84,7 +84,7 @@ struct MainTabView: View {
             
             // 3: Randevularım
             NavigationStack {
-                BookingsViewPlaceholder()
+                BookingsView()  
             }
             .tag(TabItem.bookings)
             .tabItem {
@@ -209,28 +209,6 @@ struct GuestRestrictionSheet: View {
 }
 
 // MARK: - (Sonraki adımlarda güncellicez bunları)
-
-// Bookings View Placeholder
-struct BookingsViewPlaceholder: View {
-    var body: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "ticket.fill")
-                .font(.system(size: 60))
-                .foregroundColor(Color(hex: "2E7D32").opacity(0.5))
-            
-            Text("Randevularım")
-                .font(.title2)
-                .fontWeight(.semibold)
-            
-            Text("ADIM 5'te eklenecek")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.systemGroupedBackground))
-        .navigationTitle("Randevularım")
-    }
-}
 
 // Chat List View Placeholder
 struct ChatListViewPlaceholder: View {

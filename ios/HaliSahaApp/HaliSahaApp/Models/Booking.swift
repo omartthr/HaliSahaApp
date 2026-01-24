@@ -10,6 +10,7 @@
 
 import Foundation
 import FirebaseFirestore
+import SwiftUI
 
 // MARK: - Booking Model
 struct Booking: Identifiable, Codable, Hashable {
@@ -175,13 +176,13 @@ enum BookingStatus: String, Codable, CaseIterable {
         }
     }
     
-    var color: String {
+    var color: Color {
         switch self {
-        case .pending: return "orange"
-        case .confirmed: return "green"
-        case .completed: return "blue"
-        case .cancelled: return "red"
-        case .noShow: return "gray"
+        case .pending: return .orange
+        case .confirmed: return .green
+        case .completed: return .blue
+        case .cancelled: return .red
+        case .noShow: return .gray
         }
     }
     

@@ -171,7 +171,7 @@ struct FacilityListView: View {
                 // Facility Cards
                 ForEach(viewModel.filteredFacilities) { facility in
                     NavigationLink {
-                        FacilityDetailPlaceholder(facility: facility)
+                        FacilityDetailView(facility: facility)
                     } label: {
                         FacilityCard(
                             facility: facility,

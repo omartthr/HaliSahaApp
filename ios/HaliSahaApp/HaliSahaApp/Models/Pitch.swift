@@ -158,9 +158,15 @@ struct PitchPricing: Codable, Hashable {
     }
     
     // MARK: - Price Calculation
-    func calculatePrice(for date: Date, hour: Int, isWeekend: Bool) -> Double {
-        let basePrice = hour >= 18 ? eveningPrice : daytimePrice
-        return isWeekend ? basePrice * weekendMultiplier : basePrice
+    func calculatePrice(startHour: Int, duration: Int, isWeekend: Bool) -> Double {
+        // 18:00 ve sonrası akşam tarifesi, öncesi gündüz tarifesi
+        let basePrice = startHour >= 18 ? eveningPrice : daytimePrice
+        
+        // Hafta sonu çarpanını uygula
+        let hourlyPrice = isWeekend ? basePrice * weekendMultiplier : basePrice
+        
+        // Toplam süreyi çarp (saatlik ücret * süre)
+        return hourlyPrice * Double(duration)
     }
     
     func calculateDeposit(totalPrice: Double) -> Double {
