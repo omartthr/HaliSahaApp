@@ -63,7 +63,7 @@ struct AdminTabView: View {
         TabView(selection: $selectedTab) {
             // MARK: - Tab 1: Dashboard
             NavigationStack {
-                // AdminDashboardView()
+                AdminDashboardView()
             }
             .tag(AdminTabItem.dashboard)
             .tabItem {
@@ -75,7 +75,7 @@ struct AdminTabView: View {
             
             // MARK: - Tab 2: Bookings
             NavigationStack {
-                // AdminBookingsView()
+                AdminBookingsView()
             }
             .tag(AdminTabItem.bookings)
             .tabItem {
@@ -88,7 +88,7 @@ struct AdminTabView: View {
             
             // MARK: - Tab 3: Facilities
             NavigationStack {
-                // AdminFacilitiesView()
+                AdminFacilitiesView()
             }
             .tag(AdminTabItem.facilities)
             .tabItem {
@@ -100,7 +100,7 @@ struct AdminTabView: View {
             
             // MARK: - Tab 4: Reports
             NavigationStack {
-                // AdminReportsView()
+                AdminReportsView()
             }
             .tag(AdminTabItem.reports)
             .tabItem {
@@ -112,7 +112,7 @@ struct AdminTabView: View {
             
             // MARK: - Tab 5: Settings
             NavigationStack {
-                // AdminSettingsView()
+                AdminSettingsView()
             }
             .tag(AdminTabItem.settings)
             .tabItem {
