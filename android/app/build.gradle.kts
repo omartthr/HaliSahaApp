@@ -48,11 +48,12 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-storage")
     implementation("com.google.firebase:firebase-functions-ktx")
-
+    implementation("com.google.android.gms:play-services-location:21.3.0")
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.navigation:navigation-compose:2.8.5")
-
+    implementation("com.google.maps.android:maps-compose:4.3.0")
+    implementation("com.google.android.gms:play-services-maps:18.2.0")
     implementation("androidx.compose.material3:material3:1.3.1")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
