@@ -88,10 +88,15 @@ data class PitchPricing(
     val depositPercentage: Double = 0.2,
     val currency: String = "TRY"
 ) {
-    // Fiyat hesaplama mantığı
-    fun calculatePrice(hour: Int, isWeekend: Boolean): Double {
-        val basePrice = if (hour >= 18) eveningPrice else daytimePrice
-        return if (isWeekend) basePrice * weekendMultiplier else basePrice
+    fun calculatePrice(startHour: Int, duration: Int, isWeekend: Boolean): Double {
+        // 18:00 ve sonrası akşam tarifesi, öncesi gündüz tarifesi
+        val basePrice = if (startHour >= 18) eveningPrice else daytimePrice
+
+        // Hafta sonu çarpanını uygula
+        val hourlyPrice = if (isWeekend) basePrice * weekendMultiplier else basePrice
+
+        // Toplam süreyi çarp
+        return hourlyPrice * duration.toDouble()
     }
 
     fun calculateDeposit(totalPrice: Double): Double = totalPrice * depositPercentage

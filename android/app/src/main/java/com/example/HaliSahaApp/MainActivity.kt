@@ -15,6 +15,7 @@ import com.example.HaliSahaApp.ui.screens.auth.AdminRegisterScreen
 import com.example.HaliSahaApp.ui.screens.auth.ForgotPasswordScreen
 import com.example.HaliSahaApp.ui.screens.auth.LoginScreen
 import com.example.HaliSahaApp.ui.screens.auth.RegisterScreen
+import com.example.HaliSahaApp.ui.screens.facility.FacilityListScreen
 import com.example.HaliSahaApp.ui.screens.main.MainScreen
 import com.example.HaliSahaApp.ui.screens.splash.SplashScreen
 import com.example.HaliSahaApp.ui.theme.HaliSahaAppTheme
@@ -89,6 +90,9 @@ fun HaliSahaRoot() {
                     popUpTo(0) { inclusive = true }
                 }
             })
+        }
+        composable("facility_list") {
+            FacilityListScreen(navController = navController)
         }
     }
 }

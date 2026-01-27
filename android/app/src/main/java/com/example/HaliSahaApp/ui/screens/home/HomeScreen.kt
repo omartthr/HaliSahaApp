@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField // <-- BasicTextField importu
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Notifications
@@ -120,7 +121,8 @@ fun HomeScreen(
                 } else {
                     HomeContentSection(
                         uiState = uiState,
-                        viewModel = viewModel
+                        viewModel = viewModel,
+                        navController = navController
                     )
                 }
 
@@ -357,10 +359,12 @@ fun HomeLoadingSection() {
 @Composable
 fun HomeContentSection(
     uiState: com.example.HaliSahaApp.ui.viewmodels.HomeUiState,
-    viewModel: HomeViewModel
+    viewModel: HomeViewModel,
+    navController: NavController
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
 
+        // 1. Featured Section
         if (uiState.featuredFacilities.isNotEmpty() && uiState.searchText.isEmpty()) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 SectionHeader(title = "Öne Çıkanlar", icon = Icons.Default.Star)
@@ -375,6 +379,7 @@ fun HomeContentSection(
             }
         }
 
+        // 2. Upcoming Matches
         if (uiState.upcomingMatches.isNotEmpty() && uiState.searchText.isEmpty()) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 SectionHeader(title = "Oyuncu Aranan Maçlar", icon = AppIcons.PersonGroup, actionTitle = "Tümü") {}
@@ -387,15 +392,29 @@ fun HomeContentSection(
             }
         }
 
+        // 3. Nearby / Filtered Results (GÜNCELLENDİ)
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+
+            // Başlık ve Aksiyon Mantığı
             val title = if (uiState.hasActiveFilters) "Sonuçlar" else "Yakındaki Sahalar"
             val icon = if (uiState.hasActiveFilters) AppIcons.Filter else AppIcons.Location
+
+            val actionTitle = if (uiState.hasActiveFilters) "Temizle" else "Tümü"
+            val onActionClick = {
+                if (uiState.hasActiveFilters) {
+                    viewModel.clearFilters()
+                } else {
+                    // Tümünü gör sayfasına git (FacilityListScreen)
+                    // Önce Screen.kt'ye FacilityList rotasını eklemen lazım
+                    navController.navigate("facility_list")
+                }
+            }
 
             SectionHeader(
                 title = title,
                 icon = icon,
-                actionTitle = if (uiState.hasActiveFilters) "Temizle" else null,
-                onAction = { viewModel.clearFilters() }
+                actionTitle = actionTitle,
+                onAction = onActionClick
             )
 
             if (uiState.filteredFacilities.isEmpty()) {
@@ -407,13 +426,45 @@ fun HomeContentSection(
                     onButtonClick = { viewModel.clearFilters() }
                 )
             } else {
-                uiState.filteredFacilities.forEach { facility ->
+                // Sadece ilk 5 tanesini göster (.take(5))
+                uiState.filteredFacilities.take(5).forEach { facility ->
                     Box(modifier = Modifier.padding(horizontal = 16.dp)) {
                         FacilityCard(
                             facility = facility,
                             showDistance = true,
                             distance = 2.5
                         )
+                    }
+                }
+
+                // Eğer 5'ten fazla varsa "Tümünü Gör" butonu ekle
+                if (uiState.filteredFacilities.size > 5) {
+                    Button(
+                        onClick = { navController.navigate("facility_list") },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = AppColors.Primary.copy(alpha = 0.1f),
+                            contentColor = AppColors.Primary
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .height(44.dp),
+                        elevation = ButtonDefaults.buttonElevation(0.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "Tüm Sahaları Gör (${uiState.filteredFacilities.size})",
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 14.sp
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                     }
                 }
             }
