@@ -18,6 +18,7 @@ import com.example.HaliSahaApp.data.models.UserType
 import com.example.HaliSahaApp.data.remote.AuthService
 import com.example.HaliSahaApp.ui.components.PrimaryButton
 import com.example.HaliSahaApp.ui.screens.home.HomeScreen
+import com.example.HaliSahaApp.ui.screens.map.MapScreen
 import com.example.HaliSahaApp.utils.AppColors
 import com.example.HaliSahaApp.utils.AppIcons
 
@@ -112,7 +113,9 @@ fun MainScreen(onLogout: () -> Unit) {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(BottomTab.HOME.route) { HomeScreen(navController = navController) }
-            composable(BottomTab.MAP.route) { MapScreenPlaceholder() }
+            composable(BottomTab.MAP.route) {
+                MapScreen(navController = navController) // Artık gerçek harita ekranı!
+            }
             composable(BottomTab.BOOKINGS.route) { BookingsScreenPlaceholder() }
             composable(BottomTab.CHAT.route) { ChatScreenPlaceholder() }
             composable(BottomTab.PROFILE.route) { ProfileScreenPlaceholder(onLogout) }

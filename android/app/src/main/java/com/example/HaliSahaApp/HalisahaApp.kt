@@ -8,5 +8,6 @@ class HaliSahaApp : Application() {
         super.onCreate()
         // Firebase Başlatma
         FirebaseApp.initializeApp(this)
+        com.example.HaliSahaApp.data.services.LocationService.initialize(this)
     }
 }
