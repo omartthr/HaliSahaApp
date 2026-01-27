@@ -75,7 +75,7 @@ struct SplashView: View {
                 
                 // App Name
                 VStack(spacing: 8) {
-                    Text("HaliSaha")
+                    Text("ALO Halısaha")
                         .font(.system(size: 36, weight: .bold))
                         .foregroundColor(.white)
                     

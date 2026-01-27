@@ -230,6 +230,14 @@ struct AppStrings {
     static let noNotifications = "Bildiriminiz yok"
 }
 
+// MARK: - Storage Constants
+struct StorageConstants {
+    static let maxImageSize: Int64 = 5 * 1024 * 1024 // 5MB
+    static let compressionQuality: CGFloat = 0.7
+    static let maxFacilityImages = 5
+    static let maxPitchImages = 3
+}
+
 // MARK: - Color Extension for Hex
 extension Color {
     init(hex: String) {

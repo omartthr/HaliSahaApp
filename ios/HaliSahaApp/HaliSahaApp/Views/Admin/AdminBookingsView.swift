@@ -8,6 +8,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 // MARK: - Admin Bookings View
 struct AdminBookingsView: View {
@@ -17,6 +18,8 @@ struct AdminBookingsView: View {
     @State private var selectedFilter: AdminBookingFilter = .all
     @State private var selectedBooking: Booking?
     @State private var showActionSheet = false
+    @State private var showShareSheet = false
+    @State private var exportedFileURL: URL?
     
     // MARK: - Body
     var body: some View {
@@ -44,13 +47,13 @@ struct AdminBookingsView: View {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
                     Button {
-                        viewModel.exportBookings()
+                        exportAndShare()
                     } label: {
                         Label("Dışa Aktar", systemImage: "square.and.arrow.up")
                     }
                     
                     Button {
-                        // Print
+                        printBookings()
                     } label: {
                         Label("Yazdır", systemImage: "printer")
                     }
@@ -68,12 +71,14 @@ struct AdminBookingsView: View {
                 Button("Tamamlandı Olarak İşaretle") {
                     Task {
                         await viewModel.completeBooking(booking)
+                        selectedBooking = nil
                     }
                 }
                 
                 Button("Gelmedi Olarak İşaretle", role: .destructive) {
                     Task {
                         await viewModel.markAsNoShow(booking)
+                        selectedBooking = nil
                     }
                 }
             }
@@ -82,21 +87,45 @@ struct AdminBookingsView: View {
                 Button("Onayla") {
                     Task {
                         await viewModel.confirmBooking(booking)
+                        selectedBooking = nil
                     }
                 }
                 
                 Button("Reddet", role: .destructive) {
                     Task {
                         await viewModel.rejectBooking(booking)
+                        selectedBooking = nil
                     }
                 }
             }
             
-            Button("İptal", role: .cancel) {}
+            Button("İptal", role: .cancel) {
+                selectedBooking = nil
+            }
+        } message: { booking in
+            Text("Rezervasyon: \(booking.ticketNumber)")
         }
         .task {
             await viewModel.loadBookings()
         }
+        .sheet(isPresented: $showShareSheet) {
+            if let url = exportedFileURL {
+                ShareSheet(activityItems: [url])
+            }
+        }
+    }
+    
+    // MARK: - Export and Share
+    private func exportAndShare() {
+        if let url = viewModel.exportBookingsToCSV() {
+            exportedFileURL = url
+            showShareSheet = true
+        }
+    }
+    
+    // MARK: - Print Bookings
+    private func printBookings() {
+        viewModel.printBookings()
     }
     
     // MARK: - Filter Tabs
@@ -233,6 +262,22 @@ struct AdminBookingsView: View {
     }
 }
 
+// MARK: - Share Sheet (UIActivityViewController wrapper)
+struct ShareSheet: UIViewControllerRepresentable {
+    let activityItems: [Any]
+    var applicationActivities: [UIActivity]? = nil
+    
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(
+            activityItems: activityItems,
+            applicationActivities: applicationActivities
+        )
+        return controller
+    }
+    
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
 // MARK: - Admin Bookings ViewModel
 @MainActor
 final class AdminBookingsViewModel: ObservableObject {
@@ -241,6 +286,8 @@ final class AdminBookingsViewModel: ObservableObject {
     @Published var filteredBookings: [Booking] = []
     @Published var selectedDate = Date()
     @Published var isLoading = false
+    @Published var errorMessage = ""
+    @Published var showError = false
     
     private let adminService = AdminService.shared
     private var currentFilter: AdminBookingFilter = .all
@@ -257,12 +304,62 @@ final class AdminBookingsViewModel: ObservableObject {
         filteredBookings.reduce(0) { $0 + $1.depositAmount }
     }
     
+    // MARK: - Date Navigation
+    func previousDay() {
+        selectedDate = Calendar.current.date(byAdding: .day, value: -1, to: selectedDate) ?? selectedDate
+        Task {
+            await loadBookings()
+        }
+    }
+    
+    func nextDay() {
+        selectedDate = Calendar.current.date(byAdding: .day, value: 1, to: selectedDate) ?? selectedDate
+        Task {
+            await loadBookings()
+        }
+    }
+    
+    // MARK: - Filter Count
+    func countForFilter(_ filter: AdminBookingFilter) -> Int {
+        switch filter {
+        case .all:
+            return allBookings.count
+        case .today:
+            return allBookings.filter { Calendar.current.isDateInToday($0.date) }.count
+        case .confirmed:
+            return allBookings.filter { $0.status == .confirmed }.count
+        case .pending:
+            return allBookings.filter { $0.status == .pending }.count
+        case .completed:
+            return allBookings.filter { $0.status == .completed }.count
+        case .cancelled:
+            return allBookings.filter { $0.status == .cancelled }.count
+        }
+    }
+    
     func loadBookings() async {
         isLoading = true
+        errorMessage = ""
         
-        // Mock data
-        allBookings = adminService.loadMockAdminBookings()
-        applyFilter(currentFilter)
+        do {
+            // Gerçek Firebase verileri
+            let facilities = try await adminService.fetchMyFacilities()
+            let facilityIds = facilities.compactMap { $0.id }
+            
+            // Tüm rezervasyonları çek ve tesislerime göre filtrele
+            let query = FirebaseService.shared.bookingsCollection
+                .order(by: FirestoreField.date, descending: true)
+            
+            let allFetchedBookings: [Booking] = try await FirebaseService.shared.fetchDocuments(query: query)
+            allBookings = allFetchedBookings.filter { facilityIds.contains($0.facilityId) }
+            
+            applyFilter(currentFilter)
+        } catch {
+            errorMessage = error.localizedDescription
+            showError = true
+            allBookings = []
+            filteredBookings = []
+        }
         
         isLoading = false
     }
@@ -275,10 +372,10 @@ final class AdminBookingsViewModel: ObservableObject {
             filteredBookings = allBookings
         case .today:
             filteredBookings = allBookings.filter { Calendar.current.isDateInToday($0.date) }
-        case .pending:
-            filteredBookings = allBookings.filter { $0.status == .pending }
         case .confirmed:
             filteredBookings = allBookings.filter { $0.status == .confirmed }
+        case .pending:
+            filteredBookings = allBookings.filter { $0.status == .pending }
         case .completed:
             filteredBookings = allBookings.filter { $0.status == .completed }
         case .cancelled:
@@ -286,51 +383,267 @@ final class AdminBookingsViewModel: ObservableObject {
         }
     }
     
-    func countForFilter(_ filter: AdminBookingFilter) -> Int {
-        switch filter {
-        case .all: return allBookings.count
-        case .today: return allBookings.filter { Calendar.current.isDateInToday($0.date) }.count
-        case .pending: return allBookings.filter { $0.status == .pending }.count
-        case .confirmed: return allBookings.filter { $0.status == .confirmed }.count
-        case .completed: return allBookings.filter { $0.status == .completed }.count
-        case .cancelled: return allBookings.filter { $0.status == .cancelled }.count
-        }
-    }
-    
-    func previousDay() {
-        selectedDate = Calendar.current.date(byAdding: .day, value: -1, to: selectedDate) ?? selectedDate
-    }
-    
-    func nextDay() {
-        selectedDate = Calendar.current.date(byAdding: .day, value: 1, to: selectedDate) ?? selectedDate
-    }
-    
     func confirmBooking(_ booking: Booking) async {
         guard let id = booking.id else { return }
-        try? await adminService.confirmBooking(bookingId: id)
-        await loadBookings()
+        do {
+            try await adminService.confirmBooking(bookingId: id)
+            await loadBookings()
+        } catch {
+            errorMessage = "Onaylama başarısız: \(error.localizedDescription)"
+            showError = true
+        }
     }
     
     func rejectBooking(_ booking: Booking) async {
         guard let id = booking.id else { return }
-        try? await adminService.rejectBooking(bookingId: id, reason: "Admin tarafından reddedildi")
-        await loadBookings()
+        do {
+            try await adminService.rejectBooking(bookingId: id, reason: "Admin tarafından reddedildi")
+            await loadBookings()
+        } catch {
+            errorMessage = "Reddetme başarısız: \(error.localizedDescription)"
+            showError = true
+        }
     }
     
     func completeBooking(_ booking: Booking) async {
         guard let id = booking.id else { return }
-        try? await adminService.completeBooking(bookingId: id)
-        await loadBookings()
+        do {
+            try await adminService.completeBooking(bookingId: id)
+            await loadBookings()
+        } catch {
+            errorMessage = "Tamamlama başarısız: \(error.localizedDescription)"
+            showError = true
+        }
     }
     
     func markAsNoShow(_ booking: Booking) async {
         guard let id = booking.id else { return }
-        try? await adminService.markAsNoShow(bookingId: id)
-        await loadBookings()
+        do {
+            try await adminService.markAsNoShow(bookingId: id)
+            await loadBookings()
+        } catch {
+            errorMessage = "İşlem başarısız: \(error.localizedDescription)"
+            showError = true
+        }
     }
     
-    func exportBookings() {
-        // Export logic
+    // MARK: - Export Bookings to CSV
+    func exportBookingsToCSV() -> URL? {
+        // CSV Header
+        var csvString = "Rezervasyon No,Müşteri Adı,Telefon,Saha,Tarih,Saat,Durum,Ödenen Tutar\n"
+        
+        // Date formatter
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "dd.MM.yyyy"
+        
+        // Add each booking
+        for booking in filteredBookings {
+            let row = [
+                booking.ticketNumber,
+                booking.userFullName,
+                booking.userPhone,
+                booking.pitchName,
+                dateFormatter.string(from: booking.date),
+                booking.timeSlotString,
+                booking.status.displayName,
+                String(format: "%.2f TL", booking.depositAmount)
+            ]
+            
+            // Escape special characters and join with comma
+            let escapedRow = row.map { field in
+                // Virgül veya tırnak içeriyorsa tırnak içine al
+                if field.contains(",") || field.contains("\"") {
+                    return "\"\(field.replacingOccurrences(of: "\"", with: "\"\""))\""
+                }
+                return field
+            }
+            
+            csvString += escapedRow.joined(separator: ",") + "\n"
+        }
+        
+        // Create file in temp directory
+        let fileName = "Rezervasyonlar_\(dateFormatter.string(from: Date())).csv"
+        let tempDirectory = FileManager.default.temporaryDirectory
+        let fileURL = tempDirectory.appendingPathComponent(fileName)
+        
+        do {
+            // UTF-8 BOM ekle (Excel uyumluluğu için)
+            let bom = "\u{FEFF}"
+            let dataString = bom + csvString
+            try dataString.write(to: fileURL, atomically: true, encoding: .utf8)
+            return fileURL
+        } catch {
+            print("CSV export error: \(error.localizedDescription)")
+            return nil
+        }
+    }
+    
+    // MARK: - Print Bookings
+    func printBookings() {
+        // HTML formatında yazdırılacak içerik oluştur
+        let htmlContent = generatePrintableHTML()
+        
+        // Print formatter oluştur
+        let printFormatter = UIMarkupTextPrintFormatter(markupText: htmlContent)
+        
+        // Print controller
+        let printController = UIPrintInteractionController.shared
+        printController.printFormatter = printFormatter
+        
+        // Print info
+        let printInfo = UIPrintInfo(dictionary: nil)
+        printInfo.jobName = "Rezervasyonlar"
+        printInfo.outputType = .general
+        printController.printInfo = printInfo
+        
+        // Present print dialog
+        printController.present(animated: true) { _, completed, error in
+            if let error = error {
+                print("Print error: \(error.localizedDescription)")
+            } else if completed {
+                print("Print completed successfully")
+            }
+        }
+    }
+    
+    // MARK: - Generate Printable HTML
+    private func generatePrintableHTML() -> String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "dd.MM.yyyy"
+        
+        let currentDate = dateFormatter.string(from: Date())
+        
+        var html = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                body {
+                    font-family: -apple-system, Helvetica, Arial, sans-serif;
+                    padding: 20px;
+                    font-size: 12px;
+                }
+                h1 {
+                    color: #2E7D32;
+                    font-size: 18px;
+                    margin-bottom: 5px;
+                }
+                .subtitle {
+                    color: #666;
+                    font-size: 11px;
+                    margin-bottom: 20px;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-top: 10px;
+                }
+                th {
+                    background-color: #2E7D32;
+                    color: white;
+                    padding: 8px;
+                    text-align: left;
+                    font-size: 11px;
+                }
+                td {
+                    border-bottom: 1px solid #ddd;
+                    padding: 8px;
+                    font-size: 11px;
+                }
+                tr:nth-child(even) {
+                    background-color: #f9f9f9;
+                }
+                .status-confirmed { color: #4CAF50; font-weight: bold; }
+                .status-pending { color: #FF9800; font-weight: bold; }
+                .status-cancelled { color: #f44336; font-weight: bold; }
+                .status-completed { color: #2196F3; font-weight: bold; }
+                .summary {
+                    margin-top: 20px;
+                    padding: 10px;
+                    background-color: #f5f5f5;
+                    border-radius: 5px;
+                }
+                .summary-item {
+                    display: inline-block;
+                    margin-right: 30px;
+                }
+                .summary-value {
+                    font-size: 16px;
+                    font-weight: bold;
+                    color: #2E7D32;
+                }
+            </style>
+        </head>
+        <body>
+            <h1>Rezervasyon Listesi</h1>
+            <div class="subtitle">Oluşturulma Tarihi: \(currentDate) | Toplam: \(filteredBookings.count) rezervasyon</div>
+            
+            <table>
+                <tr>
+                    <th>Rez. No</th>
+                    <th>Müşteri</th>
+                    <th>Telefon</th>
+                    <th>Saha</th>
+                    <th>Tarih</th>
+                    <th>Saat</th>
+                    <th>Durum</th>
+                    <th>Tutar</th>
+                </tr>
+        """
+        
+        // Add rows
+        for booking in filteredBookings {
+            let statusClass: String
+            switch booking.status {
+            case .confirmed: statusClass = "status-confirmed"
+            case .pending: statusClass = "status-pending"
+            case .cancelled: statusClass = "status-cancelled"
+            case .completed: statusClass = "status-completed"
+            default: statusClass = ""
+            }
+            
+            html += """
+                <tr>
+                    <td>\(booking.ticketNumber)</td>
+                    <td>\(booking.userFullName)</td>
+                    <td>\(booking.userPhone)</td>
+                    <td>\(booking.pitchName)</td>
+                    <td>\(dateFormatter.string(from: booking.date))</td>
+                    <td>\(booking.timeSlotString)</td>
+                    <td class="\(statusClass)">\(booking.status.displayName)</td>
+                    <td>\(String(format: "%.2f ₺", booking.depositAmount))</td>
+                </tr>
+            """
+        }
+        
+        // Summary
+        html += """
+            </table>
+            
+            <div class="summary">
+                <div class="summary-item">
+                    <div>Toplam Rezervasyon</div>
+                    <div class="summary-value">\(filteredBookings.count)</div>
+                </div>
+                <div class="summary-item">
+                    <div>Onaylı</div>
+                    <div class="summary-value">\(confirmedCount)</div>
+                </div>
+                <div class="summary-item">
+                    <div>Bekleyen</div>
+                    <div class="summary-value">\(pendingCount)</div>
+                </div>
+                <div class="summary-item">
+                    <div>Toplam Gelir</div>
+                    <div class="summary-value">\(String(format: "%.2f ₺", totalRevenue))</div>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        return html
     }
 }
 

@@ -29,7 +29,7 @@ struct FacilityDetailView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
-                // Hero Image
+                // Hero Image - Güncellendi
                 heroSection
                 
                 VStack(spacing: 24) {
@@ -105,51 +105,70 @@ struct FacilityDetailView: View {
         }
     }
     
-    // MARK: - Hero Section
+    // MARK: - Hero Section - Güncellendi
     private var heroSection: some View {
-        ZStack(alignment: .bottomLeading) {
-            // Placeholder Image
-            LinearGradient(
-                colors: [Color(hex: "2E7D32"), Color(hex: "1B5E20")],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
+        ZStack(alignment: .topLeading) {
+            // Fotoğraf Galerisi
+            ImageGalleryView(
+                images: viewModel.facility.images,
+                height: 280,
+                cornerRadius: 0,
+                placeholder: "sportscourt.fill"
             )
-            .frame(height: 250)
-            .overlay {
-                Image(systemName: "sportscourt.fill")
-                    .font(.system(size: 60))
-                    .foregroundColor(.white.opacity(0.3))
-            }
             
-            // Gradient overlay
+            // Gradient overlay for back button
             LinearGradient(
-                colors: [.clear, .black.opacity(0.5)],
+                colors: [.black.opacity(0.5), .clear],
                 startPoint: .top,
-                endPoint: .bottom
+                endPoint: .center
             )
+            .frame(height: 120)
             
-            // Rating badge
+            // Top Bar
             HStack {
+                // Back Button
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                        .padding(12)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Circle())
+                }
+                
                 Spacer()
-                VStack {
-                    HStack(spacing: 4) {
-                        Image(systemName: "star.fill")
-                            .font(.caption)
-                        Text(viewModel.facility.formattedRating)
-                            .fontWeight(.bold)
-                        Text("(\(viewModel.facility.totalReviews))")
-                            .font(.caption)
+                
+                // Share Button
+                Button {
+                    shareVenue()
+                } label: {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.body)
+                        .foregroundColor(.white)
+                        .padding(12)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Circle())
+                }
+                
+                // Favorite Button
+                Button {
+                    Task {
+                        await viewModel.toggleFavorite()
                     }
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(.ultraThinMaterial)
-                    .cornerRadius(20)
-                    .padding()
-                    
-                    Spacer()
+                } label: {
+                    Image(systemName: viewModel.isFavorite ? "heart.fill" : "heart")
+                        .font(.body)
+                        .foregroundColor(viewModel.isFavorite ? .red : .white)
+                        .padding(12)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Circle())
                 }
             }
+            .padding()
+            .padding(.top, 44)
         }
     }
     
