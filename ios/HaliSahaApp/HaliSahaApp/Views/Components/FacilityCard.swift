@@ -23,10 +23,11 @@ struct FacilityCard: View {
     // MARK: - Body
     var body: some View {
         HStack(spacing: 12) {
-            // Image - Güncellendi
-            CompactImageGallery(
-                images: facility.images,
-                size: 100,
+            // Image - CachedAsyncImage kullan
+            FacilityImageView(
+                url: facility.images.first,
+                size: CGSize(width: 100, height: 100),
+                cornerRadius: 12,
                 placeholder: "sportscourt.fill"
             )
             

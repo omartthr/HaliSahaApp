@@ -1,9 +1,9 @@
-// filepath: Views/Components/ImagePickerView.swift
 //
 //  ImagePickerView.swift
 //  HaliSahaApp
 //
 //  Fotoğraf seçme ve önizleme bileşeni
+//  DÜZELTİLMİŞ VERSİYON: Index sorunları ve silme mekanizması düzeltildi
 //
 //  Created by Mehmet Mert Mazıcı on 27.01.2026.
 //
@@ -11,18 +11,38 @@
 import SwiftUI
 import PhotosUI
 
-// MARK: - Multi Image Picker
+// MARK: - Image Item Model (YENİ - Güvenli ID tabanlı yaklaşım)
+struct SelectedImageItem: Identifiable, Equatable {
+    let id: UUID
+    let image: UIImage
+    
+    init(image: UIImage) {
+        self.id = UUID()
+        self.image = image
+    }
+    
+    static func == (lhs: SelectedImageItem, rhs: SelectedImageItem) -> Bool {
+        lhs.id == rhs.id
+    }
+}
+
+// MARK: - Multi Image Picker (DÜZELTİLDİ)
 struct MultiImagePicker: View {
     
+    // MARK: - Bindings
     @Binding var selectedImages: [UIImage]
     @Binding var existingImageURLs: [String]
     
+    // MARK: - Properties
     let maxImages: Int
     let title: String
     
+    // MARK: - State
     @State private var selectedItems: [PhotosPickerItem] = []
     @State private var isLoading = false
+    @State private var imageItems: [SelectedImageItem] = []
     
+    // MARK: - Init
     init(
         selectedImages: Binding<[UIImage]>,
         existingImageURLs: Binding<[String]> = .constant([]),
@@ -35,8 +55,9 @@ struct MultiImagePicker: View {
         self.title = title
     }
     
+    // MARK: - Computed
     private var totalImages: Int {
-        selectedImages.count + existingImageURLs.count
+        imageItems.count + existingImageURLs.count
     }
     
     private var canAddMore: Bool {
@@ -49,6 +70,7 @@ struct MultiImagePicker: View {
         GridItem(.flexible())
     ]
     
+    // MARK: - Body
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             headerView
@@ -56,11 +78,26 @@ struct MultiImagePicker: View {
             loadingView
             infoTextView
         }
+        .onAppear {
+            // İlk yüklemede imageItems'ı senkronize et
+            syncImageItems()
+        }
+        .onChange(of: selectedImages) { _, newImages in
+            // Dışarıdan değişiklik olursa senkronize et
+            if imageItems.map({ $0.image }) != newImages {
+                syncImageItems()
+            }
+        }
         .onChange(of: selectedItems) { _, newItems in
             Task {
                 await loadImages(from: newItems)
             }
         }
+    }
+    
+    // MARK: - Sync Image Items
+    private func syncImageItems() {
+        imageItems = selectedImages.map { SelectedImageItem(image: $0) }
     }
     
     // MARK: - Header View
@@ -80,42 +117,42 @@ struct MultiImagePicker: View {
     // MARK: - Images Grid View
     private var imagesGridView: some View {
         LazyVGrid(columns: columns, spacing: 12) {
-            existingImagesView
-            selectedImagesView
-            addButtonIfNeeded
-        }
-    }
-    
-    // MARK: - Existing Images
-    private var existingImagesView: some View {
-        ForEach(existingImageURLs, id: \.self) { url in
-            ExistingImageCell(url: url) {
-                withAnimation {
-                    existingImageURLs.removeAll { $0 == url }
+            // Mevcut URL'ler
+            ForEach(existingImageURLs, id: \.self) { url in
+                ExistingImageCell(url: url) {
+                    deleteExistingImage(url: url)
                 }
+            }
+            
+            // Yeni seçilen fotoğraflar (DÜZELTİLDİ - ID tabanlı)
+            ForEach(imageItems) { item in
+                SelectedImageCell(image: item.image) {
+                    deleteSelectedImage(item: item)
+                }
+            }
+            
+            // Ekleme butonu
+            if canAddMore {
+                addButtonView
             }
         }
     }
     
-    // MARK: - Selected Images
-    private var selectedImagesView: some View {
-        ForEach(Array(selectedImages.indices), id: \.self) { index in
-            SelectedImageCell(image: selectedImages[index]) {
-                withAnimation {
-                    // Burada bir kontrol eklemek güvenliği artırır
-                    if index < selectedImages.count {
-                        selectedImages.remove(at: index)
-                    }
-                }
-            }
+    // MARK: - Delete Existing Image (DÜZELTİLDİ)
+    private func deleteExistingImage(url: String) {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            existingImageURLs.removeAll { $0 == url }
         }
     }
     
-    // MARK: - Add Button If Needed
-    @ViewBuilder
-    private var addButtonIfNeeded: some View {
-        if canAddMore {
-            addButtonView
+    // MARK: - Delete Selected Image (DÜZELTİLDİ - ID tabanlı)
+    private func deleteSelectedImage(item: SelectedImageItem) {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            // ID ile güvenli silme
+            imageItems.removeAll { $0.id == item.id }
+            
+            // selectedImages'ı güncelle
+            selectedImages = imageItems.map { $0.image }
         }
     }
     
@@ -154,13 +191,17 @@ struct MultiImagePicker: View {
     
     // MARK: - Load Images
     private func loadImages(from items: [PhotosPickerItem]) async {
-        isLoading = true
+        guard !items.isEmpty else { return }
+        
+        await MainActor.run { isLoading = true }
         
         for item in items {
             if let data = try? await item.loadTransferable(type: Data.self),
                let image = UIImage(data: data) {
                 await MainActor.run {
-                    if selectedImages.count + existingImageURLs.count < maxImages {
+                    if totalImages < maxImages {
+                        let newItem = SelectedImageItem(image: image)
+                        imageItems.append(newItem)
                         selectedImages.append(image)
                     }
                 }
@@ -188,60 +229,94 @@ struct SelectedImageCell: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             
             // Delete Button
-            Button(action: onDelete) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.title3)
-                    .foregroundColor(.white)
-                    .background(Circle().fill(Color.red))
-            }
-            .offset(x: 6, y: -6)
+            deleteButton
         }
+    }
+    
+    private var deleteButton: some View {
+        Button(action: onDelete) {
+            Image(systemName: "xmark.circle.fill")
+                .font(.title3)
+                .symbolRenderingMode(.palette)
+                .foregroundStyle(.white, .red)
+        }
+        .offset(x: 6, y: -6)
     }
 }
 
-// MARK: - Existing Image Cell
+// MARK: - Existing Image Cell (DÜZELTİLDİ)
 struct ExistingImageCell: View {
     let url: String
     let onDelete: () -> Void
     
+    @State private var loadState: ExistingImageLoadState = .loading
+    
+    private enum ExistingImageLoadState {
+        case loading
+        case loaded(UIImage)
+        case failed
+    }
+    
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            AsyncImage(url: URL(string: url)) { phase in
-                switch phase {
-                case .empty:
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.gray.opacity(0.2))
-                        .frame(width: 100, height: 100)
-                        .overlay {
-                            ProgressView()
-                        }
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 100, height: 100)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                case .failure:
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.gray.opacity(0.2))
-                        .frame(width: 100, height: 100)
-                        .overlay {
-                            Image(systemName: "exclamationmark.triangle")
-                                .foregroundColor(.secondary)
-                        }
-                @unknown default:
-                    EmptyView()
+            imageContent
+            deleteButton
+        }
+        // View reuse fix
+        .id(url)
+        .task(id: url) {
+            await loadImage()
+        }
+    }
+    
+    @ViewBuilder
+    private var imageContent: some View {
+        switch loadState {
+        case .loading:
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.gray.opacity(0.2))
+                .frame(width: 100, height: 100)
+                .overlay { ProgressView() }
+        case .loaded(let image):
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .frame(width: 100, height: 100)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+        case .failed:
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.gray.opacity(0.2))
+                .frame(width: 100, height: 100)
+                .overlay {
+                    Image(systemName: "exclamationmark.triangle")
+                        .foregroundColor(.secondary)
                 }
+        }
+    }
+    
+    private var deleteButton: some View {
+        Button(action: onDelete) {
+            Image(systemName: "xmark.circle.fill")
+                .font(.title3)
+                .symbolRenderingMode(.palette)
+                .foregroundStyle(.white, .red)
+        }
+        .offset(x: 6, y: -6)
+    }
+    
+    private func loadImage() async {
+        do {
+            let image = try await ImageCacheService.shared.getImage(
+                from: url,
+                size: CGSize(width: 200, height: 200)
+            )
+            await MainActor.run {
+                loadState = .loaded(image)
             }
-            
-            // Delete Button
-            Button(action: onDelete) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.title3)
-                    .foregroundColor(.white)
-                    .background(Circle().fill(Color.red))
+        } catch {
+            await MainActor.run {
+                loadState = .failed
             }
-            .offset(x: 6, y: -6)
         }
     }
 }
@@ -275,7 +350,6 @@ struct SingleImagePicker: View {
     
     var body: some View {
         VStack(spacing: 12) {
-            // Preview
             ZStack {
                 if let image = selectedImage {
                     Image(uiImage: image)
@@ -284,32 +358,21 @@ struct SingleImagePicker: View {
                         .frame(width: 120, height: 120)
                         .clipShape(Circle())
                 } else if let url = existingImageURL, !url.isEmpty {
-                    AsyncImage(url: URL(string: url)) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 120, height: 120)
-                                .clipShape(Circle())
-                        default:
-                            placeholderImage
-                        }
+                    CachedAsyncImage(
+                        url: url,
+                        targetSize: CGSize(width: 240, height: 240)
+                    ) { image in
+                        image
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 120, height: 120)
+                            .clipShape(Circle())
+                    } placeholder: {
+                        placeholderImage
                     }
                 } else {
                     placeholderImage
                 }
-                
-                // Camera overlay
-                Circle()
-                    .fill(Color.black.opacity(0.4))
-                    .frame(width: 120, height: 120)
-                    .overlay {
-                        Image(systemName: "camera.fill")
-                            .font(.title)
-                            .foregroundColor(.white)
-                    }
-                    .opacity(0.001) // Sadece tıklanabilir alan olarak
             }
             
             PhotosPicker(

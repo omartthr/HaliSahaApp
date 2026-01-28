@@ -93,82 +93,67 @@ struct ZoomableImageView: View {
     
     var body: some View {
         GeometryReader { geometry in
-            AsyncImage(url: URL(string: imageURL)) { phase in
-                switch phase {
-                case .empty:
-                    ProgressView()
-                        .scaleEffect(1.5)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFit()
-                        .scaleEffect(scale)
-                        .offset(offset)
-                        .gesture(
-                            MagnificationGesture()
-                                .onChanged { value in
-                                    let delta = value / lastScale
-                                    lastScale = value
-                                    scale = min(max(scale * delta, 1), 4)
-                                }
-                                .onEnded { _ in
-                                    lastScale = 1.0
-                                    if scale < 1 {
-                                        withAnimation {
-                                            scale = 1
-                                        }
+            CachedAsyncImage(
+                url: imageURL,
+                targetSize: CGSize(width: geometry.size.width * 2, height: geometry.size.height * 2)
+            ) { image in
+                image
+                    .resizable()
+                    .scaledToFit()
+                    .scaleEffect(scale)
+                    .offset(offset)
+                    .gesture(
+                        MagnificationGesture()
+                            .onChanged { value in
+                                let delta = value / lastScale
+                                lastScale = value
+                                scale = min(max(scale * delta, 1), 4)
+                            }
+                            .onEnded { _ in
+                                lastScale = 1.0
+                                if scale < 1 {
+                                    withAnimation {
+                                        scale = 1
                                     }
-                                }
-                        )
-                        .simultaneousGesture(
-                            DragGesture()
-                                .onChanged { value in
-                                    if scale > 1 {
-                                        offset = CGSize(
-                                            width: lastOffset.width + value.translation.width,
-                                            height: lastOffset.height + value.translation.height
-                                        )
-                                    }
-                                }
-                                .onEnded { _ in
-                                    lastOffset = offset
-                                    if scale <= 1 {
-                                        withAnimation {
-                                            offset = .zero
-                                            lastOffset = .zero
-                                        }
-                                    }
-                                }
-                        )
-                        .onTapGesture(count: 2) {
-                            withAnimation {
-                                if scale > 1 {
-                                    scale = 1
-                                    offset = .zero
-                                    lastOffset = .zero
-                                } else {
-                                    scale = 2
                                 }
                             }
+                    )
+                    .simultaneousGesture(
+                        DragGesture()
+                            .onChanged { value in
+                                if scale > 1 {
+                                    offset = CGSize(
+                                        width: lastOffset.width + value.translation.width,
+                                        height: lastOffset.height + value.translation.height
+                                    )
+                                }
+                            }
+                            .onEnded { _ in
+                                lastOffset = offset
+                                if scale <= 1 {
+                                    withAnimation {
+                                        offset = .zero
+                                        lastOffset = .zero
+                                    }
+                                }
+                            }
+                    )
+                    .onTapGesture(count: 2) {
+                        withAnimation {
+                            if scale > 1 {
+                                scale = 1
+                                offset = .zero
+                                lastOffset = .zero
+                            } else {
+                                scale = 2
+                            }
                         }
-                        .frame(width: geometry.size.width, height: geometry.size.height)
-                    
-                case .failure:
-                    VStack(spacing: 12) {
-                        Image(systemName: "exclamationmark.triangle")
-                            .font(.largeTitle)
-                            .foregroundColor(.gray)
-                        Text("Fotoğraf yüklenemedi")
-                            .font(.subheadline)
-                            .foregroundColor(.gray)
                     }
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+            } placeholder: {
+                ProgressView()
+                    .scaleEffect(1.5)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    
-                @unknown default:
-                    EmptyView()
-                }
             }
         }
     }

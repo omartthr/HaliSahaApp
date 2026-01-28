@@ -290,6 +290,75 @@ final class AdminService: ObservableObject {
         )
     }
     
+    // MARK: - Delete Facility
+    @MainActor
+    func deleteFacility(facilityId: String) async throws {
+        guard let userId = firebaseService.currentUserId else {
+            throw AdminError.notAuthenticated
+        }
+        
+        // 1. Tesisin bu kullanıcıya ait olduğunu doğrula
+        let facility: Facility = try await firebaseService.fetchDocument(
+            from: firebaseService.facilitiesCollection,
+            documentId: facilityId
+        )
+        
+        guard facility.ownerId == userId else {
+            throw AdminError.notAuthorized
+        }
+        
+        // 2. Aktif rezervasyon kontrolü (gelecek rezervasyonları al, status'u client-side filtrele)
+        let futureBookingsQuery = firebaseService.bookingsCollection
+            .whereField(FirestoreField.facilityId, isEqualTo: facilityId)
+            .whereField(FirestoreField.date, isGreaterThanOrEqualTo: Timestamp(date: Date()))
+        
+        let futureBookings: [Booking] = try await firebaseService.fetchDocuments(query: futureBookingsQuery)
+        
+        // Client-side status filtresi (index sorunu olmadan)
+        let activeBookings = futureBookings.filter { booking in
+            booking.status == .pending || booking.status == .confirmed
+        }
+        
+        if !activeBookings.isEmpty {
+            throw AdminError.operationFailed("Bu tesiste \(activeBookings.count) aktif rezervasyon bulunuyor. Önce rezervasyonları iptal edin.")
+        }
+        
+        // 3. Alt sahaları (pitches) sil
+        let pitches = try await fetchPitches(for: facilityId)
+        for pitch in pitches {
+            guard let pitchId = pitch.id else { continue }
+            try await deletePitch(pitchId: pitchId, facilityId: facilityId)
+        }
+        
+        // 4. Geçmiş rezervasyonları sil veya anonim yap (opsiyonel)
+        let allBookingsQuery = firebaseService.bookingsCollection
+            .whereField(FirestoreField.facilityId, isEqualTo: facilityId)
+        
+        let allBookings: [Booking] = try await firebaseService.fetchDocuments(query: allBookingsQuery)
+        let batch = firebaseService.db.batch()
+        
+        for booking in allBookings {
+            guard let bookingId = booking.id else { continue }
+            let ref = firebaseService.bookingsCollection.document(bookingId)
+            // Rezervasyonları silmek yerine tesisi "Silinmiş Tesis" olarak işaretleyebilirsiniz
+            batch.updateData([
+                "facilityName": "[Silinmiş Tesis]",
+                FirestoreField.updatedAt: Timestamp(date: Date())
+            ], forDocument: ref)
+        }
+        
+        try await batch.commit()
+        
+        // 5. Tesisi sil
+        try await firebaseService.deleteDocument(
+            from: firebaseService.facilitiesCollection,
+            documentId: facilityId
+        )
+        
+        // 6. Lokal listeyi güncelle
+        myFacilities.removeAll { $0.id == facilityId }
+    }
+    
     // MARK: - Fetch Facility Bookings
     @MainActor
     func fetchFacilityBookings(

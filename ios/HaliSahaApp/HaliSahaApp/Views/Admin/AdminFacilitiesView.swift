@@ -93,6 +93,16 @@ struct AdminFacilitiesView: View {
         .sheet(isPresented: $showAddFacility) {
             AddFacilityView()
         }
+        .onChange(of: showAddFacility) { oldValue, newValue in
+            // Sheet kapandığında listeyi yenile
+            if oldValue == true && newValue == false {
+                Task {
+                    // Memory cache'i temizle (yeni görseller için)
+                    await ImageCacheService.shared.clearMemoryCache()
+                    await viewModel.refreshFacilities()
+                }
+            }
+        }
         .refreshable {
             await viewModel.refreshFacilities()
         }
@@ -133,6 +143,8 @@ final class AdminFacilitiesViewModel: ObservableObject {
     }
     
     func refreshFacilities() async {
+        // Önce memory cache'i temizle
+        await ImageCacheService.shared.clearMemoryCache()
         await loadFacilities()
     }
 }
@@ -146,6 +158,9 @@ struct AdminFacilityListCard: View {
     
     var body: some View {
         VStack(spacing: 16) {
+            // DEBUG - Konsola facility bilgilerini yazdır
+            let _ = print("🔍 Facility: \(facility.name), ID: \(facility.id ?? "nil"), Images: \(facility.images)")
+            
             // Header
             HStack {
                 // Facility Image - Güncellendi
@@ -248,15 +263,17 @@ struct QuickStat: View {
 // MARK: - Admin Facility Detail View
 struct AdminFacilityDetailView: View {
     
+    @Environment(\.dismiss) private var dismiss
+    
     let facility: Facility
     @StateObject private var viewModel: AdminFacilityDetailViewModel
     
     // Sheet States
-    @State private var showEditFacility = false
     @State private var showAddPitch = false
     @State private var showEditPitch = false
     @State private var showEditHours = false
     @State private var selectedPitchForEdit: Pitch?
+    @State private var navigateToEditFacility = false
     
     init(facility: Facility) {
         self.facility = facility
@@ -291,8 +308,11 @@ struct AdminFacilityDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    showEditFacility = true
+                NavigationLink {
+                    EditFacilityView(facility: facility) {
+                        // Tesis silindiğinde detay sayfasından çık
+                        dismiss()
+                    }
                 } label: {
                     Text("Düzenle")
                         .foregroundColor(Color(hex: "2E7D32"))
@@ -300,15 +320,28 @@ struct AdminFacilityDetailView: View {
             }
         }
         // MARK: - Sheets
-        .sheet(isPresented: $showEditFacility) {
-            EditFacilityView(facility: facility)
-        }
         .sheet(isPresented: $showAddPitch) {
             AddPitchView(facilityId: facility.id ?? "")
+        }
+        .onChange(of: showAddPitch) { oldValue, newValue in
+            if oldValue == true && newValue == false {
+                Task {
+                    await ImageCacheService.shared.clearMemoryCache()
+                    await viewModel.loadPitches()
+                }
+            }
         }
         .sheet(isPresented: $showEditPitch) {
             if let pitch = selectedPitchForEdit {
                 EditPitchView(pitch: pitch, facilityId: facility.id ?? "")
+            }
+        }
+        .onChange(of: showEditPitch) { oldValue, newValue in
+            if oldValue == true && newValue == false {
+                Task {
+                    await ImageCacheService.shared.clearMemoryCache()
+                    await viewModel.loadPitches()
+                }
             }
         }
         .sheet(isPresented: $showEditHours) {

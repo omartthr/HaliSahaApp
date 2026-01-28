@@ -18,103 +18,103 @@ struct EditFacilityView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: EditFacilityViewModel
     
+    // Silme işlemi callback'i
+    var onDelete: (() -> Void)?
+    
     // MARK: - Init
-    init(facility: Facility) {
+    init(facility: Facility, onDelete: (() -> Void)? = nil) {
         _viewModel = StateObject(wrappedValue: EditFacilityViewModel(facility: facility))
+        self.onDelete = onDelete
     }
     
     // MARK: - Body
     var body: some View {
-        NavigationStack {
-            Form {
-                // Durum
-                statusSection
-                
-                // Fotoğraflar - YENİ SECTION
-                imagesSection
-                
-                // Temel Bilgiler
-                basicInfoSection
-                
-                // İletişim
-                contactSection
-                
-                // Konum
-                locationSection
-                
-                // Özellikler
-                amenitiesSection
-                
-                // Çalışma Saatleri
-                operatingHoursSection
-                
-                // Tehlikeli Bölge
-                dangerZone
-            }
-            .navigationTitle("Tesisi Düzenle")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("İptal") {
-                        dismiss()
-                    }
-                }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Kaydet") {
-                        Task {
-                            await viewModel.updateFacility()
-                            if viewModel.saveSuccess {
-                                dismiss()
-                            }
-                        }
-                    }
-                    .fontWeight(.semibold)
-                    .disabled(!viewModel.isFormValid || viewModel.isLoading)
-                }
-            }
-            .alert("Hata", isPresented: $viewModel.showError) {
-                Button("Tamam", role: .cancel) {}
-            } message: {
-                Text(viewModel.errorMessage)
-            }
-            .alert("Tesisi Sil", isPresented: $viewModel.showDeleteConfirm) {
-                Button("İptal", role: .cancel) {}
-                Button("Sil", role: .destructive) {
+        Form {
+            // Durum
+            statusSection
+            
+            // Fotoğraflar - YENİ SECTION
+            imagesSection
+            
+            // Temel Bilgiler
+            basicInfoSection
+            
+            // İletişim
+            contactSection
+            
+            // Konum
+            locationSection
+            
+            // Özellikler
+            amenitiesSection
+            
+            // Çalışma Saatleri
+            operatingHoursSection
+            
+            // Tehlikeli Bölge
+            dangerZone
+        }
+        .navigationTitle("Tesisi Düzenle")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Kaydet") {
                     Task {
-                        await viewModel.deleteFacility()
-                        dismiss()
-                    }
-                }
-            } message: {
-                Text("Bu tesisi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.")
-            }
-            .overlay {
-                if viewModel.isLoading {
-                    ZStack {
-                        Color.black.opacity(0.3)
-                            .ignoresSafeArea()
-                        
-                        VStack(spacing: 16) {
-                            ProgressView()
-                                .scaleEffect(1.5)
-                            
-                            Text(viewModel.loadingMessage)
-                                .font(.subheadline)
-                                .foregroundColor(.white)
+                        await viewModel.updateFacility()
+                        if viewModel.saveSuccess {
+                            dismiss()
                         }
-                        .padding(24)
-                        .background(.ultraThinMaterial)
-                        .cornerRadius(16)
+                    }
+                }
+                .fontWeight(.semibold)
+                .disabled(!viewModel.isFormValid || viewModel.isLoading)
+            }
+        }
+        .alert("Hata", isPresented: $viewModel.showError) {
+            Button("Tamam", role: .cancel) {}
+        } message: {
+            Text(viewModel.errorMessage)
+        }
+        .alert("Tesisi Sil", isPresented: $viewModel.showDeleteConfirm) {
+            Button("İptal", role: .cancel) {}
+            Button("Sil", role: .destructive) {
+                Task {
+                    await viewModel.deleteFacility()
+                    if viewModel.saveSuccess {
+                        // Önce bu ekrandan çık, sonra detay ekranını da kapat
+                        dismiss()
+                        onDelete?()
                     }
                 }
             }
-            .sheet(isPresented: $viewModel.showLocationPicker) {
-                LocationPickerView(
-                    coordinate: $viewModel.coordinate,
-                    address: $viewModel.address
-                )
+        } message: {
+            Text("Bu tesisi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz ve tüm sahalar da silinecektir.")
+        }
+        .overlay {
+            if viewModel.isLoading {
+                ZStack {
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
+                    
+                    VStack(spacing: 16) {
+                        ProgressView()
+                            .scaleEffect(1.5)
+                        
+                        Text(viewModel.loadingMessage)
+                            .font(.subheadline)
+                            .foregroundColor(.white)
+                    }
+                    .padding(24)
+                    .background(.ultraThinMaterial)
+                    .cornerRadius(16)
+                }
             }
+        }
+        .sheet(isPresented: $viewModel.showLocationPicker) {
+            LocationPickerView(
+                coordinate: $viewModel.coordinate,
+                address: $viewModel.address
+            )
         }
     }
     
@@ -550,17 +550,25 @@ final class EditFacilityViewModel: ObservableObject {
     
     // MARK: - Delete Facility
     func deleteFacility() async {
-        guard let facilityId = facility.id else { return }
+        guard let facilityId = facility.id else { 
+            errorMessage = "Tesis ID bulunamadı"
+            showError = true
+            return 
+        }
         
         isLoading = true
         loadingMessage = "Tesis siliniyor..."
         
         do {
-            // Fotoğrafları sil
+            // 1. Fotoğrafları sil
+            loadingMessage = "Fotoğraflar siliniyor..."
             try await storageService.deleteFacilityImages(facilityId: facilityId)
             
-            // TODO: Firebase'den tesisi sil
-            // try await adminService.deleteFacility(facilityId: facilityId)
+            // 2. Firebase'den tesisi ve ilişkili verileri sil
+            loadingMessage = "Tesis kaldırılıyor..."
+            try await adminService.deleteFacility(facilityId: facilityId)
+            
+            saveSuccess = true
         } catch {
             errorMessage = error.localizedDescription
             showError = true

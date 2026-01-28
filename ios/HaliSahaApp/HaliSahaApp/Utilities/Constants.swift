@@ -238,6 +238,17 @@ struct StorageConstants {
     static let maxPitchImages = 3
 }
 
+// MARK: - Image Cache Constants
+struct ImageCacheConstants {
+    static let maxMemoryCacheMB = 100
+    static let maxDiskCacheMB = 500
+    static let cacheExpirationDays = 7
+    static let thumbnailSize = CGSize(width: 200, height: 200)
+    static let mediumSize = CGSize(width: 600, height: 600)
+    static let maxConcurrentDownloads = 5
+    static let maxPreloadCount = 20
+}
+
 // MARK: - Color Extension for Hex
 extension Color {
     init(hex: String) {

@@ -497,7 +497,7 @@ struct OperatingHourEditRow: View {
     
     private let times = stride(from: 0, to: 24, by: 1).map { hour in
         String(format: "%02d:00", hour)
-    } + ["00:00"]
+    }
     
     var body: some View {
         HStack {
