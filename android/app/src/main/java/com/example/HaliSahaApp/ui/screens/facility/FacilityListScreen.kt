@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.HaliSahaApp.ui.components.*
+import com.example.HaliSahaApp.ui.navigation.Screen
 import com.example.HaliSahaApp.ui.viewmodels.FacilityListViewModel
 import com.example.HaliSahaApp.ui.viewmodels.SortOption
 import com.example.HaliSahaApp.utils.AppColors
@@ -161,8 +162,10 @@ fun FacilityListScreen(
                                 showDistance = true,
                                 distance = viewModel.getDistance(facility),
                                 onClick = {
-                                    // Detay sayfasına yönlendirme (placeholder)
-                                    // navController.navigate("facility_detail/${facility.id}")
+                                    // GÜNCELLENEN KISIM:
+                                    facility.id?.let { id ->
+                                        navController.navigate(Screen.FacilityDetail.createRoute(id))
+                                    }
                                 }
                             )
                         }

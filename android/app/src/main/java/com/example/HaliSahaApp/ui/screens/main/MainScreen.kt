@@ -21,6 +21,11 @@ import com.example.HaliSahaApp.ui.screens.home.HomeScreen
 import com.example.HaliSahaApp.ui.screens.map.MapScreen
 import com.example.HaliSahaApp.utils.AppColors
 import com.example.HaliSahaApp.utils.AppIcons
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import com.example.HaliSahaApp.ui.navigation.Screen
+import com.example.HaliSahaApp.ui.screens.facility.FacilityDetailScreen
+import com.example.HaliSahaApp.ui.screens.facility.FacilityListScreen
 
 // MARK: - Tab Item Enum
 enum class BottomTab(
@@ -112,13 +117,33 @@ fun MainScreen(onLogout: () -> Unit) {
             startDestination = BottomTab.HOME.route,
             modifier = Modifier.padding(innerPadding)
         ) {
+            // Mevcut Tab Rotaları
             composable(BottomTab.HOME.route) { HomeScreen(navController = navController) }
-            composable(BottomTab.MAP.route) {
-                MapScreen(navController = navController) // Artık gerçek harita ekranı!
-            }
+            composable(BottomTab.MAP.route) { MapScreenPlaceholder() }
             composable(BottomTab.BOOKINGS.route) { BookingsScreenPlaceholder() }
             composable(BottomTab.CHAT.route) { ChatScreenPlaceholder() }
             composable(BottomTab.PROFILE.route) { ProfileScreenPlaceholder(onLogout) }
+
+            // 👇 EKSİK OLANLARI BURAYA EKLİYORUZ 👇
+
+            // 1. Facility Detail
+            composable(
+                route = Screen.FacilityDetail.route,
+                arguments = listOf(navArgument("facilityId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val facilityId = backStackEntry.arguments?.getString("facilityId")
+                if (facilityId != null) {
+                    FacilityDetailScreen(
+                        navController = navController,
+                        facilityId = facilityId
+                    )
+                }
+            }
+
+            // 2. Facility List (Tümünü Gör)
+            composable(Screen.FacilityList.route) {
+                FacilityListScreen(navController = navController)
+            }
         }
     }
 

@@ -15,6 +15,7 @@ import com.example.HaliSahaApp.ui.screens.auth.AdminRegisterScreen
 import com.example.HaliSahaApp.ui.screens.auth.ForgotPasswordScreen
 import com.example.HaliSahaApp.ui.screens.auth.LoginScreen
 import com.example.HaliSahaApp.ui.screens.auth.RegisterScreen
+import com.example.HaliSahaApp.ui.screens.facility.FacilityDetailScreen
 import com.example.HaliSahaApp.ui.screens.facility.FacilityListScreen
 import com.example.HaliSahaApp.ui.screens.main.MainScreen
 import com.example.HaliSahaApp.ui.screens.splash.SplashScreen
@@ -92,6 +93,23 @@ fun HaliSahaRoot() {
             })
         }
         composable("facility_list") {
+            FacilityListScreen(navController = navController)
+        }
+        composable(
+            route = Screen.FacilityDetail.route,
+            // Arguments tanımı opsiyonel çünkü String parametre default olarak alınır
+        ) { backStackEntry ->
+            val facilityId = backStackEntry.arguments?.getString("facilityId")
+            if (facilityId != null) {
+                FacilityDetailScreen(
+                    navController = navController,
+                    facilityId = facilityId
+                )
+            }
+        }
+
+        // 8. FACILITY LIST SCREEN (Zaten eklemiştik ama kontrol et)
+        composable(Screen.FacilityList.route) {
             FacilityListScreen(navController = navController)
         }
     }

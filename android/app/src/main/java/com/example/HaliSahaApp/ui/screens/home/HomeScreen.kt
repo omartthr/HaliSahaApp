@@ -36,6 +36,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.HaliSahaApp.data.remote.AuthService
 import com.example.HaliSahaApp.ui.components.*
+import com.example.HaliSahaApp.ui.navigation.Screen
 import com.example.HaliSahaApp.ui.viewmodels.HomeFilter
 import com.example.HaliSahaApp.ui.viewmodels.HomeViewModel
 import com.example.HaliSahaApp.utils.AppColors
@@ -373,7 +374,15 @@ fun HomeContentSection(
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     items(uiState.featuredFacilities) { facility ->
-                        FeaturedFacilityCard(facility = facility)
+                        FeaturedFacilityCard(
+                            facility = facility,
+                            onClick = {
+                                // GÜNCELLENEN KISIM:
+                                facility.id?.let { id ->
+                                    navController.navigate(Screen.FacilityDetail.createRoute(id))
+                                }
+                            }
+                        )
                     }
                 }
             }
@@ -432,7 +441,13 @@ fun HomeContentSection(
                         FacilityCard(
                             facility = facility,
                             showDistance = true,
-                            distance = 2.5
+                            distance = 2.5,
+                            onClick = {
+                                // GÜNCELLENEN KISIM:
+                                facility.id?.let { id ->
+                                    navController.navigate(Screen.FacilityDetail.createRoute(id))
+                                }
+                            }
                         )
                     }
                 }
