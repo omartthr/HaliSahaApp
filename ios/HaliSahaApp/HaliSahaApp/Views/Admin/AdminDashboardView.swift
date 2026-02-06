@@ -14,7 +14,13 @@ struct AdminDashboardView: View {
     
     // MARK: - Properties
     @StateObject private var viewModel = AdminDashboardViewModel()
-    @State private var selectedFacility: Facility?
+    
+    // Sheet States
+    @State private var showAddFacility = false
+    @State private var showAddPitch = false
+    @State private var showFacilitySelector = false
+    @State private var selectedFacilityForPitch: Facility?
+    @State private var showNoFacilityAlert = false
     
     // MARK: - Body
     var body: some View {
@@ -54,6 +60,38 @@ struct AdminDashboardView: View {
         }
         .task {
             await viewModel.loadData()
+        }
+        // MARK: - Sheets
+        .sheet(isPresented: $showAddFacility) {
+            AddFacilityView()
+        }
+        .sheet(isPresented: $showAddPitch) {
+            if let facility = selectedFacilityForPitch, let facilityId = facility.id {
+                AddPitchView(facilityId: facilityId)
+            }
+        }
+        .sheet(isPresented: $showFacilitySelector) {
+            FacilitySelectorSheet(
+                facilities: viewModel.facilities,
+                onSelect: { facility in
+                    selectedFacilityForPitch = facility
+                    showFacilitySelector = false
+                    // Küçük bir gecikme ile saha ekleme sheet'ini aç
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        showAddPitch = true
+                    }
+                }
+            )
+            .presentationDetents([.medium])
+        }
+        // MARK: - Alerts
+        .alert("Tesis Gerekli", isPresented: $showNoFacilityAlert) {
+            Button("Tesis Ekle") {
+                showAddFacility = true
+            }
+            Button("İptal", role: .cancel) {}
+        } message: {
+            Text("Saha ekleyebilmek için önce bir tesis eklemeniz gerekiyor.")
         }
     }
     
@@ -150,34 +188,56 @@ struct AdminDashboardView: View {
                 .font(.headline)
             
             HStack(spacing: 12) {
+                // Yeni Saha Butonu - Bu action kullanıyor
                 QuickActionButton(
                     title: "Yeni Saha",
                     icon: "plus.circle.fill",
                     color: Color(hex: "2E7D32")
                 ) {
-                    // Add new pitch
+                    handleAddPitchTapped()
                 }
                 
+                // Rezervasyonlar - NavigationLink ile
                 NavigationLink {
                     AdminBookingsView()
                 } label: {
-                    QuickActionButton(
+                    // QuickActionButtonContent kullan (Button içermeyen versiyon)
+                    QuickActionButtonContent(
                         title: "Rezervasyonlar",
                         icon: "list.clipboard.fill",
                         color: .blue
                     )
                 }
+                .buttonStyle(.plain)
                 
+                // Raporlar - NavigationLink ile
                 NavigationLink {
                     AdminReportsView()
                 } label: {
-                    QuickActionButton(
+                    // QuickActionButtonContent kullan (Button içermeyen versiyon)
+                    QuickActionButtonContent(
                         title: "Raporlar",
                         icon: "chart.bar.fill",
                         color: .purple
                     )
                 }
+                .buttonStyle(.plain)
             }
+        }
+    }
+    
+    // MARK: - Handle Add Pitch Tapped
+    private func handleAddPitchTapped() {
+        if viewModel.facilities.isEmpty {
+            // Hiç tesis yok - uyarı göster
+            showNoFacilityAlert = true
+        } else if viewModel.facilities.count == 1 {
+            // Tek tesis var - direkt saha ekleme aç
+            selectedFacilityForPitch = viewModel.facilities.first
+            showAddPitch = true
+        } else {
+            // Birden fazla tesis var - seçim yaptır
+            showFacilitySelector = true
         }
     }
     
@@ -253,7 +313,7 @@ struct AdminDashboardView: View {
             
             // Add Facility Button
             Button {
-                // Add new facility
+                showAddFacility = true
             } label: {
                 HStack {
                     Image(systemName: "plus.circle.fill")
@@ -271,6 +331,64 @@ struct AdminDashboardView: View {
     }
 }
 
+// MARK: - Facility Selector Sheet
+struct FacilitySelectorSheet: View {
+    let facilities: [Facility]
+    let onSelect: (Facility) -> Void
+    
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            List(facilities) { facility in
+                Button {
+                    onSelect(facility)
+                } label: {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color(hex: "2E7D32").opacity(0.1))
+                                .frame(width: 44, height: 44)
+                            
+                            Image(systemName: "sportscourt.fill")
+                                .foregroundColor(Color(hex: "2E7D32"))
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(facility.name)
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.primary)
+                            
+                            Text(facility.address)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                        }
+                        
+                        Spacer()
+                        
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+            .navigationTitle("Tesis Seçin")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("İptal") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+}
+
 // MARK: - Admin Dashboard ViewModel
 @MainActor
 final class AdminDashboardViewModel: ObservableObject {
@@ -279,38 +397,50 @@ final class AdminDashboardViewModel: ObservableObject {
     @Published var todayBookings: [Booking] = []
     @Published var facilities: [Facility] = []
     @Published var isLoading = false
+    @Published var errorMessage = ""
+    @Published var showError = false
     
     private let adminService = AdminService.shared
     
     func loadData() async {
         isLoading = true
         
-        // Mock data yükle
-        facilities = adminService.loadMockAdminFacilities()
-        todayBookings = adminService.loadMockAdminBookings().filter {
-            Calendar.current.isDateInToday($0.date)
+        do {
+            // Gerçek Firebase verileri
+            stats = try await adminService.fetchDashboardStats()
+            facilities = try await adminService.fetchMyFacilities()
+            
+            // Bugünkü rezervasyonlar
+            todayBookings = adminService.todayBookings
+            
+        } catch {
+            errorMessage = error.localizedDescription
+            showError = true
         }
-        
-        // Stats güncelle
-        stats.totalFacilities = facilities.count
-        stats.todayBookings = todayBookings.count
-        stats.pendingBookings = adminService.loadMockAdminBookings().filter { $0.status == .pending }.count
-        stats.monthlyRevenue = 15750
-        stats.averageRating = 4.8
         
         isLoading = false
     }
     
     func completeBooking(_ booking: Booking) async {
         guard let id = booking.id else { return }
-        try? await adminService.completeBooking(bookingId: id)
-        await loadData()
+        do {
+            try await adminService.completeBooking(bookingId: id)
+            await loadData()
+        } catch {
+            errorMessage = "Rezervasyon tamamlanamadı: \(error.localizedDescription)"
+            showError = true
+        }
     }
     
     func markAsNoShow(_ booking: Booking) async {
         guard let id = booking.id else { return }
-        try? await adminService.markAsNoShow(bookingId: id)
-        await loadData()
+        do {
+            try await adminService.markAsNoShow(bookingId: id)
+            await loadData()
+        } catch {
+            errorMessage = "İşlem başarısız: \(error.localizedDescription)"
+            showError = true
+        }
     }
 }
 
@@ -349,6 +479,32 @@ struct AdminStatCard: View {
     }
 }
 
+// MARK: - QuickActionButtonContent (NavigationLink label için - Button içermez)
+struct QuickActionButtonContent: View {
+    let title: String
+    let icon: String
+    let color: Color
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.title2)
+                .foregroundColor(color)
+            
+            Text(title)
+                .font(.caption)
+                .fontWeight(.medium)
+                .foregroundColor(.primary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 16)
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
+        .shadow(color: .black.opacity(0.03), radius: 8)
+    }
+}
+
+// MARK: - QuickActionButton (Action callback için - Button içerir)
 struct QuickActionButton: View {
     let title: String
     let icon: String
@@ -359,21 +515,11 @@ struct QuickActionButton: View {
         Button {
             action?()
         } label: {
-            VStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.title2)
-                    .foregroundColor(color)
-                
-                Text(title)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(.primary)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(Color(.systemBackground))
-            .cornerRadius(12)
-            .shadow(color: .black.opacity(0.03), radius: 8)
+            QuickActionButtonContent(
+                title: title,
+                icon: icon,
+                color: color
+            )
         }
         .buttonStyle(.plain)
     }
@@ -450,6 +596,7 @@ struct AdminBookingCard: View {
                         .background(Color.green)
                         .cornerRadius(8)
                     }
+                    .buttonStyle(.plain)
                     
                     Button {
                         onNoShow?()
@@ -466,6 +613,7 @@ struct AdminBookingCard: View {
                         .background(Color.red)
                         .cornerRadius(8)
                     }
+                    .buttonStyle(.plain)
                 }
             }
         }

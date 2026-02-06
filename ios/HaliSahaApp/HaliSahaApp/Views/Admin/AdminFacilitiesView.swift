@@ -18,32 +18,72 @@ struct AdminFacilitiesView: View {
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 16) {
-                ForEach(viewModel.facilities) { facility in
-                    NavigationLink {
-                        AdminFacilityDetailView(facility: facility)
-                    } label: {
-                        AdminFacilityListCard(facility: facility)
+                if viewModel.isLoading {
+                    ProgressView("Tesisler yükleniyor...")
+                        .padding()
+                } else if viewModel.facilities.isEmpty {
+                    // Boş durum
+                    VStack(spacing: 16) {
+                        Image(systemName: "sportscourt")
+                            .font(.system(size: 60))
+                            .foregroundColor(.secondary)
+                        
+                        Text("Henüz Tesis Eklemediniz")
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                        
+                        Text("İlk tesisinizi ekleyerek başlayın")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        
+                        Button {
+                            showAddFacility = true
+                        } label: {
+                            HStack {
+                                Image(systemName: "plus.circle.fill")
+                                Text("Tesis Ekle")
+                            }
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color(hex: "2E7D32"))
+                            .cornerRadius(12)
+                        }
+                        .padding(.horizontal, 40)
                     }
-                    .buttonStyle(.plain)
+                    .frame(maxHeight: .infinity)
+                    .padding(.top, 100)
+                } else {
+                    ForEach(viewModel.facilities) { facility in
+                        NavigationLink {
+                            AdminFacilityDetailView(facility: facility)
+                        } label: {
+                            AdminFacilityListCard(facility: facility)
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
                 
-                // Add Button
-                Button {
-                    showAddFacility = true
-                } label: {
-                    HStack {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.title2)
-                        Text("Yeni Tesis Ekle")
-                            .fontWeight(.medium)
+                // Add Button (eğer tesis varsa)
+                if !viewModel.facilities.isEmpty {
+                    Button {
+                        showAddFacility = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.title2)
+                            Text("Yeni Tesis Ekle")
+                                .fontWeight(.medium)
+                        }
+                        .foregroundColor(Color(hex: "2E7D32"))
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(Color(hex: "2E7D32"), style: StrokeStyle(lineWidth: 2, dash: [8]))
+                        )
                     }
-                    .foregroundColor(Color(hex: "2E7D32"))
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(Color(hex: "2E7D32"), style: StrokeStyle(lineWidth: 2, dash: [8]))
-                    )
                 }
             }
             .padding()
@@ -52,6 +92,24 @@ struct AdminFacilitiesView: View {
         .navigationTitle("Tesislerim")
         .sheet(isPresented: $showAddFacility) {
             AddFacilityView()
+        }
+        .onChange(of: showAddFacility) { oldValue, newValue in
+            // Sheet kapandığında listeyi yenile
+            if oldValue == true && newValue == false {
+                Task {
+                    // Memory cache'i temizle (yeni görseller için)
+                    await ImageCacheService.shared.clearMemoryCache()
+                    await viewModel.refreshFacilities()
+                }
+            }
+        }
+        .refreshable {
+            await viewModel.refreshFacilities()
+        }
+        .alert("Hata", isPresented: $viewModel.showError) {
+            Button("Tamam", role: .cancel) {}
+        } message: {
+            Text(viewModel.errorMessage)
         }
         .task {
             await viewModel.loadFacilities()
@@ -64,13 +122,30 @@ struct AdminFacilitiesView: View {
 final class AdminFacilitiesViewModel: ObservableObject {
     @Published var facilities: [Facility] = []
     @Published var isLoading = false
+    @Published var errorMessage = ""
+    @Published var showError = false
     
     private let adminService = AdminService.shared
     
     func loadFacilities() async {
         isLoading = true
-        facilities = adminService.loadMockAdminFacilities()
+        errorMessage = ""
+        
+        do {
+            facilities = try await adminService.fetchMyFacilities()
+        } catch {
+            errorMessage = error.localizedDescription
+            showError = true
+            facilities = [] // Hata durumunda boş liste
+        }
+        
         isLoading = false
+    }
+    
+    func refreshFacilities() async {
+        // Önce memory cache'i temizle
+        await ImageCacheService.shared.clearMemoryCache()
+        await loadFacilities()
     }
 }
 
@@ -78,19 +153,22 @@ final class AdminFacilitiesViewModel: ObservableObject {
 struct AdminFacilityListCard: View {
     let facility: Facility
     
+    @State private var showFullScreenImages = false
+    @State private var selectedImageIndex = 0
+    
     var body: some View {
         VStack(spacing: 16) {
+            // DEBUG - Konsola facility bilgilerini yazdır
+            let _ = print("🔍 Facility: \(facility.name), ID: \(facility.id ?? "nil"), Images: \(facility.images)")
+            
             // Header
             HStack {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(hex: "2E7D32").opacity(0.1))
-                        .frame(width: 70, height: 70)
-                    
-                    Image(systemName: "sportscourt.fill")
-                        .font(.title)
-                        .foregroundColor(Color(hex: "2E7D32"))
-                }
+                // Facility Image - Güncellendi
+                CompactImageGallery(
+                    images: facility.images,
+                    size: 70,
+                    placeholder: "sportscourt.fill"
+                )
                 
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
@@ -185,10 +263,17 @@ struct QuickStat: View {
 // MARK: - Admin Facility Detail View
 struct AdminFacilityDetailView: View {
     
+    @Environment(\.dismiss) private var dismiss
+    
     let facility: Facility
     @StateObject private var viewModel: AdminFacilityDetailViewModel
-    @State private var showEditFacility = false
+    
+    // Sheet States
     @State private var showAddPitch = false
+    @State private var showEditPitch = false
+    @State private var showEditHours = false
+    @State private var selectedPitchForEdit: Pitch?
+    @State private var navigateToEditFacility = false
     
     init(facility: Facility) {
         self.facility = facility
@@ -198,6 +283,9 @@ struct AdminFacilityDetailView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
+                // Fotoğraf Galerisi - YENİ
+                imageGallerySection
+                
                 // Facility Info Card
                 facilityInfoCard
                 
@@ -220,64 +308,102 @@ struct AdminFacilityDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    showEditFacility = true
+                NavigationLink {
+                    EditFacilityView(facility: facility) {
+                        // Tesis silindiğinde detay sayfasından çık
+                        dismiss()
+                    }
                 } label: {
                     Text("Düzenle")
                         .foregroundColor(Color(hex: "2E7D32"))
                 }
             }
         }
-        .sheet(isPresented: $showEditFacility) {
-            EditFacilityView(facility: facility)
-        }
+        // MARK: - Sheets
         .sheet(isPresented: $showAddPitch) {
             AddPitchView(facilityId: facility.id ?? "")
+        }
+        .onChange(of: showAddPitch) { oldValue, newValue in
+            if oldValue == true && newValue == false {
+                Task {
+                    await ImageCacheService.shared.clearMemoryCache()
+                    await viewModel.loadPitches()
+                }
+            }
+        }
+        .sheet(isPresented: $showEditPitch) {
+            if let pitch = selectedPitchForEdit {
+                EditPitchView(pitch: pitch, facilityId: facility.id ?? "")
+            }
+        }
+        .onChange(of: showEditPitch) { oldValue, newValue in
+            if oldValue == true && newValue == false {
+                Task {
+                    await ImageCacheService.shared.clearMemoryCache()
+                    await viewModel.loadPitches()
+                }
+            }
+        }
+        .sheet(isPresented: $showEditHours) {
+            OperatingHoursEditSheet(facility: facility) {
+                // Refresh after save
+                Task {
+                    await viewModel.loadPitches()
+                }
+            }
         }
         .task {
             await viewModel.loadPitches()
         }
+        // selectedPitchForEdit değiştiğinde sheet'i aç
+        .onChange(of: selectedPitchForEdit) { _, newValue in
+            if newValue != nil {
+                showEditPitch = true
+            }
+        }
+    }
+    
+    // MARK: - Image Gallery Section (YENİ)
+    private var imageGallerySection: some View {
+        ImageGalleryView(
+            images: facility.images,
+            height: 220,
+            cornerRadius: 16,
+            placeholder: "sportscourt.fill"
+        )
     }
     
     // MARK: - Facility Info Card
     private var facilityInfoCard: some View {
         VStack(spacing: 16) {
-            // Image placeholder
-            ZStack {
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(
-                        LinearGradient(
-                            colors: [Color(hex: "2E7D32"), Color(hex: "1B5E20")],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(height: 150)
-                
-                Image(systemName: "sportscourt.fill")
-                    .font(.system(size: 50))
-                    .foregroundColor(.white.opacity(0.3))
-                
-                // Status Badge
-                VStack {
-                    HStack {
-                        Spacer()
-                        Text(facility.status.displayName)
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(facility.status.color)
-                            .cornerRadius(20)
-                            .padding()
-                    }
-                    Spacer()
-                }
-            }
-            
-            // Info
+            // Info - Fotoğraf kısmı kaldırıldı, galeri ayrı section oldu
             VStack(alignment: .leading, spacing: 12) {
+                // Status Badge
+                HStack {
+                    Text(facility.status.displayName)
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(facility.status.color)
+                        .cornerRadius(20)
+                    
+                    Spacer()
+                    
+                    // Rating
+                    HStack(spacing: 4) {
+                        Image(systemName: "star.fill")
+                            .foregroundColor(.orange)
+                        Text(facility.formattedRating)
+                            .fontWeight(.semibold)
+                        Text("(\(facility.totalReviews))")
+                            .foregroundColor(.secondary)
+                    }
+                    .font(.subheadline)
+                }
+                
+                // Address
                 HStack {
                     Image(systemName: "mappin.circle.fill")
                         .foregroundColor(Color(hex: "2E7D32"))
@@ -285,17 +411,11 @@ struct AdminFacilityDetailView: View {
                         .font(.subheadline)
                 }
                 
+                // Phone
                 HStack {
                     Image(systemName: "phone.fill")
                         .foregroundColor(Color(hex: "2E7D32"))
                     Text(facility.phone)
-                        .font(.subheadline)
-                }
-                
-                HStack {
-                    Image(systemName: "star.fill")
-                        .foregroundColor(.orange)
-                    Text("\(facility.formattedRating) (\(facility.totalReviews) değerlendirme)")
                         .font(.subheadline)
                 }
             }
@@ -364,7 +484,8 @@ struct AdminFacilityDetailView: View {
             
             ForEach(viewModel.pitches) { pitch in
                 PitchManagementCard(pitch: pitch) {
-                    // Edit pitch
+                    // Edit pitch - Sheet'i aç
+                    selectedPitchForEdit = pitch
                 } onDelete: {
                     Task {
                         await viewModel.deletePitch(pitch)
@@ -424,21 +545,234 @@ struct AdminFacilityDetailView: View {
                 Spacer()
                 
                 Button("Düzenle") {
-                    // Edit hours
+                    showEditHours = true
                 }
                 .font(.subheadline)
                 .foregroundColor(Color(hex: "2E7D32"))
             }
             
             VStack(spacing: 8) {
-                OperatingHourRow(day: "Pazartesi - Cuma", hours: "09:00 - 23:00")
-                OperatingHourRow(day: "Cumartesi", hours: "08:00 - 00:00")
-                OperatingHourRow(day: "Pazar", hours: "08:00 - 22:00")
+                OperatingHourRow(day: "Pazartesi - Cuma", hours: "\(facility.operatingHours.mondayOpen) - \(facility.operatingHours.mondayClose)")
+                OperatingHourRow(day: "Cumartesi", hours: "\(facility.operatingHours.saturdayOpen) - \(facility.operatingHours.saturdayClose)")
+                OperatingHourRow(day: "Pazar", hours: "\(facility.operatingHours.sundayOpen) - \(facility.operatingHours.sundayClose)")
             }
             .padding()
             .background(Color(.systemBackground))
             .cornerRadius(12)
         }
+    }
+}
+
+// MARK: - Operating Hours Edit Sheet
+struct OperatingHoursEditSheet: View {
+    
+    let facility: Facility
+    var onSave: (() -> Void)?
+    
+    @Environment(\.dismiss) private var dismiss
+    @StateObject private var viewModel: OperatingHoursEditViewModel
+    
+    init(facility: Facility, onSave: (() -> Void)? = nil) {
+        self.facility = facility
+        self.onSave = onSave
+        _viewModel = StateObject(wrappedValue: OperatingHoursEditViewModel(facility: facility))
+    }
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Hafta İçi") {
+                    OperatingHourEditRow(
+                        day: "Pazartesi",
+                        openTime: $viewModel.mondayOpen,
+                        closeTime: $viewModel.mondayClose
+                    )
+                    
+                    OperatingHourEditRow(
+                        day: "Salı",
+                        openTime: $viewModel.tuesdayOpen,
+                        closeTime: $viewModel.tuesdayClose
+                    )
+                    
+                    OperatingHourEditRow(
+                        day: "Çarşamba",
+                        openTime: $viewModel.wednesdayOpen,
+                        closeTime: $viewModel.wednesdayClose
+                    )
+                    
+                    OperatingHourEditRow(
+                        day: "Perşembe",
+                        openTime: $viewModel.thursdayOpen,
+                        closeTime: $viewModel.thursdayClose
+                    )
+                    
+                    OperatingHourEditRow(
+                        day: "Cuma",
+                        openTime: $viewModel.fridayOpen,
+                        closeTime: $viewModel.fridayClose
+                    )
+                }
+                
+                Section("Hafta Sonu") {
+                    OperatingHourEditRow(
+                        day: "Cumartesi",
+                        openTime: $viewModel.saturdayOpen,
+                        closeTime: $viewModel.saturdayClose
+                    )
+                    
+                    OperatingHourEditRow(
+                        day: "Pazar",
+                        openTime: $viewModel.sundayOpen,
+                        closeTime: $viewModel.sundayClose
+                    )
+                }
+                
+                Section {
+                    Button("Tüm Günleri Aynı Yap") {
+                        viewModel.applyToAllDays()
+                    }
+                    .foregroundColor(Color(hex: "2E7D32"))
+                }
+            }
+            .navigationTitle("Çalışma Saatleri")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("İptal") {
+                        dismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Kaydet") {
+                        Task {
+                            await viewModel.saveHours()
+                            onSave?()
+                            dismiss()
+                        }
+                    }
+                    .fontWeight(.semibold)
+                    .disabled(viewModel.isLoading)
+                }
+            }
+            .overlay {
+                if viewModel.isLoading {
+                    ProgressView()
+                        .padding()
+                        .background(.regularMaterial)
+                        .cornerRadius(12)
+                }
+            }
+            .alert("Hata", isPresented: $viewModel.showError) {
+                Button("Tamam", role: .cancel) {}
+            } message: {
+                Text(viewModel.errorMessage)
+            }
+        }
+    }
+}
+
+// MARK: - Operating Hours Edit ViewModel
+@MainActor
+final class OperatingHoursEditViewModel: ObservableObject {
+    
+    private let facility: Facility
+    private let adminService = AdminService.shared
+    
+    // Operating Hours
+    @Published var mondayOpen: String
+    @Published var mondayClose: String
+    @Published var tuesdayOpen: String
+    @Published var tuesdayClose: String
+    @Published var wednesdayOpen: String
+    @Published var wednesdayClose: String
+    @Published var thursdayOpen: String
+    @Published var thursdayClose: String
+    @Published var fridayOpen: String
+    @Published var fridayClose: String
+    @Published var saturdayOpen: String
+    @Published var saturdayClose: String
+    @Published var sundayOpen: String
+    @Published var sundayClose: String
+    
+    // State
+    @Published var isLoading = false
+    @Published var showError = false
+    @Published var errorMessage = ""
+    
+    init(facility: Facility) {
+        self.facility = facility
+        
+        // Mevcut saatleri yükle
+        self.mondayOpen = facility.operatingHours.mondayOpen
+        self.mondayClose = facility.operatingHours.mondayClose
+        self.tuesdayOpen = facility.operatingHours.tuesdayOpen
+        self.tuesdayClose = facility.operatingHours.tuesdayClose
+        self.wednesdayOpen = facility.operatingHours.wednesdayOpen
+        self.wednesdayClose = facility.operatingHours.wednesdayClose
+        self.thursdayOpen = facility.operatingHours.thursdayOpen
+        self.thursdayClose = facility.operatingHours.thursdayClose
+        self.fridayOpen = facility.operatingHours.fridayOpen
+        self.fridayClose = facility.operatingHours.fridayClose
+        self.saturdayOpen = facility.operatingHours.saturdayOpen
+        self.saturdayClose = facility.operatingHours.saturdayClose
+        self.sundayOpen = facility.operatingHours.sundayOpen
+        self.sundayClose = facility.operatingHours.sundayClose
+    }
+    
+    func applyToAllDays() {
+        tuesdayOpen = mondayOpen
+        tuesdayClose = mondayClose
+        wednesdayOpen = mondayOpen
+        wednesdayClose = mondayClose
+        thursdayOpen = mondayOpen
+        thursdayClose = mondayClose
+        fridayOpen = mondayOpen
+        fridayClose = mondayClose
+        saturdayOpen = mondayOpen
+        saturdayClose = mondayClose
+        sundayOpen = mondayOpen
+        sundayClose = mondayClose
+    }
+    
+    func saveHours() async {
+        guard let facilityId = facility.id else {
+            errorMessage = "Tesis ID bulunamadı"
+            showError = true
+            return
+        }
+        
+        isLoading = true
+        
+        let operatingHours = OperatingHours(
+            mondayOpen: mondayOpen,
+            mondayClose: mondayClose,
+            tuesdayOpen: tuesdayOpen,
+            tuesdayClose: tuesdayClose,
+            wednesdayOpen: wednesdayOpen,
+            wednesdayClose: wednesdayClose,
+            thursdayOpen: thursdayOpen,
+            thursdayClose: thursdayClose,
+            fridayOpen: fridayOpen,
+            fridayClose: fridayClose,
+            saturdayOpen: saturdayOpen,
+            saturdayClose: saturdayClose,
+            sundayOpen: sundayOpen,
+            sundayClose: sundayClose
+        )
+        
+        var updatedFacility = facility
+        updatedFacility.operatingHours = operatingHours
+        updatedFacility.updatedAt = Date()
+        
+        do {
+            try await adminService.updateFacility(updatedFacility)
+        } catch {
+            errorMessage = error.localizedDescription
+            showError = true
+        }
+        
+        isLoading = false
     }
 }
 
@@ -448,6 +782,8 @@ final class AdminFacilityDetailViewModel: ObservableObject {
     
     @Published var pitches: [Pitch] = []
     @Published var isLoading = false
+    @Published var errorMessage = ""
+    @Published var showError = false
     
     private let facility: Facility
     private let adminService = AdminService.shared
@@ -457,37 +793,31 @@ final class AdminFacilityDetailViewModel: ObservableObject {
     }
     
     func loadPitches() async {
-        // Mock pitches
-        pitches = [
-            Pitch(
-                id: "pitch1",
-                facilityId: facility.id ?? "",
-                name: "Saha 1",
-                description: "Ana saha",
-                pitchType: .outdoor,
-                surfaceType: .syntheticGrass,
-                size: .fiveASide,
-                capacity: 10,
-                pricing: PitchPricing(daytimePrice: 500, eveningPrice: 650)
-            ),
-            Pitch(
-                id: "pitch2",
-                facilityId: facility.id ?? "",
-                name: "Saha 2",
-                description: "Kapalı saha",
-                pitchType: .indoor,
-                surfaceType: .syntheticGrass,
-                size: .fiveASide,
-                capacity: 10,
-                pricing: PitchPricing(daytimePrice: 600, eveningPrice: 750)
-            )
-        ]
+        guard let facilityId = facility.id else { return }
+        
+        isLoading = true
+        
+        do {
+            pitches = try await adminService.fetchPitches(for: facilityId)
+        } catch {
+            errorMessage = error.localizedDescription
+            showError = true
+            pitches = []
+        }
+        
+        isLoading = false
     }
     
     func deletePitch(_ pitch: Pitch) async {
         guard let pitchId = pitch.id, let facilityId = facility.id else { return }
-        try? await adminService.deletePitch(pitchId: pitchId, facilityId: facilityId)
-        await loadPitches()
+        
+        do {
+            try await adminService.deletePitch(pitchId: pitchId, facilityId: facilityId)
+            await loadPitches() // Listeyi yenile
+        } catch {
+            errorMessage = error.localizedDescription
+            showError = true
+        }
     }
 }
 
@@ -522,11 +852,32 @@ struct PitchManagementCard: View {
     var onDelete: () -> Void
     
     var body: some View {
-        HStack {
+        HStack(spacing: 12) {
+            // Pitch Image - YENİ
+            CompactImageGallery(
+                images: pitch.images,
+                size: 60,
+                placeholder: "sportscourt"
+            )
+            
             VStack(alignment: .leading, spacing: 6) {
-                Text(pitch.name)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
+                HStack {
+                    Text(pitch.name)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    
+                    Spacer()
+                    
+                    // Status Badge
+                    Text(pitch.isActive ? "Aktif" : "Pasif")
+                        .font(.caption2)
+                        .fontWeight(.medium)
+                        .foregroundColor(pitch.isActive ? Color(hex: "2E7D32") : .secondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(pitch.isActive ? Color(hex: "2E7D32").opacity(0.1) : Color(.systemGray5))
+                        .cornerRadius(8)
+                }
                 
                 HStack(spacing: 8) {
                     Label(pitch.size.displayName, systemImage: "person.2")
@@ -611,57 +962,6 @@ struct OperatingHourRow: View {
                 .font(.subheadline)
                 .fontWeight(.medium)
                 .foregroundColor(Color(hex: "2E7D32"))
-        }
-    }
-}
-
-// MARK: - Placeholder Views
-struct AddFacilityView: View {
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        NavigationStack {
-            Text("Yeni Tesis Formu")
-                .navigationTitle("Yeni Tesis")
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button("İptal") { dismiss() }
-                    }
-                }
-        }
-    }
-}
-
-struct EditFacilityView: View {
-    let facility: Facility
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        NavigationStack {
-            Text("Tesis Düzenleme Formu")
-                .navigationTitle("Tesisi Düzenle")
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button("İptal") { dismiss() }
-                    }
-                }
-        }
-    }
-}
-
-struct AddPitchView: View {
-    let facilityId: String
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        NavigationStack {
-            Text("Yeni Saha Formu")
-                .navigationTitle("Yeni Saha")
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button("İptal") { dismiss() }
-                    }
-                }
         }
     }
 }

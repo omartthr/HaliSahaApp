@@ -230,6 +230,25 @@ struct AppStrings {
     static let noNotifications = "Bildiriminiz yok"
 }
 
+// MARK: - Storage Constants
+struct StorageConstants {
+    static let maxImageSize: Int64 = 5 * 1024 * 1024 // 5MB
+    static let compressionQuality: CGFloat = 0.7
+    static let maxFacilityImages = 5
+    static let maxPitchImages = 3
+}
+
+// MARK: - Image Cache Constants
+struct ImageCacheConstants {
+    static let maxMemoryCacheMB = 100
+    static let maxDiskCacheMB = 500
+    static let cacheExpirationDays = 7
+    static let thumbnailSize = CGSize(width: 200, height: 200)
+    static let mediumSize = CGSize(width: 600, height: 600)
+    static let maxConcurrentDownloads = 5
+    static let maxPreloadCount = 20
+}
+
 // MARK: - Color Extension for Hex
 extension Color {
     init(hex: String) {

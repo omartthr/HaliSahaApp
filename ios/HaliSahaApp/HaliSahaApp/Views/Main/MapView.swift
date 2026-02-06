@@ -194,24 +194,99 @@ struct MapView: View {
     
     // MARK: - Facility Detail Sheet
     private func facilityDetailSheet(facility: Facility) -> some View {
-        VStack {
-            Spacer()
+        VStack(spacing: 0) {
+            // Handle
+            Capsule()
+                .fill(Color(.systemGray4))
+                .frame(width: 36, height: 5)
+                .padding(.top, 8)
             
-            FacilityMapCard(
-                facility: facility,
-                distance: viewModel.distanceString(for: facility),
-                onClose: {
-                    viewModel.selectFacility(nil)
-                },
-                onNavigate: {
-                    openInMaps(facility: facility)
+            HStack(spacing: 12) {
+                // Image - Güncellendi
+                CompactImageGallery(
+                    images: facility.images,
+                    size: 80,
+                    placeholder: "sportscourt.fill"
+                )
+                
+                // Info
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(facility.name)
+                        .font(.headline)
+                        .lineLimit(1)
+                    
+                    HStack(spacing: 4) {
+                        Image(systemName: "star.fill")
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                        Text(facility.formattedRating)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        Text("(\(facility.totalReviews))")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    HStack(spacing: 4) {
+                        Image(systemName: "mappin.circle.fill")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Text(facility.address)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+                    
+                    // Amenities
+                    HStack(spacing: 6) {
+                        ForEach(facility.amenities.activeAmenities.prefix(4), id: \.name) { amenity in
+                            Text(amenity.icon)
+                                .font(.caption)
+                        }
+                        
+                        if facility.amenities.activeAmenities.count > 4 {
+                            Text("+\(facility.amenities.activeAmenities.count - 4)")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                    }
                 }
-            )
-            .padding(.horizontal)
-            .padding(.bottom, 100)
-            .transition(.move(edge: .bottom).combined(with: .opacity))
+                
+                Spacer()
+                
+                // Close button
+                Button {
+                    withAnimation {
+                        viewModel.selectFacility(nil)
+                    }
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            
+            // Action Button
+            NavigationLink {
+                FacilityDetailView(facility: facility)
+            } label: {
+                Text("Detayları Gör")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color(hex: "2E7D32"))
+                    .cornerRadius(12)
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 16)
         }
-        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: viewModel.showFacilityDetail)
+        .background(Color(.systemBackground))
+        .cornerRadius(20)
+        .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: -5)
     }
     
     // MARK: - Open in Maps
@@ -283,21 +358,17 @@ struct FacilityMapCard: View {
         VStack(spacing: 0) {
             // Handle
             Capsule()
-                .fill(Color.gray.opacity(0.3))
-                .frame(width: 40, height: 5)
+                .fill(Color(.systemGray4))
+                .frame(width: 36, height: 5)
                 .padding(.top, 8)
             
             HStack(spacing: 12) {
-                // Image Placeholder
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(hex: "2E7D32").opacity(0.1))
-                        .frame(width: 80, height: 80)
-                    
-                    Image(systemName: "sportscourt.fill")
-                        .font(.system(size: 30))
-                        .foregroundColor(Color(hex: "2E7D32").opacity(0.5))
-                }
+                // Image - Güncellendi
+                CompactImageGallery(
+                    images: facility.images,
+                    size: 80,
+                    placeholder: "sportscourt.fill"
+                )
                 
                 // Info
                 VStack(alignment: .leading, spacing: 6) {
@@ -318,12 +389,13 @@ struct FacilityMapCard: View {
                     }
                     
                     HStack(spacing: 4) {
-                        Image(systemName: "location.fill")
+                        Image(systemName: "mappin.circle.fill")
                             .font(.caption)
                             .foregroundColor(.secondary)
-                        Text(distance)
+                        Text(facility.address)
                             .font(.caption)
                             .foregroundColor(.secondary)
+                            .lineLimit(1)
                     }
                     
                     // Amenities
@@ -332,33 +404,32 @@ struct FacilityMapCard: View {
                             Text(amenity.icon)
                                 .font(.caption)
                         }
+                        
+                        if facility.amenities.activeAmenities.count > 4 {
+                            Text("+\(facility.amenities.activeAmenities.count - 4)")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
                     }
                 }
                 
                 Spacer()
                 
-                // Actions
-                VStack(spacing: 16) {
-                    Button(action: onClose) {
-                        Image(systemName: "xmark")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .padding(8)
-                            .background(Color(.systemGray6))
-                            .clipShape(Circle())
+                // Close button
+                Button {
+                    withAnimation {
+                        onClose()
                     }
-                    
-                    
-                    Button(action: onNavigate) {
-                        Image(systemName: "arrow.triangle.turn.up.right.circle.fill")
-                            .font(.title)
-                            .foregroundColor(Color(hex: "2E7D32"))
-                    }
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(.secondary)
                 }
             }
-            .padding(16)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
             
-            // Detail Button
+            // Action Button
             NavigationLink {
                 FacilityDetailView(facility: facility)
             } label: {

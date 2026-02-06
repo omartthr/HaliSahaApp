@@ -120,10 +120,7 @@ final class AdminService: ObservableObject {
             
         } catch {
             isLoading = false
-            // Mock data dön
-            let mockFacilities = loadMockAdminFacilities()
-            self.myFacilities = mockFacilities
-            return mockFacilities
+            throw AdminError.operationFailed("Tesisler yüklenirken hata: \(error.localizedDescription)")
         }
     }
     
@@ -160,9 +157,60 @@ final class AdminService: ObservableObject {
             throw AdminError.invalidData
         }
         
-        try firebaseService.facilitiesCollection
-            .document(facilityId)
-            .setData(from: facility, merge: true)
+        // Server-side timestamp ile güncelleme
+        try await firebaseService.updateDocument(
+            in: firebaseService.facilitiesCollection,
+            documentId: facilityId,
+            fields: [
+                "name": facility.name,
+                "description": facility.description,
+                "taxNumber": facility.taxNumber,
+                "phone": facility.phone,
+                "email": facility.email as Any,
+                "address": facility.address,
+                "latitude": facility.latitude,
+                "longitude": facility.longitude,
+                "amenities": try Firestore.Encoder().encode(facility.amenities),
+                "operatingHours": try Firestore.Encoder().encode(facility.operatingHours),
+                "isActive": facility.isActive,
+                FirestoreField.updatedAt: Timestamp(date: Date()) // Server timestamp
+            ]
+        )
+    }
+    
+    // MARK: - Update Denormalized Facility Data
+    @MainActor
+    func updateDenormalizedFacilityData(
+        facilityId: String,
+        newName: String? = nil,
+        newPhone: String? = nil,
+        newAddress: String? = nil
+    ) async throws {
+        // Mevcut rezervasyonları bul
+        let query = firebaseService.bookingsCollection
+            .whereField(FirestoreField.facilityId, isEqualTo: facilityId)
+            .whereField(FirestoreField.date, isGreaterThanOrEqualTo: Timestamp(date: Date())) // Gelecek rezervasyonlar
+        
+        let bookings: [Booking] = try await firebaseService.fetchDocuments(query: query)
+        
+        // Batch update
+        let batch = firebaseService.db.batch()
+        
+        for booking in bookings {
+            guard let bookingId = booking.id else { continue }
+            
+            var updates: [String: Any] = [:]
+            if let name = newName { updates["facilityName"] = name }
+            if let phone = newPhone { updates["facilityPhone"] = phone }
+            if let address = newAddress { updates["facilityAddress"] = address }
+            
+            if !updates.isEmpty {
+                let ref = firebaseService.bookingsCollection.document(bookingId)
+                batch.updateData(updates, forDocument: ref)
+            }
+        }
+        
+        try await batch.commit()
     }
     
     // MARK: - Create Pitch
@@ -186,10 +234,51 @@ final class AdminService: ObservableObject {
             throw AdminError.invalidData
         }
         
-
-        try firebaseService.pitchesCollection(for: facilityId)
-            .document(pitchId)
-            .setData(from: pitch, merge: true)
+        // Server-side timestamp ile güncelleme
+        try await firebaseService.updateDocument(
+            in: firebaseService.pitchesCollection(for: facilityId),
+            documentId: pitchId,
+            fields: [
+                "name": pitch.name,
+                "description": pitch.description as Any,
+                "pitchType": pitch.pitchType.rawValue,
+                "surfaceType": pitch.surfaceType.rawValue,
+                "size": pitch.size.rawValue,
+                "capacity": pitch.capacity,
+                "isActive": pitch.isActive,
+                "pricing": try Firestore.Encoder().encode(pitch.pricing),
+                FirestoreField.updatedAt: Timestamp(date: Date())
+            ]
+        )
+        
+        // Pitch adı değiştiyse denormalized data'yı güncelle
+        let nameChanged = true // Önceki adı karşılaştırmak için ViewModel'den parametre gerekli
+        if nameChanged {
+            try await updateDenormalizedPitchData(pitchId: pitchId, newName: pitch.name)
+        }
+    }
+    
+    // MARK: - Update Denormalized Pitch Data
+    @MainActor
+    func updateDenormalizedPitchData(
+        pitchId: String,
+        newName: String
+    ) async throws {
+        let query = firebaseService.bookingsCollection
+            .whereField(FirestoreField.pitchId, isEqualTo: pitchId)
+            .whereField(FirestoreField.date, isGreaterThanOrEqualTo: Timestamp(date: Date()))
+        
+        let bookings: [Booking] = try await firebaseService.fetchDocuments(query: query)
+        
+        let batch = firebaseService.db.batch()
+        
+        for booking in bookings {
+            guard let bookingId = booking.id else { continue }
+            let ref = firebaseService.bookingsCollection.document(bookingId)
+            batch.updateData(["pitchName": newName], forDocument: ref)
+        }
+        
+        try await batch.commit()
     }
     
     // MARK: - Delete Pitch
@@ -199,6 +288,75 @@ final class AdminService: ObservableObject {
             from: firebaseService.pitchesCollection(for: facilityId),
             documentId: pitchId
         )
+    }
+    
+    // MARK: - Delete Facility
+    @MainActor
+    func deleteFacility(facilityId: String) async throws {
+        guard let userId = firebaseService.currentUserId else {
+            throw AdminError.notAuthenticated
+        }
+        
+        // 1. Tesisin bu kullanıcıya ait olduğunu doğrula
+        let facility: Facility = try await firebaseService.fetchDocument(
+            from: firebaseService.facilitiesCollection,
+            documentId: facilityId
+        )
+        
+        guard facility.ownerId == userId else {
+            throw AdminError.notAuthorized
+        }
+        
+        // 2. Aktif rezervasyon kontrolü (gelecek rezervasyonları al, status'u client-side filtrele)
+        let futureBookingsQuery = firebaseService.bookingsCollection
+            .whereField(FirestoreField.facilityId, isEqualTo: facilityId)
+            .whereField(FirestoreField.date, isGreaterThanOrEqualTo: Timestamp(date: Date()))
+        
+        let futureBookings: [Booking] = try await firebaseService.fetchDocuments(query: futureBookingsQuery)
+        
+        // Client-side status filtresi (index sorunu olmadan)
+        let activeBookings = futureBookings.filter { booking in
+            booking.status == .pending || booking.status == .confirmed
+        }
+        
+        if !activeBookings.isEmpty {
+            throw AdminError.operationFailed("Bu tesiste \(activeBookings.count) aktif rezervasyon bulunuyor. Önce rezervasyonları iptal edin.")
+        }
+        
+        // 3. Alt sahaları (pitches) sil
+        let pitches = try await fetchPitches(for: facilityId)
+        for pitch in pitches {
+            guard let pitchId = pitch.id else { continue }
+            try await deletePitch(pitchId: pitchId, facilityId: facilityId)
+        }
+        
+        // 4. Geçmiş rezervasyonları sil veya anonim yap (opsiyonel)
+        let allBookingsQuery = firebaseService.bookingsCollection
+            .whereField(FirestoreField.facilityId, isEqualTo: facilityId)
+        
+        let allBookings: [Booking] = try await firebaseService.fetchDocuments(query: allBookingsQuery)
+        let batch = firebaseService.db.batch()
+        
+        for booking in allBookings {
+            guard let bookingId = booking.id else { continue }
+            let ref = firebaseService.bookingsCollection.document(bookingId)
+            // Rezervasyonları silmek yerine tesisi "Silinmiş Tesis" olarak işaretleyebilirsiniz
+            batch.updateData([
+                "facilityName": "[Silinmiş Tesis]",
+                FirestoreField.updatedAt: Timestamp(date: Date())
+            ], forDocument: ref)
+        }
+        
+        try await batch.commit()
+        
+        // 5. Tesisi sil
+        try await firebaseService.deleteDocument(
+            from: firebaseService.facilitiesCollection,
+            documentId: facilityId
+        )
+        
+        // 6. Lokal listeyi güncelle
+        myFacilities.removeAll { $0.id == facilityId }
     }
     
     // MARK: - Fetch Facility Bookings
@@ -250,13 +408,12 @@ final class AdminService: ObservableObject {
             fields: [
                 FirestoreField.status: BookingStatus.cancelled.rawValue,
                 "cancellationReason": reason,
-                "paymentStatus": PaymentStatus.refunded.rawValue,
                 FirestoreField.updatedAt: Timestamp(date: Date())
             ]
         )
     }
     
-    // MARK: - Mark Booking as Completed
+    // MARK: - Complete Booking
     @MainActor
     func completeBooking(bookingId: String) async throws {
         try await firebaseService.updateDocument(
@@ -264,7 +421,6 @@ final class AdminService: ObservableObject {
             documentId: bookingId,
             fields: [
                 FirestoreField.status: BookingStatus.completed.rawValue,
-                "paymentStatus": PaymentStatus.fullyPaid.rawValue,
                 FirestoreField.updatedAt: Timestamp(date: Date())
             ]
         )
@@ -314,6 +470,32 @@ final class AdminService: ObservableObject {
             totalDeposits: totalDeposits,
             totalBookings: totalBookings,
             dailyRevenue: dailyRevenue
+        )
+    }
+    
+    // MARK: - Update Facility Images
+    @MainActor
+    func updateFacilityImages(facilityId: String, images: [String]) async throws {
+        try await firebaseService.updateDocument(
+            in: firebaseService.facilitiesCollection,
+            documentId: facilityId,
+            fields: [
+                "images": images,
+                FirestoreField.updatedAt: Timestamp(date: Date())
+            ]
+        )
+    }
+    
+    // MARK: - Update Pitch Images
+    @MainActor
+    func updatePitchImages(pitchId: String, facilityId: String, images: [String]) async throws {
+        try await firebaseService.updateDocument(
+            in: firebaseService.pitchesCollection(for: facilityId),
+            documentId: pitchId,
+            fields: [
+                "images": images,
+                FirestoreField.updatedAt: Timestamp(date: Date())
+            ]
         )
     }
     

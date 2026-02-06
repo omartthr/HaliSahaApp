@@ -7,60 +7,63 @@
 //  Created by Mehmet Mert Mazıcı on 13.01.2026.
 //
 
-import SwiftUI
 import MapKit
+import SwiftUI
 
 // MARK: - Facility Detail View
 struct FacilityDetailView: View {
-    
+
     // MARK: - Properties
     @StateObject private var viewModel: FacilityDetailViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var showFullDescription = false
     @State private var showAllAmenities = false
     @State private var showGuestAlert = false
-    
+
     // MARK: - Init
     init(facility: Facility) {
         _viewModel = StateObject(wrappedValue: FacilityDetailViewModel(facility: facility))
     }
-    
+
     // MARK: - Body
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
-                // Hero Image
+                // Hero Image - Güncellendi
                 heroSection
-                
+
                 VStack(spacing: 24) {
                     // Header Info
                     headerSection
-                    
+
                     Divider()
-                    
+
                     // Pitches Section
                     pitchesSection
-                    
+
                     Divider()
-                    
-                    // Date Selection
-                    dateSelectionSection
-                    
-                    // Time Slots
-                    timeSlotsSection
-                    
-                    Divider()
-                    
+
+                    // Date Selection & Time Slots - Only show if pitches exist
+                    if viewModel.hasPitches {
+                        // Date Selection
+                        dateSelectionSection
+
+                        // Time Slots
+                        timeSlotsSection
+
+                        Divider()
+                    }
+
                     // Amenities
                     amenitiesSection
-                    
+
                     Divider()
-                    
+
                     // Location
                     locationSection
-                    
+
                     Divider()
-                    
+
                     // Reviews Summary
                     reviewsSummarySection
                 }
@@ -78,7 +81,7 @@ struct FacilityDetailView: View {
                     } label: {
                         Image(systemName: "square.and.arrow.up")
                     }
-                    
+
                     // Favorite
                     Button {
                         Task {
@@ -100,59 +103,55 @@ struct FacilityDetailView: View {
         } message: {
             Text("Rezervasyon yapmak için üye girişi yapmanız gerekiyor.")
         }
+        .navigationDestination(isPresented: $viewModel.showBookingFlow) {
+            BookingFlowView(viewModel: viewModel)
+        }
         .task {
             await viewModel.loadData()
         }
     }
-    
-    // MARK: - Hero Section
+
+    // MARK: - Hero Section - Güncellendi
     private var heroSection: some View {
-        ZStack(alignment: .bottomLeading) {
-            // Placeholder Image
-            LinearGradient(
-                colors: [Color(hex: "2E7D32"), Color(hex: "1B5E20")],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
+        ZStack(alignment: .topLeading) {
+            // Fotoğraf Galerisi
+            ImageGalleryView(
+                images: viewModel.facility.images,
+                height: 280,
+                cornerRadius: 0,
+                placeholder: "sportscourt.fill"
             )
-            .frame(height: 250)
-            .overlay {
-                Image(systemName: "sportscourt.fill")
-                    .font(.system(size: 60))
-                    .foregroundColor(.white.opacity(0.3))
-            }
-            
-            // Gradient overlay
+
+            // Gradient overlay for back button
             LinearGradient(
-                colors: [.clear, .black.opacity(0.5)],
+                colors: [.black.opacity(0.5), .clear],
                 startPoint: .top,
-                endPoint: .bottom
+                endPoint: .center
             )
-            
-            // Rating badge
+            .frame(height: 120)
+
+            // Top Bar - Back Button Only
             HStack {
-                Spacer()
-                VStack {
-                    HStack(spacing: 4) {
-                        Image(systemName: "star.fill")
-                            .font(.caption)
-                        Text(viewModel.facility.formattedRating)
-                            .fontWeight(.bold)
-                        Text("(\(viewModel.facility.totalReviews))")
-                            .font(.caption)
-                    }
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(.ultraThinMaterial)
-                    .cornerRadius(20)
-                    .padding()
-                    
-                    Spacer()
+                // Back Button
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                        .padding(12)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Circle())
                 }
+
+                Spacer()
             }
+            .padding()
+            .padding(.top, 44)
         }
     }
-    
+
     // MARK: - Header Section
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -160,7 +159,7 @@ struct FacilityDetailView: View {
             Text(viewModel.facility.name)
                 .font(.title2)
                 .fontWeight(.bold)
-            
+
             // Address
             HStack(spacing: 6) {
                 Image(systemName: "mappin.circle.fill")
@@ -169,7 +168,7 @@ struct FacilityDetailView: View {
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
-            
+
             // Phone
             HStack(spacing: 6) {
                 Image(systemName: "phone.fill")
@@ -178,14 +177,14 @@ struct FacilityDetailView: View {
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
-            
+
             // Description
             if !viewModel.facility.description.isEmpty {
                 Text(viewModel.facility.description)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .lineLimit(showFullDescription ? nil : 2)
-                
+
                 if viewModel.facility.description.count > 100 {
                     Button(showFullDescription ? "Daha az" : "Devamını oku") {
                         withAnimation {
@@ -196,7 +195,7 @@ struct FacilityDetailView: View {
                     .foregroundColor(Color(hex: "2E7D32"))
                 }
             }
-            
+
             // Tags
             HStack(spacing: 8) {
                 if viewModel.facility.amenities.isIndoor {
@@ -204,48 +203,91 @@ struct FacilityDetailView: View {
                 } else {
                     TagView(text: "Açık Alan", icon: "sun.max.fill")
                 }
-                
+
                 if viewModel.facility.amenities.hasParking {
                     TagView(text: "Otopark", icon: "car.fill", style: .outlined)
                 }
             }
         }
     }
-    
+
     // MARK: - Pitches Section
     private var pitchesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Sahalar")
                 .font(.headline)
-            
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(viewModel.pitches) { pitch in
-                        PitchSelectionCard(
-                            pitch: pitch,
-                            isSelected: viewModel.selectedPitch?.id == pitch.id
-                        ) {
-                            viewModel.selectPitch(pitch)
+
+            if viewModel.hasPitches {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(viewModel.pitches) { pitch in
+                            PitchSelectionCard(
+                                pitch: pitch,
+                                isSelected: viewModel.selectedPitch?.id == pitch.id
+                            ) {
+                                viewModel.selectPitch(pitch)
+                            }
                         }
                     }
                 }
+            } else {
+                // Empty State
+                VStack(spacing: 12) {
+                    Image(systemName: "sportscourt")
+                        .font(.system(size: 40))
+                        .foregroundColor(.secondary)
+
+                    Text("Henüz saha bilgisi eklenmemiş")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+
+                    Text("Bu tesis henüz saha detaylarını sisteme tanımlamamış.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+
+                    // Call Button
+                    Button {
+                        if let url = URL(string: "tel:\(viewModel.facility.phone)") {
+                            UIApplication.shared.open(url)
+                        }
+                    } label: {
+                        HStack {
+                            Image(systemName: "phone.fill")
+                            Text("Bilgi için ara")
+                        }
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 10)
+                        .background(Color(hex: "2E7D32"))
+                        .cornerRadius(8)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 24)
+                .background(Color(.systemGray6))
+                .cornerRadius(12)
             }
         }
     }
-    
+
     // MARK: - Date Selection Section
     private var dateSelectionSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Tarih Seçin")
                 .font(.headline)
-            
+
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
                     ForEach(0..<14, id: \.self) { dayOffset in
-                        let date = Calendar.current.date(byAdding: .day, value: dayOffset, to: Date())!
+                        let date = Calendar.current.date(
+                            byAdding: .day, value: dayOffset, to: Date())!
                         DateSelectionButton(
                             date: date,
-                            isSelected: Calendar.current.isDate(date, inSameDayAs: viewModel.selectedDate)
+                            isSelected: Calendar.current.isDate(
+                                date, inSameDayAs: viewModel.selectedDate)
                         ) {
                             viewModel.selectDate(date)
                         }
@@ -254,16 +296,16 @@ struct FacilityDetailView: View {
             }
         }
     }
-    
+
     // MARK: - Time Slots Section
     private var timeSlotsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("Saat Seçin")
                     .font(.headline)
-                
+
                 Spacer()
-                
+
                 if let start = viewModel.selectedStartHour, let end = viewModel.selectedEndHour {
                     Text("\(start.asHourString) - \(end.asHourString)")
                         .font(.subheadline)
@@ -271,8 +313,10 @@ struct FacilityDetailView: View {
                         .foregroundColor(Color(hex: "2E7D32"))
                 }
             }
-            
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
+
+            LazyVGrid(
+                columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8
+            ) {
                 ForEach(viewModel.availableTimeSlots) { slot in
                     TimeSlotButton(
                         slot: slot,
@@ -282,7 +326,7 @@ struct FacilityDetailView: View {
                     }
                 }
             }
-            
+
             // Legend
             HStack(spacing: 16) {
                 LegendItem(color: Color(hex: "2E7D32"), text: "Seçili")
@@ -292,22 +336,22 @@ struct FacilityDetailView: View {
             .font(.caption)
         }
     }
-    
+
     // MARK: - Amenities Section
     private var amenitiesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Özellikler")
                 .font(.headline)
-            
+
             let amenities = viewModel.facility.amenities.activeAmenities
             let displayCount = showAllAmenities ? amenities.count : min(6, amenities.count)
-            
+
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 12) {
                 ForEach(amenities.prefix(displayCount), id: \.name) { amenity in
                     AmenityItem(icon: amenity.icon, name: amenity.name)
                 }
             }
-            
+
             if amenities.count > 6 {
                 Button(showAllAmenities ? "Daha az göster" : "Tümünü göster (\(amenities.count))") {
                     withAnimation {
@@ -319,25 +363,29 @@ struct FacilityDetailView: View {
             }
         }
     }
-    
+
     // MARK: - Location Section
     private var locationSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Konum")
                 .font(.headline)
-            
+
             // Mini Map
-            Map(position: .constant(.region(MKCoordinateRegion(
-                center: viewModel.facility.coordinate,
-                span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-            )))) {
+            Map(
+                position: .constant(
+                    .region(
+                        MKCoordinateRegion(
+                            center: viewModel.facility.coordinate,
+                            span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+                        )))
+            ) {
                 Marker(viewModel.facility.name, coordinate: viewModel.facility.coordinate)
                     .tint(Color(hex: "2E7D32"))
             }
             .frame(height: 150)
             .cornerRadius(12)
             .disabled(true)
-            
+
             // Directions Button
             Button {
                 openInMaps()
@@ -352,16 +400,16 @@ struct FacilityDetailView: View {
             }
         }
     }
-    
+
     // MARK: - Reviews Summary Section
     private var reviewsSummarySection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("Değerlendirmeler")
                     .font(.headline)
-                
+
                 Spacer()
-                
+
                 NavigationLink {
                     // ReviewsListView
                     Text("Değerlendirmeler - ADIM 8'de")
@@ -371,22 +419,22 @@ struct FacilityDetailView: View {
                         .foregroundColor(Color(hex: "2E7D32"))
                 }
             }
-            
+
             HStack(spacing: 16) {
                 // Rating
                 VStack {
                     Text(viewModel.facility.formattedRating)
                         .font(.system(size: 40, weight: .bold))
-                    
+
                     RatingStarsView(rating: viewModel.facility.averageRating)
-                    
+
                     Text("\(viewModel.facility.totalReviews) değerlendirme")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
-                
+
                 Spacer()
-                
+
                 // Rating Bars
                 VStack(spacing: 4) {
                     ForEach((1...5).reversed(), id: \.self) { star in
@@ -399,43 +447,73 @@ struct FacilityDetailView: View {
             .cornerRadius(12)
         }
     }
-    
+
     // MARK: - Bottom Bar
     private var bottomBar: some View {
         VStack(spacing: 0) {
             Divider()
-            
+
             HStack {
-                // Price Info
-                VStack(alignment: .leading, spacing: 2) {
-                    if viewModel.canProceedToBooking {
-                        Text(viewModel.totalPrice.asCurrency)
-                            .font(.title3)
-                            .fontWeight(.bold)
-                        
-                        Text("\(viewModel.selectedDuration) saat")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    } else {
-                        Text("Saat seçin")
+                if viewModel.hasPitches {
+                    // Price Info
+                    VStack(alignment: .leading, spacing: 2) {
+                        if viewModel.canProceedToBooking {
+                            Text(viewModel.totalPrice.asCurrency)
+                                .font(.title3)
+                                .fontWeight(.bold)
+
+                            Text("\(viewModel.selectedDuration) saat")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        } else {
+                            Text("Saat seçin")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+
+                    Spacer()
+
+                    // Book Button
+                    PrimaryButton(
+                        title: "Rezervasyon Yap",
+                        size: .medium,
+                        isDisabled: !viewModel.canProceedToBooking,
+                        fullWidth: false
+                    ) {
+                        if viewModel.isGuestUser {
+                            showGuestAlert = true
+                        } else {
+                            viewModel.proceedToBooking()
+                        }
+                    }
+                } else {
+                    // No pitches - show contact info
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Saha bilgisi bekleniyor")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
-                }
-                
-                Spacer()
-                
-                // Book Button
-                PrimaryButton(
-                    title: "Rezervasyon Yap",
-                    size: .medium,
-                    isDisabled: !viewModel.canProceedToBooking,
-                    fullWidth: false
-                ) {
-                    if viewModel.isGuestUser {
-                        showGuestAlert = true
-                    } else {
-                        viewModel.proceedToBooking()
+
+                    Spacer()
+
+                    // Call Button
+                    Button {
+                        if let url = URL(string: "tel:\(viewModel.facility.phone)") {
+                            UIApplication.shared.open(url)
+                        }
+                    } label: {
+                        HStack {
+                            Image(systemName: "phone.fill")
+                            Text("Tesisi Ara")
+                        }
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 12)
+                        .background(Color(hex: "2E7D32"))
+                        .cornerRadius(10)
                     }
                 }
             }
@@ -443,18 +521,19 @@ struct FacilityDetailView: View {
             .background(Color(.systemBackground))
         }
     }
-    
+
     // MARK: - Actions
     private func shareVenue() {
         let text = "\(viewModel.facility.name) - \(viewModel.facility.address)"
         let activityVC = UIActivityViewController(activityItems: [text], applicationActivities: nil)
-        
+
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let rootVC = windowScene.windows.first?.rootViewController {
+            let rootVC = windowScene.windows.first?.rootViewController
+        {
             rootVC.present(activityVC, animated: true)
         }
     }
-    
+
     private func openInMaps() {
         let coordinate = viewModel.facility.coordinate
         let placemark = MKPlacemark(coordinate: coordinate)
@@ -472,7 +551,7 @@ struct PitchSelectionCard: View {
     let pitch: Pitch
     let isSelected: Bool
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 8) {
@@ -480,19 +559,19 @@ struct PitchSelectionCard: View {
                     Text(pitch.name)
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                    
+
                     Spacer()
-                    
+
                     if isSelected {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundColor(Color(hex: "2E7D32"))
                     }
                 }
-                
+
                 Text(pitch.size.displayName)
                     .font(.caption)
                     .foregroundColor(.secondary)
-                
+
                 Text(pitch.pricing.daytimePrice.asShortCurrency)
                     .font(.subheadline)
                     .fontWeight(.medium)
@@ -515,21 +594,21 @@ struct DateSelectionButton: View {
     let date: Date
     let isSelected: Bool
     let action: () -> Void
-    
+
     private var dayFormatter: DateFormatter {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "tr_TR")
         formatter.dateFormat = "EEE"
         return formatter
     }
-    
+
     var body: some View {
         Button(action: action) {
             VStack(spacing: 4) {
                 Text(dayFormatter.string(from: date))
                     .font(.caption)
                     .foregroundColor(isSelected ? .white : .secondary)
-                
+
                 Text("\(Calendar.current.component(.day, from: date))")
                     .font(.headline)
                     .foregroundColor(isSelected ? .white : .primary)
@@ -546,14 +625,14 @@ struct TimeSlotButton: View {
     let slot: TimeSlot
     let isSelected: Bool
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             VStack(spacing: 2) {
                 Text(slot.hour.asHourString)
                     .font(.subheadline)
                     .fontWeight(isSelected ? .semibold : .regular)
-                
+
                 if slot.price > 0 {
                     Text(slot.price.asShortCurrency)
                         .font(.caption2)
@@ -568,7 +647,7 @@ struct TimeSlotButton: View {
         .buttonStyle(.plain)
         .disabled(!slot.isAvailable)
     }
-    
+
     private var backgroundColor: Color {
         if isSelected {
             return Color(hex: "2E7D32")
@@ -578,7 +657,7 @@ struct TimeSlotButton: View {
             return Color(.systemGray4)
         }
     }
-    
+
     private var foregroundColor: Color {
         if isSelected {
             return .white
@@ -593,7 +672,7 @@ struct TimeSlotButton: View {
 struct LegendItem: View {
     let color: Color
     let text: String
-    
+
     var body: some View {
         HStack(spacing: 4) {
             Circle()
@@ -608,7 +687,7 @@ struct LegendItem: View {
 struct AmenityItem: View {
     let icon: String
     let name: String
-    
+
     var body: some View {
         VStack(spacing: 6) {
             Text(icon)
@@ -628,19 +707,19 @@ struct AmenityItem: View {
 struct RatingBar: View {
     let star: Int
     let percentage: Double
-    
+
     var body: some View {
         HStack(spacing: 4) {
             Text("\(star)")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .frame(width: 12)
-            
+
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
                     Rectangle()
                         .fill(Color(.systemGray5))
-                    
+
                     Rectangle()
                         .fill(Color.orange)
                         .frame(width: geometry.size.width * percentage)

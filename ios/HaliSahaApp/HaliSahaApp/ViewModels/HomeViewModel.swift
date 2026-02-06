@@ -7,50 +7,50 @@
 //  Created by Mehmet Mert Mazıcı on 26.12.2025.
 //
 
-
+import CoreLocation
 import Foundation
 import SwiftUI
-import CoreLocation
 
 // MARK: - Home ViewModel
 @MainActor
 final class HomeViewModel: ObservableObject {
-    
+
     // MARK: - Published Properties
     @Published var searchText = ""
     @Published var isLoading = false
     @Published var isRefreshing = false
     @Published var errorMessage: String?
-    
+
     // Data
     @Published var featuredFacilities: [Facility] = []
     @Published var nearbyFacilities: [Facility] = []
     @Published var recentlyViewedFacilities: [Facility] = []
     @Published var upcomingMatches: [MatchPost] = []
-    
+
     // Location
     @Published var userLocation: CLLocationCoordinate2D?
     @Published var locationPermissionDenied = false
-    
+
     // Filters
     @Published var selectedFilter: HomeFilter = .all
-    
+
     // MARK: - Private Properties
     private let firebaseService = FirebaseService.shared
+    private let facilityService = FacilityService.shared
     private let locationManager = CLLocationManager()
-    
+
     // MARK: - Computed Properties
     var filteredFacilities: [Facility] {
         var facilities = nearbyFacilities
-        
+
         // Arama filtresi
         if !searchText.isEmpty {
             facilities = facilities.filter { facility in
-                facility.name.localizedCaseInsensitiveContains(searchText) ||
-                facility.address.localizedCaseInsensitiveContains(searchText)
+                facility.name.localizedCaseInsensitiveContains(searchText)
+                    || facility.address.localizedCaseInsensitiveContains(searchText)
             }
         }
-        
+
         // Kategori filtresi
         switch selectedFilter {
         case .all:
@@ -64,46 +64,63 @@ final class HomeViewModel: ObservableObject {
         case .hasParking:
             facilities = facilities.filter { $0.amenities.hasParking }
         }
-        
+
         return facilities
     }
-    
+
     var hasActiveFilters: Bool {
         !searchText.isEmpty || selectedFilter != .all
     }
-    
+
     // MARK: - Init
     init() {
-        // Mock data yükle
-        loadMockData()
+        // Data will be loaded when view appears via loadData()
     }
-    
+
     // MARK: - Load Data
     func loadData() async {
         isLoading = true
         errorMessage = nil
-        
-        // Simüle edilmiş network gecikmesi
-        try? await Task.sleep(nanoseconds: 1_000_000_000)
-        
-        // Mock data zaten yüklü
-        // Gerçek implementasyonda Firebase'den çekilecek
-        
-        isLoading = false
+
+        do {
+            // Fetch all approved, active facilities from Firestore
+            let allFacilities = try await facilityService.fetchAllFacilities()
+
+            // Featured facilities: top 3 by rating
+            featuredFacilities = Array(
+                allFacilities.sorted { $0.averageRating > $1.averageRating }.prefix(3)
+            )
+
+            // Nearby facilities: all approved facilities
+            nearbyFacilities = allFacilities
+
+            isLoading = false
+        } catch {
+            isLoading = false
+            errorMessage = error.localizedDescription
+        }
     }
-    
+
     // MARK: - Refresh Data
     func refreshData() async {
         isRefreshing = true
-        
-        try? await Task.sleep(nanoseconds: 500_000_000)
-        
-        // Mock data'yı yeniden yükle
-        loadMockData()
-        
-        isRefreshing = false
+        errorMessage = nil
+
+        do {
+            let allFacilities = try await facilityService.fetchAllFacilities(forceRefresh: true)
+
+            featuredFacilities = Array(
+                allFacilities.sorted { $0.averageRating > $1.averageRating }.prefix(3)
+            )
+            nearbyFacilities = allFacilities
+
+            isRefreshing = false
+        } catch {
+            isRefreshing = false
+            errorMessage = error.localizedDescription
+        }
     }
-    
+
     // MARK: - Load Mock Data
     private func loadMockData() {
         // Featured Facilities
@@ -137,9 +154,9 @@ final class HomeViewModel: ObservableObject {
                 isIndoor: false,
                 hasParking: false,
                 priceRange: "450-700 ₺"
-            )
+            ),
         ]
-        
+
         // Nearby Facilities
         nearbyFacilities = [
             createMockFacility(
@@ -185,9 +202,9 @@ final class HomeViewModel: ObservableObject {
                 hasParking: true,
                 priceRange: "400-650 ₺",
                 distance: 5.1
-            )
+            ),
         ]
-        
+
         // Upcoming Match Posts
         upcomingMatches = [
             MatchPost.mockPost,
@@ -199,10 +216,10 @@ final class HomeViewModel: ObservableObject {
                 currentPlayers: 11,
                 maxPlayers: 14,
                 daysFromNow: 4
-            )
+            ),
         ]
     }
-    
+
     // MARK: - Helper: Create Mock Facility
     private func createMockFacility(
         id: String,
@@ -240,7 +257,7 @@ final class HomeViewModel: ObservableObject {
         )
         return facility
     }
-    
+
     // MARK: - Helper: Create Mock Match Post
     private func createMockMatchPost(
         id: String,
@@ -260,7 +277,8 @@ final class HomeViewModel: ObservableObject {
             facilityName: facilityName,
             facilityAddress: "Ankara",
             pitchName: "Saha 1",
-            matchDate: Calendar.current.date(byAdding: .day, value: daysFromNow, to: Date()) ?? Date(),
+            matchDate: Calendar.current.date(byAdding: .day, value: daysFromNow, to: Date())
+                ?? Date(),
             startHour: 19,
             endHour: 20,
             title: title,
@@ -271,13 +289,13 @@ final class HomeViewModel: ObservableObject {
             costPerPlayer: 80
         )
     }
-    
+
     // MARK: - Actions
     func clearFilters() {
         searchText = ""
         selectedFilter = .all
     }
-    
+
     func selectFilter(_ filter: HomeFilter) {
         withAnimation(.easeInOut(duration: 0.2)) {
             if selectedFilter == filter {
@@ -296,9 +314,9 @@ enum HomeFilter: String, CaseIterable, Identifiable {
     case outdoor = "Açık"
     case highRated = "Yüksek Puan"
     case hasParking = "Otoparkı Var"
-    
+
     var id: String { rawValue }
-    
+
     var icon: String {
         switch self {
         case .all: return "square.grid.2x2"

@@ -23,8 +23,13 @@ struct FacilityCard: View {
     // MARK: - Body
     var body: some View {
         HStack(spacing: 12) {
-            // Image
-            facilityImage
+            // Image - CachedAsyncImage kullan
+            FacilityImageView(
+                url: facility.images.first,
+                size: CGSize(width: 100, height: 100),
+                cornerRadius: 12,
+                placeholder: "sportscourt.fill"
+            )
             
             // Info
             VStack(alignment: .leading, spacing: 6) {
@@ -63,7 +68,7 @@ struct FacilityCard: View {
                 
                 // Bottom Row: Price & Distance
                 HStack {
-                    // Price indicator (gerçek fiyat Pitch'ten gelecek)
+                    // Price indicator
                     Text("₺₺")
                         .font(.caption)
                         .fontWeight(.medium)
@@ -93,38 +98,6 @@ struct FacilityCard: View {
         .background(Color(.systemBackground))
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 2)
-    }
-    
-    // MARK: - Facility Image
-    private var facilityImage: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(hex: "2E7D32").opacity(0.1))
-                .frame(width: 100, height: 100)
-            
-            Image(systemName: "sportscourt.fill")
-                .font(.system(size: 30))
-                .foregroundColor(Color(hex: "2E7D32").opacity(0.5))
-            
-            // Status badge
-            if facility.amenities.isIndoor {
-                VStack {
-                    HStack {
-                        Spacer()
-                        Text("Kapalı")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
-                            .background(Color(hex: "2E7D32"))
-                            .cornerRadius(4)
-                    }
-                    Spacer()
-                }
-                .padding(6)
-            }
-        }
-        .frame(width: 100, height: 100)
     }
     
     // MARK: - Amenity Pills
