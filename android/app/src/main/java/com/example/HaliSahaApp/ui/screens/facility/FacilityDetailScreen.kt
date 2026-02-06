@@ -38,6 +38,7 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import androidx.compose.foundation.lazy.items
+import com.example.HaliSahaApp.ui.screens.booking.BookingFlowScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -183,6 +184,23 @@ fun FacilityDetailScreen(
             },
             containerColor = AppColors.Surface // Diyalog Rengi Beyaz
         )
+    }
+    if (uiState.showBookingFlow) {
+        // Tam ekran dialog/sheet olarak açıyoruz
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { /* Dismiss engellenebilir */ },
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false) // Full screen
+        ) {
+            BookingFlowScreen(
+                viewModel = viewModel,
+                onDismiss = { viewModel.proceedToBooking() }, // Toggle gibi çalışır, false yapar
+                onBookingCompleted = {
+                    // Ana sayfaya veya randevulara yönlendir
+                    navController.popBackStack()
+                    // navController.navigate(BottomTab.BOOKINGS.route) // İstersen
+                }
+            )
+        }
     }
 }
 
