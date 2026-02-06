@@ -24,6 +24,7 @@ import com.example.HaliSahaApp.utils.AppIcons
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import com.example.HaliSahaApp.ui.navigation.Screen
+import com.example.HaliSahaApp.ui.screens.booking.BookingsScreen
 import com.example.HaliSahaApp.ui.screens.facility.FacilityDetailScreen
 import com.example.HaliSahaApp.ui.screens.facility.FacilityListScreen
 
@@ -119,8 +120,10 @@ fun MainScreen(onLogout: () -> Unit) {
         ) {
             // Mevcut Tab Rotaları
             composable(BottomTab.HOME.route) { HomeScreen(navController = navController) }
-            composable(BottomTab.MAP.route) { MapScreenPlaceholder() }
-            composable(BottomTab.BOOKINGS.route) { BookingsScreenPlaceholder() }
+            composable(BottomTab.MAP.route) { MapScreen(navController = navController) }
+            composable(BottomTab.BOOKINGS.route) {
+                BookingsScreen(navController = navController) // Placeholder yerine gerçek ekran
+            }
             composable(BottomTab.CHAT.route) { ChatScreenPlaceholder() }
             composable(BottomTab.PROFILE.route) { ProfileScreenPlaceholder(onLogout) }
 

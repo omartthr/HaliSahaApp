@@ -11,6 +11,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.HaliSahaApp.data.models.UserType
 import com.example.HaliSahaApp.data.remote.AuthService
 import com.example.HaliSahaApp.ui.navigation.Screen
+import com.example.HaliSahaApp.ui.screens.admin.AdminScreen
 import com.example.HaliSahaApp.ui.screens.auth.AdminRegisterScreen
 import com.example.HaliSahaApp.ui.screens.auth.ForgotPasswordScreen
 import com.example.HaliSahaApp.ui.screens.auth.LoginScreen
@@ -49,13 +50,20 @@ fun HaliSahaRoot() {
                 // YÖNLENDİRME MANTIĞI GÜNCELLENDİ:
                 // Giriş yapmışsa VEYA Misafir ise -> Ana Sayfaya git
                 val isGuest = currentUser?.userType == UserType.GUEST
+                val isAdmin = currentUser?.userType == UserType.ADMIN
 
                 if (isAuthenticated || isGuest) {
-                    navController.navigate(Screen.Main.route) {
-                        popUpTo(Screen.Splash.route) { inclusive = true }
+                    // YÖNLENDİRME MANTIĞI:
+                    if (isAdmin) {
+                        navController.navigate(Screen.AdminMain.route) { // Admin ise Admin Paneline
+                            popUpTo(Screen.Splash.route) { inclusive = true }
+                        }
+                    } else {
+                        navController.navigate(Screen.Main.route) { // Değilse Ana Sayfaya
+                            popUpTo(Screen.Splash.route) { inclusive = true }
+                        }
                     }
                 } else {
-                    // Değilse -> Login'e git
                     navController.navigate(Screen.Login.route) {
                         popUpTo(Screen.Splash.route) { inclusive = true }
                     }
@@ -111,6 +119,13 @@ fun HaliSahaRoot() {
         // 8. FACILITY LIST SCREEN (Zaten eklemiştik ama kontrol et)
         composable(Screen.FacilityList.route) {
             FacilityListScreen(navController = navController)
+        }
+        composable(Screen.AdminMain.route) {
+            AdminScreen(onLogout = {
+                navController.navigate(Screen.Login.route) {
+                    popUpTo(0) { inclusive = true }
+                }
+            })
         }
     }
 }

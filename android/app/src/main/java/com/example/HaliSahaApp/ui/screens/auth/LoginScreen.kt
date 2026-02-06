@@ -31,6 +31,8 @@ import com.example.HaliSahaApp.ui.navigation.Screen
 import com.example.HaliSahaApp.ui.viewmodels.AuthViewModel
 import com.example.HaliSahaApp.utils.AppColors
 import com.example.HaliSahaApp.utils.AppStrings
+import com.example.HaliSahaApp.data.models.UserType // <-- Bunu eklemeyi unutma
+import com.example.HaliSahaApp.data.remote.AuthService
 
 @Composable
 fun LoginScreen(
@@ -39,28 +41,35 @@ fun LoginScreen(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
-
+    val currentUser by AuthService.currentUser.collectAsState()
     // Form States
     val email by viewModel.email.collectAsState()
     val password by viewModel.password.collectAsState()
 
     // ✅ Hata VE Başarı Mesajları
     LaunchedEffect(uiState) {
-        // Hata durumu
+        if (uiState.isSuccess && currentUser != null) {
+            // Toast mesajı (İsteğe bağlı)
+            // Toast.makeText(context, "Giriş Başarılı", Toast.LENGTH_SHORT).show()
+
+            // KULLANICI TİPİ KONTROLÜ
+            val targetRoute = if (currentUser?.userType == UserType.ADMIN) {
+                Screen.AdminMain.route // Admin ise Admin Paneline
+            } else {
+                Screen.Main.route // Değilse Normal Ana Sayfaya
+            }
+
+            // Yönlendirme
+            navController.navigate(targetRoute) {
+                popUpTo(Screen.Login.route) { inclusive = true } // Geri dönülemesin
+            }
+
+            viewModel.clearError() // State'i temizle
+        }
+
         if (uiState.error != null) {
             Toast.makeText(context, uiState.error, Toast.LENGTH_LONG).show()
             viewModel.clearError()
-        }
-
-        // ✅ Başarı durumu - Main ekrana yönlendir
-        if (uiState.isSuccess) {
-            Toast.makeText(context, "Giriş Başarılı!", Toast.LENGTH_SHORT).show()
-            viewModel.clearError()
-
-            // Tüm navigation stack'i temizle ve main ekrana git
-            navController.navigate(Screen.Main.route) {
-                popUpTo(0) { inclusive = true }
-            }
         }
     }
 
