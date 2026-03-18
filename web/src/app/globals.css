@@ -1,0 +1,435 @@
+@import "tailwindcss";
+
+/* ============================================
+   HaliSahaApp - Global Design System
+   Primary: #2E7D32 (iOS app rengi)
+   ============================================ */
+
+:root {
+  --primary: #2E7D32;
+  --primary-light: #4CAF50;
+  --primary-dark: #1B5E20;
+  --primary-bg: #E8F5E9;
+
+  --surface: #ffffff;
+  --surface-secondary: #f5f5f5;
+  --surface-tertiary: #eeeeee;
+
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --text-tertiary: #9ca3af;
+
+  --border: #e5e7eb;
+  --border-light: #f3f4f6;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+  --shadow-lg: 0 10px 30px rgba(0,0,0,0.10), 0 4px 8px rgba(0,0,0,0.05);
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+  background-color: #f8f9fa;
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---- Scrollbar ---- */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+/* ---- Transitions: only decorative elements, NOT buttons or links ---- */
+/* a, button transitions are handled per-component to preserve spring physics */
+
+/* ---- Page wrapper ---- */
+.page-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #f5f5f7;
+}
+
+/* ---- Card ---- */
+.card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-light);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* ---- Pill / Tag ---- */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pill-primary {
+  background: var(--primary-bg);
+  color: var(--primary);
+}
+
+.pill-outline {
+  background: transparent;
+  color: var(--primary);
+  border: 1.5px solid var(--primary);
+}
+
+/* ---- Buttons ---- */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--primary);
+  color: white;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  padding: 12px 24px;
+  font-size: 15px;
+  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.25);
+}
+
+.btn-primary:hover {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(46, 125, 50, 0.35);
+}
+
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: transparent;
+  color: var(--primary);
+  font-weight: 600;
+  border: 2px solid var(--primary);
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  padding: 10px 24px;
+  font-size: 15px;
+}
+
+.btn-outline:hover {
+  background: var(--primary-bg);
+}
+
+/* ---- Section Header ---- */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ---- Star Rating ---- */
+.stars {
+  display: inline-flex;
+  gap: 2px;
+  color: #f59e0b;
+}
+
+/* ---- Skeleton Loading ---- */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-md);
+}
+
+/* ---- Amenity Chip ---- */
+.amenity-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: #f3f4f6;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+}
+
+/* ---- Time Slot ---- */
+.time-slot {
+  padding: 10px;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.15s;
+}
+.time-slot.available { background: #f3f4f6; color: #374151; }
+.time-slot.selected { background: var(--primary); color: white; border-color: var(--primary); }
+.time-slot.booked { background: #e5e7eb; color: #9ca3af; cursor: not-allowed; }
+
+/* ---- Map container ---- */
+.map-container {
+  height: 500px;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+/* ---- Input ---- */
+.input-field {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  color: var(--text-primary);
+  background: var(--surface);
+  outline: none;
+  transition: border-color 0.2s;
+}
+.input-field:focus { border-color: var(--primary); }
+
+/* ---- Auth card ---- */
+.auth-card {
+  background: white;
+  border-radius: var(--radius-2xl);
+  padding: 40px;
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 440px;
+}
+
+/* ---- Horizontal scroll ---- */
+.scroll-x {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+.scroll-x::-webkit-scrollbar { display: none; }
+
+/* ---- Section spacing ---- */
+.section { padding: 32px 0; }
+.content-container { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
+
+/* ---- Badge dot ---- */
+.badge-dot {
+  width: 8px; height: 8px;
+  background: #ef4444;
+  border-radius: 50%;
+  position: absolute;
+  top: -2px; right: -2px;
+}
+
+/* ---- Responsive helpers ---- */
+.hidden-mobile { display: flex; }
+.show-mobile-only { display: none; }
+.show-mobile-only-block { display: none; }
+
+@media (max-width: 640px) {
+  .hidden-mobile { display: none !important; }
+  .show-mobile-only { display: flex !important; }
+  .show-mobile-only-block { display: block !important; }
+}
+
+/* ---- Nav link hover ---- */
+.nav-link-hover:hover {
+  background: #f3f4f6;
+  color: #2E7D32;
+}
+
+/* ---- Navbar text link spring effect ---- */
+.nav-text-link {
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 14px;
+  opacity: 0.9;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 0.4rem 0.6rem;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nav-text-link:hover {
+  transform: translateY(-3px) scale(1.05);
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* ---- Interactive Glassmorphism Card ---- */
+.interactive-glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 1);
+  border-radius: 24px;
+  padding: 1.5rem 1.5rem;
+  width: 280px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-decoration: none;
+  color: #111827;
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+}
+
+.interactive-glass-card:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.09);
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(255, 255, 255, 1);
+}
+
+.interactive-glass-card .card-icon-box {
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.interactive-glass-card:hover .card-icon-box {
+  transform: scale(1.1) rotate(-8deg);
+}
+
+/* ---- Dynamic Glassmorphism Button ---- */
+.brand-btn-glass {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  border-radius: 30px;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 0.8rem 1.8rem;
+  font-size: 1rem;
+}
+
+/* Base Light Variant (Haritada Ara) */
+.brand-btn-glass.solid-light {
+  background: rgba(255, 255, 255, 0.95);
+  color: #114B32;
+  border: 1px solid rgba(255, 255, 255, 1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+.brand-btn-glass.solid-light:hover {
+  transform: translateY(-5px) scale(1.04);
+  background: #ffffff;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15), 0 8px 16px rgba(0, 0, 0, 0.08);
+  border-color: rgba(255, 255, 255, 1);
+}
+
+/* Semi-transparent Light Variant (Hemen Uye Ol, Kayit Ol un-scrolled) */
+.brand-btn-glass.ghost-light {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.brand-btn-glass.ghost-light:hover {
+  transform: translateY(-5px) scale(1.04);
+  background: rgba(255, 255, 255, 0.28);
+  border-color: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15), 0 8px 16px rgba(0, 0, 0, 0.08);
+}
+
+/* Solid Dark Variant (Navbar Scrolled Kayit Ol) */
+.brand-btn-glass.solid-dark {
+  background: #114B32;
+  color: white;
+  border: 1px solid #114B32;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+.brand-btn-glass.solid-dark:hover {
+  transform: translateY(-5px) scale(1.04);
+  background: #1A754E;
+  border-color: #1A754E;
+  box-shadow: 0 20px 40px rgba(17, 75, 50, 0.3), 0 8px 16px rgba(17, 75, 50, 0.15);
+}
+
+/* Transparent Outline Variant (Giris Yap) */
+.brand-btn-glass.transparent-text {
+  background: transparent;
+  color: inherit;
+  border: 1px solid transparent;            
+  padding: 0.6rem 1.2rem;
+}
+
+.brand-btn-glass.transparent-text:hover {
+  transform: translateY(-2px) scale(1.02);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ---- Location Card (birebir interactive-glass-card ile esit) ---- */
+.location-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 1);
+  border-radius: 24px;
+  padding: 1.4rem 1.5rem;
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  color: #111827;
+}
+
+.location-card:hover {
+  box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.15), 0 20px 40px rgba(0, 0, 0, 0.10);
+  background: rgba(255, 255, 255, 0.99);
+  border-color: rgba(46, 125, 50, 0.25);
+}
