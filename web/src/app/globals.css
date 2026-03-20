@@ -243,6 +243,131 @@ body {
   max-width: 440px;
 }
 
+/* ---- Auth Dynamo Glass Card (login) ---- */
+.auth-dynamo-glass {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 1);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
+  transition: background 0.5s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.5s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.auth-dynamo-glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(232, 245, 233, 0.46) 0%, rgba(232, 245, 233, 0.2) 24%, rgba(255, 255, 255, 0) 48%);
+  pointer-events: none;
+}
+
+.auth-dynamo-glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  pointer-events: none;
+}
+
+.auth-dynamo-glass > * {
+  position: relative;
+  z-index: 1;
+}
+
+.auth-dynamo-glass:hover {
+  background: rgba(255, 255, 255, 0.93);
+  border-color: rgba(255, 255, 255, 1);
+  box-shadow: 0 16px 36px rgba(17, 24, 39, 0.08);
+}
+
+/* ---- Auth Topbar Dynamo Glass ---- */
+.auth-topbar-dynamo {
+  margin: 12px 16px 0;
+  padding: 14px 28px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 1);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  transition: background 0.5s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.auth-topbar-dynamo:hover {
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 16px 36px rgba(17, 24, 39, 0.08);
+}
+
+.auth-topbar-links {
+  display: inline-flex;
+  align-items: center;
+  gap: 28px;
+}
+
+.auth-topbar-link {
+  font-size: 15px;
+  font-weight: 700;
+  color: #374151;
+  text-decoration: none;
+  padding: 6px 10px;
+  border-radius: 10px;
+  transition: color 0.25s ease, background 0.25s ease;
+}
+
+.auth-topbar-link:hover {
+  color: #111827;
+  background: rgba(232, 245, 233, 0.72);
+}
+
+@media (max-width: 640px) {
+  .auth-topbar-dynamo {
+    margin: 10px 10px 0;
+    padding: 12px 14px;
+    border-radius: 18px;
+  }
+
+  .auth-topbar-links {
+    gap: 10px;
+  }
+
+  .auth-topbar-link {
+    font-size: 14px;
+    padding: 5px 8px;
+  }
+}
+
+.auth-register-wide {
+  width: min(860px, 94vw);
+  max-width: 860px;
+  padding: 24px 26px;
+}
+
+.auth-register-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 760px) {
+  .auth-register-wide {
+    width: min(520px, 94vw);
+    max-width: 520px;
+    padding: 20px;
+  }
+
+  .auth-register-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 /* ---- Horizontal scroll ---- */
 .scroll-x {
   display: flex;
@@ -337,6 +462,135 @@ body {
   transform: scale(1.1) rotate(-8deg);
 }
 
+/* ---- Featured Fields Cards (white dynamic glass) ---- */
+.featured-fields-scroll {
+  padding: 8px 4px 34px;
+  margin: -6px -4px -20px;
+}
+
+.featured-field-card {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 1);
+  border-radius: 24px;
+  width: min(280px, calc(100vw - 56px));
+  min-width: min(280px, calc(100vw - 56px));
+  flex-shrink: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  color: #111827;
+  box-shadow: 0 10px 28px rgba(17, 24, 39, 0.08);
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.featured-field-card:hover {
+  transform: translateY(-6px) scale(1.01);
+  box-shadow: 0 18px 36px rgba(17, 24, 39, 0.12);
+  background: rgba(255, 255, 255, 0.97);
+  border-color: rgba(46, 125, 50, 0.18);
+}
+
+.featured-field-card-cover {
+  border-radius: 20px 20px 0 0;
+  flex-shrink: 0;
+}
+
+.featured-field-rating {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-radius: 20px;
+  padding: 4px 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.featured-field-card-info {
+  padding: 16px 18px 18px;
+  min-width: 0;
+}
+
+.featured-field-title {
+  font-size: 1rem;
+  line-height: 1.35;
+  font-weight: 700;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.featured-field-address {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #9ca3af;
+  min-width: 0;
+}
+
+.featured-field-address-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.featured-field-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.featured-field-chip {
+  font-size: 14px;
+  background: #f3f4f6;
+  border-radius: 8px;
+  padding: 4px 8px;
+  line-height: 1;
+}
+
+.home-aurora-section {
+  background: linear-gradient(180deg, #f5f5f7 0%, #edf4ef 16%, #e7f0e9 100%);
+}
+
+.home-aurora-section::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 110px;
+  background: linear-gradient(180deg, #f5f5f7 0%, rgba(245, 245, 247, 0.85) 50%, rgba(245, 245, 247, 0) 100%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.home-aurora-section .aurora-bg-layer {
+  top: -24px !important;
+  height: calc(100% + 24px) !important;
+}
+
+@media (max-width: 640px) {
+  .featured-fields-scroll {
+    margin: -4px -2px -16px;
+    padding: 6px 2px 28px;
+  }
+
+  .featured-field-card {
+    width: min(260px, calc(100vw - 44px));
+    min-width: min(260px, calc(100vw - 44px));
+  }
+}
+
 /* ---- Dynamic Glassmorphism Button ---- */
 .brand-btn-glass {
   display: inline-flex;
@@ -426,16 +680,22 @@ body {
   flex-direction: column;
   gap: 5px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
-  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: background 0.35s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
   color: #111827;
 }
 
-.location-card:hover {
-  transform: translateY(-6px) scale(1.02);
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.09);
-  background: rgba(255, 255, 255, 0.97);
-  border-color: rgba(46, 125, 50, 0.25);
+.location-card:hover,
+.location-card:focus-visible {
+  outline: none;
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(255, 255, 255, 1);
+  box-shadow: 0 0 0 4px rgba(46, 125, 50, 0.1), 0 14px 30px rgba(0, 0, 0, 0.06);
+}
+
+.location-card:active {
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 0 0 5px rgba(46, 125, 50, 0.12), 0 10px 24px rgba(0, 0, 0, 0.05);
 }
 
 /* ---- CTA Register Button (interactive-glass-card ile aynı hissiyat) ---- */

@@ -7,7 +7,7 @@ import Aurora from "@/components/ui/Aurora/Aurora";
 const featuredFields = [
   { id: "1", name: "Kadıköy Merkez Halı Saha", address: "Zühtüpaşa, Kadıköy / İstanbul", rating: 4.8, reviews: 124, features: ["🚿", "🅿️", "🍔", "💡"], color: "from-emerald-700 to-teal-600" },
   { id: "2", name: "Beşiktaş Vadi Saha", address: "Vişnezade, Beşiktaş / İstanbul", rating: 4.5, reviews: 87, features: ["🚿", "🅿️", "☕", "🏆"], color: "from-green-700 to-emerald-500" },
-  { id: "3", name: "Üsküdar Sahil Halı Saha", address: "Mimar Sinan, Üsküdar / İstanbul", rating: 4.2, reviews: 53, features: ["🚿", "🍔", "💡"], color: "from-teal-700 to-cyan-600" },
+  { id: "3", name: "Üsküdar Sahil Halı Saha", address: "Mimar Sinan, Üsküdar / İstanbul", rating: 4.2, reviews: 53, features: ["🚿", "🍔", "💡"], color: "from-emerald-700 to-green-600" },
 ];
 
 const upcomingMatches = [
@@ -92,7 +92,7 @@ export default function Home() {
         position: "relative", zIndex: 10,
         flexWrap: "wrap",
       }}>
-        {quickActions.map((qa, i) => {
+        {quickActions.map((qa) => {
           const bgColors: Record<string, string> = {
             "#2E7D32": "#e8f5e9", // icon-green
             "#1565C0": "#e3f2fd", // icon-blue
@@ -135,7 +135,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* RIGHT: Location Cards — outer wrapper scrolls, inner wrapper gives padding so scale() doesn't clip */}
+          {/* RIGHT: Location Cards — outer wrapper scrolls, inner wrapper keeps comfortable spacing */}
           <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", maxHeight: 520, borderRadius: 8 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem", padding: "6px 6px 6px 2px" }}>
               {/* Placeholder cards – user will fill in later */}
@@ -175,39 +175,32 @@ export default function Home() {
               Tümü <ChevronRight size={15} />
             </Link>
           </div>
-          <div className="scroll-x">
+          <div className="scroll-x featured-fields-scroll">
             {featuredFields.map(field => (
               <Link key={field.id} href={`/fields/${field.id}`}
-                className="interactive-glass-card"
+                className="featured-field-card"
                 style={{
                   textDecoration: "none",
-                  flexShrink: 0,
-                  width: 270,
-                  padding: 0,
-                  overflow: "hidden",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "stretch",
                 }}>
                 {/* Card Image */}
-                <div className={`h-36 bg-gradient-to-br ${field.color} relative flex items-center justify-center`}
-                  style={{ borderRadius: "20px 20px 0 0", flexShrink: 0 }}>
+                <div className={`featured-field-card-cover h-36 bg-gradient-to-br ${field.color} relative flex items-center justify-center`}>
                   <span style={{ fontSize: 48, opacity: 0.25 }}>⚽</span>
-                  <div style={{ position: "absolute", bottom: 12, left: 12, background: "rgba(0,0,0,0.4)", backdropFilter: "blur(6px)", borderRadius: 20, padding: "4px 10px", display: "flex", alignItems: "center", gap: 4 }}>
+                  <div className="featured-field-rating">
                     <Star size={12} style={{ color: "#FCD34D", fill: "#FCD34D" }} />
                     <span style={{ color: "white", fontSize: 13, fontWeight: 700 }}>{field.rating}</span>
                     <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 11 }}>({field.reviews})</span>
                   </div>
                 </div>
                 {/* Card Info */}
-                <div style={{ padding: "16px 18px" }}>
-                  <p className="font-bold text-sm truncate" style={{ color: "#111827" }}>{field.name}</p>
-                  <p className="text-xs mt-1 truncate" style={{ color: "#9ca3af" }}>
-                    <MapPin size={11} style={{ display: "inline", marginRight: 3 }} />{field.address}
+                <div className="featured-field-card-info">
+                  <p className="featured-field-title">{field.name}</p>
+                  <p className="featured-field-address">
+                    <MapPin size={11} style={{ flexShrink: 0 }} />
+                    <span className="featured-field-address-text">{field.address}</span>
                   </p>
-                  <div style={{ display: "flex", gap: 4, marginTop: 10 }}>
+                  <div className="featured-field-features">
                     {field.features.map(f => (
-                      <span key={f} style={{ fontSize: 14, background: "#f3f4f6", borderRadius: 6, padding: "3px 7px" }}>{f}</span>
+                      <span key={f} className="featured-field-chip">{f}</span>
                     ))}
                   </div>
                 </div>
@@ -218,13 +211,13 @@ export default function Home() {
       </section>
 
       {/* Aurora Wrapper Section (Upcoming Matches + Trust Row + CTA + Footer) */}
-      <section className="relative overflow-hidden" style={{ background: "#f5f5f7" }}>
+      <section className="home-aurora-section relative overflow-hidden" style={{ background: "#f5f5f7" }}>
         {/* Ortak Arka Plan: Aurora — ters çevrilmiş, aşağıdan yukarı bakar */}
-        <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", zIndex: 0, opacity: 1, transform: "scaleY(-1)" }}>
+        <div className="aurora-bg-layer" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", zIndex: 0, opacity: 1, transform: "scaleY(-1)" }}>
           <Aurora
             colorStops={["#114B32", "#2E7D32", "#4CAF50"]}
-            amplitude={3.0}
-            blend={0.4}
+            amplitude={2.2}
+            blend={0.7}
           />
         </div>
 

@@ -8,6 +8,7 @@ import { auth, db } from "@/lib/firebase";
 import { doc, setDoc } from "firebase/firestore";
 import { toast } from "react-hot-toast";
 import { Mail, Lock, User, AtSign, ArrowRight, Check } from "lucide-react";
+import Aurora from "@/components/ui/Aurora/Aurora";
 
 const RegisterPage = () => {
   const [formData, setFormData] = useState({
@@ -52,20 +53,56 @@ const RegisterPage = () => {
   const perks = ["Ücretsiz kayıt", "Anında rezervasyon", "Maç organizasyonu"];
 
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)", display: "flex", flexDirection: "column" }}>
+    <div className="home-aurora-section" style={{ height: "100vh", minHeight: "100vh", background: "#f5f5f7", display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
+      <div className="aurora-bg-layer" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", zIndex: 0, opacity: 1, transform: "scaleY(-1)", pointerEvents: "none" }}>
+        <Aurora
+          colorStops={["#114B32", "#2E7D32", "#4CAF50"]}
+          amplitude={2.2}
+          blend={0.7}
+        />
+      </div>
+
       {/* Top bar */}
-      <div style={{ padding: "20px 24px" }}>
+      <div
+        className="auth-topbar-dynamo"
+        style={{
+          position: "relative",
+          zIndex: 10,
+          margin: "12px 16px 0",
+          padding: "14px 28px",
+          borderRadius: 24,
+          background: "rgba(255, 255, 255, 0.86)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          border: "1px solid rgba(255, 255, 255, 1)",
+          boxShadow: "0 10px 40px rgba(0,0,0,0.04)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 16,
+          flexWrap: "wrap",
+        }}
+      >
         <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
           <span style={{ fontSize: 18, fontWeight: 900, color: "#111827" }}>
             Halı<span style={{ color: "#2E7D32" }}>SahaApp</span>
           </span>
         </Link>
+
+        <div className="auth-topbar-links" style={{ display: "flex", alignItems: "center", gap: 28, marginLeft: "auto" }}>
+          <Link href="/" className="auth-topbar-link" style={{ fontSize: 15, fontWeight: 700, color: "#374151", textDecoration: "none", padding: "6px 10px", borderRadius: 10 }}>
+            Ana Sayfa
+          </Link>
+          <Link href="/groups" className="auth-topbar-link" style={{ fontSize: 15, fontWeight: 700, color: "#374151", textDecoration: "none", padding: "6px 10px", borderRadius: 10 }}>
+            Gruplar
+          </Link>
+        </div>
       </div>
 
-      <div style={{ flex: 1, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "20px 16px 40px" }}>
-        <div className="auth-card" style={{ maxWidth: 480 }}>
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "12px 16px 20px", position: "relative", zIndex: 10, overflow: "hidden" }}>
+        <div className="auth-card auth-dynamo-glass auth-register-wide">
           {/* Header */}
-          <div style={{ textAlign: "center", marginBottom: 28 }}>
+          <div style={{ textAlign: "center", marginBottom: 20 }}>
             <div style={{ width: 64, height: 64, background: "#E8F5E9", borderRadius: 20, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", fontSize: 28 }}>
               🏆
             </div>
@@ -74,7 +111,7 @@ const RegisterPage = () => {
           </div>
 
           {/* Perks */}
-          <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
             {perks.map(p => (
               <div key={p} style={{ display: "flex", alignItems: "center", gap: 6, background: "#E8F5E9", borderRadius: 20, padding: "5px 12px" }}>
                 <Check size={13} style={{ color: "#2E7D32" }} />
@@ -83,9 +120,9 @@ const RegisterPage = () => {
             ))}
           </div>
 
-          <form onSubmit={handleRegister} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <form onSubmit={handleRegister} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {/* Name row */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div className="auth-register-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div>
                 <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 5 }}>İsim</label>
                 <div style={{ position: "relative" }}>
@@ -104,25 +141,26 @@ const RegisterPage = () => {
               </div>
             </div>
 
-            <div>
-              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 5 }}>Kullanıcı Adı</label>
-              <div style={{ position: "relative" }}>
-                <AtSign size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
-                <input name="username" required value={formData.username} onChange={handleChange}
-                  className="input-field" style={{ paddingLeft: 36 }} placeholder="ahmet_123" />
+            <div className="auth-register-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 5 }}>Kullanıcı Adı</label>
+                <div style={{ position: "relative" }}>
+                  <AtSign size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
+                  <input name="username" required value={formData.username} onChange={handleChange}
+                    className="input-field" style={{ paddingLeft: 36 }} placeholder="ahmet_123" />
+                </div>
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 5 }}>E-posta</label>
+                <div style={{ position: "relative" }}>
+                  <Mail size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
+                  <input name="email" type="email" required value={formData.email} onChange={handleChange}
+                    className="input-field" style={{ paddingLeft: 36 }} placeholder="ahmet@example.com" />
+                </div>
               </div>
             </div>
 
-            <div>
-              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 5 }}>E-posta</label>
-              <div style={{ position: "relative" }}>
-                <Mail size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
-                <input name="email" type="email" required value={formData.email} onChange={handleChange}
-                  className="input-field" style={{ paddingLeft: 36 }} placeholder="ahmet@example.com" />
-              </div>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div className="auth-register-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div>
                 <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 5 }}>Şifre</label>
                 <div style={{ position: "relative" }}>
