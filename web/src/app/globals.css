@@ -41,6 +41,7 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
@@ -48,6 +49,7 @@ body {
   background-color: #f8f9fa;
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
 /* ---- Scrollbar ---- */
@@ -65,6 +67,7 @@ body {
   display: flex;
   flex-direction: column;
   background-color: #f5f5f7;
+  overflow-x: hidden;
 }
 
 /* ---- Card ---- */
@@ -429,7 +432,61 @@ body {
 }
 
 .location-card:hover {
-  box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.15), 0 20px 40px rgba(0, 0, 0, 0.10);
-  background: rgba(255, 255, 255, 0.99);
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.09);
+  background: rgba(255, 255, 255, 0.97);
   border-color: rgba(46, 125, 50, 0.25);
+}
+
+/* ---- CTA Register Button (interactive-glass-card ile aynı hissiyat) ---- */
+.cta-register-btn {
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  user-select: none;
+}
+
+.cta-register-btn:hover {
+  transform: translateY(-6px) scale(1.04);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.14) !important;
+}
+
+.cta-register-btn:active {
+  transform: translateY(1px) scale(0.97);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10) !important;
+  transition: all 0.1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cta-register-btn svg {
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cta-register-btn:hover svg {
+  transform: translateX(4px);
+}
+
+/* ---- Match Glass Card (full-width glassmorphism, same hover as interactive-glass-card) ---- */
+.match-glass-card:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.09);
+  background: rgba(255, 255, 255, 0.97) !important;
+}
+
+/* ---- Katıl Button (spring press effect) ---- */
+.katil-btn {
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  user-select: none;
+}
+
+.katil-btn:hover {
+  transform: translateY(-3px) scale(1.06);
+  box-shadow: 0 8px 20px rgba(46, 125, 50, 0.25) !important;
+  background: #2E7D32 !important;
+  color: white !important;
+}
+
+.katil-btn:active {
+  transform: translateY(1px) scale(0.96);
+  box-shadow: 0 1px 4px rgba(46, 125, 50, 0.15) !important;
+  transition: all 0.1s cubic-bezier(0.16, 1, 0.3, 1);
 }

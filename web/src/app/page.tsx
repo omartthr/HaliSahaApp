@@ -165,7 +165,7 @@ export default function Home() {
       </section>
 
       {/* Featured Facilities */}
-      <section className="section" style={{ background: "white", borderTop: "1px solid #f0f0f0", borderBottom: "1px solid #f0f0f0" }}>
+      <section className="section" style={{ background: "#f5f5f7" }}>
         <div className="content-container">
           <div className="section-header">
             <h2 className="section-title">
@@ -177,29 +177,38 @@ export default function Home() {
           </div>
           <div className="scroll-x">
             {featuredFields.map(field => (
-              <Link key={field.id} href={`/fields/${field.id}`} style={{ textDecoration: "none", flexShrink: 0 }}>
-                <div style={{ width: 260, background: "white", borderRadius: "20px", overflow: "hidden", boxShadow: "0 4px 16px rgba(0,0,0,0.08)", border: "1px solid #f0f0f0" }}
-                  className="hover:-translate-y-1 hover:shadow-lg transition-all duration-200">
-                  {/* Card Image */}
-                  <div className={`h-36 bg-gradient-to-br ${field.color} relative flex items-center justify-center`}>
-                    <span style={{ fontSize: 48, opacity: 0.25 }}>⚽</span>
-                    <div style={{ position: "absolute", bottom: 12, left: 12, background: "rgba(0,0,0,0.4)", backdropFilter: "blur(6px)", borderRadius: 20, padding: "4px 10px", display: "flex", alignItems: "center", gap: 4 }}>
-                      <Star size={12} style={{ color: "#FCD34D", fill: "#FCD34D" }} />
-                      <span style={{ color: "white", fontSize: 13, fontWeight: 700 }}>{field.rating}</span>
-                      <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 11 }}>({field.reviews})</span>
-                    </div>
+              <Link key={field.id} href={`/fields/${field.id}`}
+                className="interactive-glass-card"
+                style={{
+                  textDecoration: "none",
+                  flexShrink: 0,
+                  width: 270,
+                  padding: 0,
+                  overflow: "hidden",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "stretch",
+                }}>
+                {/* Card Image */}
+                <div className={`h-36 bg-gradient-to-br ${field.color} relative flex items-center justify-center`}
+                  style={{ borderRadius: "20px 20px 0 0", flexShrink: 0 }}>
+                  <span style={{ fontSize: 48, opacity: 0.25 }}>⚽</span>
+                  <div style={{ position: "absolute", bottom: 12, left: 12, background: "rgba(0,0,0,0.4)", backdropFilter: "blur(6px)", borderRadius: 20, padding: "4px 10px", display: "flex", alignItems: "center", gap: 4 }}>
+                    <Star size={12} style={{ color: "#FCD34D", fill: "#FCD34D" }} />
+                    <span style={{ color: "white", fontSize: 13, fontWeight: 700 }}>{field.rating}</span>
+                    <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 11 }}>({field.reviews})</span>
                   </div>
-                  {/* Card Info */}
-                  <div style={{ padding: "14px 16px" }}>
-                    <p className="font-bold text-sm truncate" style={{ color: "#111827" }}>{field.name}</p>
-                    <p className="text-xs mt-1 truncate" style={{ color: "#9ca3af" }}>
-                      <MapPin size={11} style={{ display: "inline", marginRight: 3 }} />{field.address}
-                    </p>
-                    <div style={{ display: "flex", gap: 4, marginTop: 10 }}>
-                      {field.features.map(f => (
-                        <span key={f} style={{ fontSize: 14, background: "#f3f4f6", borderRadius: 6, padding: "3px 7px" }}>{f}</span>
-                      ))}
-                    </div>
+                </div>
+                {/* Card Info */}
+                <div style={{ padding: "16px 18px" }}>
+                  <p className="font-bold text-sm truncate" style={{ color: "#111827" }}>{field.name}</p>
+                  <p className="text-xs mt-1 truncate" style={{ color: "#9ca3af" }}>
+                    <MapPin size={11} style={{ display: "inline", marginRight: 3 }} />{field.address}
+                  </p>
+                  <div style={{ display: "flex", gap: 4, marginTop: 10 }}>
+                    {field.features.map(f => (
+                      <span key={f} style={{ fontSize: 14, background: "#f3f4f6", borderRadius: 6, padding: "3px 7px" }}>{f}</span>
+                    ))}
                   </div>
                 </div>
               </Link>
@@ -208,91 +217,121 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Upcoming Matches */}
-      <section className="section">
-        <div className="content-container">
-          <div className="section-header">
-            <h2 className="section-title">
-              <Users size={18} style={{ color: "#2E7D32" }} /> Oyuncu Aranan Maçlar
-            </h2>
-            <Link href="/groups" style={{ fontSize: "14px", fontWeight: 600, color: "#2E7D32", textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
-              Tümü <ChevronRight size={15} />
-            </Link>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {upcomingMatches.map(match => (
-              <div key={match.id} style={{ background: "white", borderRadius: "16px", padding: "20px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", border: "1px solid #f0f0f0" }}>
-                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#E8F5E9", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "#2E7D32", fontSize: 16 }}>
-                      {match.creator[0]}
-                    </div>
-                    <div>
-                      <p style={{ fontWeight: 600, fontSize: 13, color: "#374151" }}>{match.creator}</p>
-                      <p style={{ fontSize: 12, color: "#9ca3af" }}>{match.date}</p>
-                    </div>
-                  </div>
-                  <span style={{ background: "#2E7D32", color: "white", borderRadius: 20, padding: "4px 12px", fontSize: 12, fontWeight: 700 }}>
-                    👤 {match.available} kişi
-                  </span>
-                </div>
-                <p style={{ fontWeight: 700, fontSize: 15, color: "#111827", marginBottom: 8 }}>{match.title}</p>
-                <div style={{ display: "flex", gap: 16, color: "#9ca3af", fontSize: 12, marginBottom: 12 }}>
-                  <span>📍 {match.facility}</span>
-                  <span>🕐 {match.date}</span>
-                </div>
-                {/* Progress bar */}
-                <div style={{ marginBottom: 6 }}>
-                  <div style={{ background: "#f0f0f0", borderRadius: 4, height: 6 }}>
-                    <div style={{ background: "#2E7D32", height: 6, borderRadius: 4, width: `${(match.current / match.total) * 100}%` }} />
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: 12 }}>
-                    <span style={{ color: "#9ca3af" }}>{match.current}/{match.total} oyuncu</span>
-                    <span style={{ color: "#2E7D32", fontWeight: 700 }}>{match.cost}</span>
-                  </div>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
-                  <span style={{ fontSize: 12, color: "#9ca3af" }}>{match.skill}</span>
-                  <Link href="/groups" style={{ background: "#E8F5E9", color: "#2E7D32", borderRadius: 8, padding: "6px 16px", fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
-                    Katıl
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Footer Öncesi Ortak Aurora Alanı (Trust Row + CTA) */}
-      <section className="relative overflow-hidden" style={{ borderTop: "1px solid #f0f0f0", background: "#0f2e1a" }}>
-        {/* Ortak Arka Plan: Aurora */}
-        <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", zIndex: 0, opacity: 1 }}>
+      {/* Aurora Wrapper Section (Upcoming Matches + Trust Row + CTA + Footer) */}
+      <section className="relative overflow-hidden" style={{ background: "#f5f5f7" }}>
+        {/* Ortak Arka Plan: Aurora — ters çevrilmiş, aşağıdan yukarı bakar */}
+        <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", zIndex: 0, opacity: 1, transform: "scaleY(-1)" }}>
           <Aurora
             colorStops={["#114B32", "#2E7D32", "#4CAF50"]}
-            amplitude={2.0}
-            blend={0.6}
+            amplitude={3.0}
+            blend={0.4}
           />
         </div>
 
-        {/* --- Trust Row İçeriği --- */}
-        <div className="relative" style={{ padding: "48px 0 16px 0", zIndex: 1 }}>
-          <div className="content-container relative">
+        {/* --- Oyuncu Aranan Maçlar (Upcoming Matches) --- */}
+        <div className="relative z-10" style={{ padding: "48px 0 24px 0" }}>
+          <div className="content-container">
+            <div className="section-header">
+              <h2 className="section-title">
+                <Users size={18} style={{ color: "#2E7D32" }} /> Oyuncu Aranan Maçlar
+              </h2>
+              <Link href="/groups" style={{ fontSize: "14px", fontWeight: 600, color: "#2E7D32", textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
+                Tümü <ChevronRight size={15} />
+              </Link>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {upcomingMatches.map(match => (
+                <div key={match.id}
+                  className="match-glass-card"
+                  style={{
+                    background: "rgba(255, 255, 255, 0.88)",
+                    borderRadius: "24px",
+                    padding: "24px",
+                    boxShadow: "0 10px 40px rgba(0,0,0,0.06)",
+                    border: "1px solid rgba(255,255,255,1)",
+                    backdropFilter: "blur(20px)",
+                    WebkitBackdropFilter: "blur(20px)",
+                    width: "100%",
+                    transition: "all 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
+                  }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#E8F5E9", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "#2E7D32", fontSize: 16 }}>
+                        {match.creator[0]}
+                      </div>
+                      <div>
+                        <p style={{ fontWeight: 600, fontSize: 13, color: "#374151" }}>{match.creator}</p>
+                        <p style={{ fontSize: 12, color: "#9ca3af" }}>{match.date}</p>
+                      </div>
+                    </div>
+                    <span style={{ background: "#2E7D32", color: "white", borderRadius: 20, padding: "4px 12px", fontSize: 12, fontWeight: 700 }}>
+                      👤 {match.available} kişi
+                    </span>
+                  </div>
+                  <p style={{ fontWeight: 700, fontSize: 15, color: "#111827", marginBottom: 8 }}>{match.title}</p>
+                  <div style={{ display: "flex", gap: 16, color: "#9ca3af", fontSize: 12, marginBottom: 12 }}>
+                    <span>📍 {match.facility}</span>
+                    <span>🕐 {match.date}</span>
+                  </div>
+                  {/* Progress bar */}
+                  <div style={{ marginBottom: 6 }}>
+                    <div style={{ background: "#f0f0f0", borderRadius: 4, height: 6 }}>
+                      <div style={{ background: "#2E7D32", height: 6, borderRadius: 4, width: `${(match.current / match.total) * 100}%` }} />
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: 12 }}>
+                      <span style={{ color: "#9ca3af" }}>{match.current}/{match.total} oyuncu</span>
+                      <span style={{ color: "#2E7D32", fontWeight: 700 }}>{match.cost}</span>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
+                    <span style={{ fontSize: 12, color: "#9ca3af" }}>{match.skill}</span>
+                    <Link href="/groups"
+                      className="katil-btn"
+                      style={{ background: "#E8F5E9", color: "#2E7D32", borderRadius: 8, padding: "6px 16px", fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
+                      Katıl
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* --- Güvenli Ödeme Kartları (Trust Row) --- */}
+        <div className="relative z-10" style={{ padding: "48px 0 16px 0" }}>
+          <div className="content-container">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {[
-                { icon: Shield, color: "#2E7D32", title: "Güvenli Ödeme", desc: "256-bit SSL şifreli, güvenli altyapı." },
-                { icon: Clock, color: "#1565C0", title: "7/24 Destek", desc: "Her zaman yanınızdayız, anında çözüm." },
-                { icon: Star, color: "#E65100", title: "Doğrulanmış Sahalar", desc: "Tüm sahalar yerinde ziyaret edilerek onaylandı." },
+                { icon: Shield, color: "#2E7D32", bg: "#e8f5e9", title: "Güvenli Ödeme", desc: "256-bit SSL şifreli, güvenli altyapı." },
+                { icon: Clock, color: "#1565C0", bg: "#e3f2fd", title: "7/24 Destek", desc: "Her zaman yanınızdayız, anında çözüm." },
+                { icon: Star, color: "#E65100", bg: "#fff3e0", title: "Doğrulanmış Sahalar", desc: "Tüm sahalar yerinde ziyaret edilerek onaylandı." },
               ].map(item => {
                 const Icon = item.icon;
                 return (
-                  <div key={item.title} style={{ display: "flex", alignItems: "flex-start", gap: 16, padding: "20px", background: "rgba(255, 255, 255, 0.95)", borderRadius: "14px", border: "1px solid rgba(255,255,255,0.5)", boxShadow: "0 8px 30px rgba(0,0,0,0.12)", backdropFilter: "blur(10px)" }}>
-                    <div style={{ flexShrink: 0, width: 44, height: 44, borderRadius: "12px", background: `${item.color}15`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <Icon size={20} style={{ color: item.color }} />
+                  <div key={item.title} style={{
+                    display: "flex", flexDirection: "column", alignItems: "flex-start",
+                    padding: "28px", gap: 0,
+                    background: "rgba(255, 255, 255, 0.88)",
+                    backdropFilter: "blur(20px)",
+                    WebkitBackdropFilter: "blur(20px)",
+                    borderRadius: "24px",
+                    border: "1px solid rgba(255,255,255,1)",
+                    boxShadow: "0 10px 40px rgba(0,0,0,0.06)",
+                    transition: "all 0.5s cubic-bezier(0.16,1,0.3,1)",
+                    cursor: "default",
+                  }}
+                    className="hover:-translate-y-1 hover:shadow-xl transition-all duration-300"
+                  >
+                    <div style={{
+                      width: 54, height: 54, borderRadius: "50%",
+                      background: item.bg, color: item.color,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      marginBottom: "1.25rem",
+                    }}>
+                      <Icon size={26} />
                     </div>
-                    <div>
-                      <p style={{ fontWeight: 700, fontSize: 14, color: "#111827" }}>{item.title}</p>
-                      <p style={{ fontSize: 13, color: "#9ca3af", marginTop: 4, lineHeight: 1.5 }}>{item.desc}</p>
-                    </div>
+                    <h3 style={{ fontSize: "1.15rem", fontWeight: 700, color: "#1a1a1a", marginBottom: "0.25rem" }}>{item.title}</h3>
+                    <p style={{ fontSize: "0.9rem", color: "#666", lineHeight: 1.4 }}>{item.desc}</p>
                   </div>
                 );
               })}
@@ -301,21 +340,48 @@ export default function Home() {
         </div>
 
         {/* --- CTA İçeriği --- */}
-        <div className="relative text-white py-16 px-4" style={{ zIndex: 1 }}>
-          <div className="content-container text-center relative">
-            <div style={{ fontSize: 40, marginBottom: 16 }}>⚽</div>
-            <h2 className="text-4xl font-black mb-3 tracking-tight">Hemen Başla, Ücretsiz</h2>
-            <p className="mb-8 text-lg" style={{ color: "rgba(255,255,255,0.9)" }}>
-              Binlerce kullanıcıyla saha kirasında zaman ve para kaybetme.
-            </p>
-            <Link href="/register" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "white", color: "#2E7D32", padding: "16px 36px", borderRadius: "16px", fontWeight: 800, fontSize: 16, boxShadow: "0 8px 24px rgba(0,0,0,0.2)", textDecoration: "none" }}>
-              Ücretsiz Üye Ol <ArrowRight size={20} />
-            </Link>
+        <div className="relative py-16 px-4" style={{ zIndex: 1 }}>
+          <div className="content-container text-center relative" style={{ display: "flex", justifyContent: "center" }}>
+            <div style={{
+              background: "rgba(255, 255, 255, 0.8)",
+              marginBottom: "48px",
+              backdropFilter: "blur(20px)",
+              WebkitBackdropFilter: "blur(20px)",
+              border: "1px solid rgba(255, 255, 255, 1)",
+              borderRadius: "30px",
+              padding: "48px 56px",
+              boxShadow: "0 10px 40px rgba(0,0,0,0.06)",
+              maxWidth: 560,
+              width: "100%",
+              alignItems: "center",
+              display: "flex",
+              flexDirection: "column",
+            }}>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>⚽</div>
+              <h2 className="text-4xl font-black mb-3 tracking-tight" style={{ color: "#1a1a1a" }}>Hemen Başla, Ücretsiz</h2>
+              <p className="mb-12 text-lg" style={{ color: "#666" }}>
+                Binlerce kullanıcıyla saha kirasında zaman ve para kaybetme.
+              </p>
+              <Link
+                href="/register"
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 8,
+                  background: "white", color: "#2E7D32",
+                  padding: "16px 36px", borderRadius: "16px",
+                  fontWeight: 800, fontSize: 16,
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                  textDecoration: "none",
+                }}
+                className="cta-register-btn"
+              >
+                Ücretsiz Üye Ol <ArrowRight size={20} />
+              </Link>
+            </div>
           </div>
         </div>
 
         {/* --- Footer İçeriği --- */}
-        <footer className="relative text-white pt-12 pb-8 px-4" style={{ zIndex: 1, borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+        <footer className="relative text-white pb-8 px-4" style={{ zIndex: 1, borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "8px" }}>
           <div className="content-container">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-10">
               <div>
