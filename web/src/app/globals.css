@@ -283,6 +283,30 @@ body {
   box-shadow: 0 16px 36px rgba(17, 24, 39, 0.08);
 }
 
+/* ---- Match Create: softer white Dynamo Glass ---- */
+.match-dynamo-card {
+  background: rgba(255, 255, 255, 0.78);
+  border-color: rgba(255, 255, 255, 0.84);
+  box-shadow: 0 14px 34px rgba(17, 24, 39, 0.06);
+}
+
+.match-dynamo-card::before {
+  background: linear-gradient(180deg, rgba(232, 245, 233, 0.26) 0%, rgba(255, 255, 255, 0.12) 42%, rgba(255, 255, 255, 0) 65%);
+}
+
+.match-dynamo-card:hover {
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: 0 16px 38px rgba(17, 24, 39, 0.08);
+}
+
+.match-dynamo-card .time-slot.available {
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.match-dynamo-card .time-slot.booked {
+  background: rgba(203, 213, 225, 0.55);
+}
+
 /* ---- Auth Topbar Dynamo Glass ---- */
 .auth-topbar-dynamo {
   margin: 12px 16px 0;

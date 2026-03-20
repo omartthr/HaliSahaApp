@@ -17,7 +17,7 @@ const upcomingMatches = [
 
 const quickActions = [
   { icon: Search, title: "Saha Bul", subtitle: "Yakındaki sahaları keşfet", color: "#2E7D32", href: "#map" },
-  { icon: Users, title: "Maç Kur", subtitle: "Arkadaşlarınla maç organize et", color: "#1565C0", href: "/groups" },
+  { icon: Users, title: "Maç Kur", subtitle: "Arkadaşlarınla maç organize et", color: "#1565C0", href: "/groups/create" },
   { icon: Calendar, title: "Randevularım", subtitle: "Rezervasyonlarını yönet", color: "#E65100", href: "/profile" },
   { icon: Star, title: "Favoriler", subtitle: "Kaydettiğin sahalar", color: "#6A1B9A", href: "/profile" },
 ];
@@ -72,12 +72,12 @@ export default function Home() {
         <div style={{ position: "absolute", bottom: "-118px", left: 0, width: "100%", lineHeight: 0, zIndex: 1 }}>
           <svg data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none" style={{ display: "block", width: "calc(100% + 1.3px)", height: 120, overflow: "visible" }}>
             <defs>
-              <filter id="wave-shadow" x="-10%" y="-10%" width="120%" height="150%">
-                <feDropShadow dx="0" dy="12" stdDeviation="10" floodColor="#000000" floodOpacity="0.45" />
+              <filter id="wave-soft-shadow" x="-8%" y="-8%" width="116%" height="180%">
+                <feGaussianBlur stdDeviation="7" />
               </filter>
             </defs>
-            {/* Gölgeli Alt Katman: Gölgeyi oluşturur ama kendi rengi tarayıcı filtresinde hafif solabilir */}
-            <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z" fill="#1A754E" filter="url(#wave-shadow)" />
+            {/* Yumuşak gölge: ayrik ve asagi kaydirilmis katman, keskin cizgi olusturmaz */}
+            <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z" fill="rgba(0,0,0,0.22)" transform="translate(0, 14)" filter="url(#wave-soft-shadow)" />
             {/* Temiz Üst Katman: Filtre olmadığı için üstteki ana alanla %100 aynı piksel renginde çizilir! */}
             <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z" fill="#1A754E" />
           </svg>
