@@ -130,11 +130,24 @@ export default function Aurora(props: AuroraProps) {
         const ctn = ctnDom.current;
         if (!ctn) return;
 
-        const renderer = new Renderer({
-            alpha: true,
-            premultipliedAlpha: true,
-            antialias: true
-        });
+        // Some devices/browsers block or run out of WebGL contexts.
+        // Fail gracefully so the page still renders without Aurora.
+        const probeCanvas = document.createElement('canvas');
+        const canUseWebGL = !!probeCanvas.getContext('webgl2') || !!probeCanvas.getContext('webgl');
+        if (!canUseWebGL) {
+            return;
+        }
+
+        let renderer: Renderer;
+        try {
+            renderer = new Renderer({
+                alpha: true,
+                premultipliedAlpha: true,
+                antialias: true
+            });
+        } catch {
+            return;
+        }
         const gl = renderer.gl;
         gl.clearColor(0, 0, 0, 0);
         gl.enable(gl.BLEND);
@@ -203,7 +216,11 @@ export default function Aurora(props: AuroraProps) {
             if (ctn && gl.canvas.parentNode === ctn) {
                 ctn.removeChild(gl.canvas);
             }
-            gl.getExtension('WEBGL_lose_context')?.loseContext();
+            try {
+                gl.getExtension('WEBGL_lose_context')?.loseContext();
+            } catch {
+                // no-op
+            }
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [amplitude]);

@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Navbar from "@/components/common/Navbar";
 import Link from "next/link";
+import Carousel from "@/components/Carousel";
 import { MapPin, Star, ChevronLeft, Check, ArrowRight } from "lucide-react";
 
 // Maç Kur kartı için, öne çıkan saha detay tasarımının kopyası
@@ -54,6 +55,45 @@ const nearbyFacilities = [
   { id: "f4", district: "Ataşehir", name: "Saha 4", address: "Adres bilgisi gelecek" },
 ];
 
+const featureCarouselItems = [
+  {
+    id: 1,
+    title: "Duş",
+    description: "Maç sonrası temiz ve kullanışlı duş alanı.",
+    icon: <span style={{ fontSize: 18 }}>🚿</span>,
+  },
+  {
+    id: 2,
+    title: "Otopark",
+    description: "Araçla gelenler için rahat otopark erişimi.",
+    icon: <span style={{ fontSize: 18 }}>🅿️</span>,
+  },
+  {
+    id: 3,
+    title: "Kantin",
+    description: "Maç öncesi ve sonrası atıştırmalık alanı.",
+    icon: <span style={{ fontSize: 18 }}>🍔</span>,
+  },
+  {
+    id: 4,
+    title: "Aydınlatma",
+    description: "Akşam maçları için güçlü saha aydınlatması.",
+    icon: <span style={{ fontSize: 18 }}>💡</span>,
+  },
+  {
+    id: 5,
+    title: "Klima",
+    description: "Kapalı alanlarda dengeli hava sirkulasyonu.",
+    icon: <span style={{ fontSize: 18 }}>🌀</span>,
+  },
+  {
+    id: 6,
+    title: "Wi-Fi",
+    description: "Tesiste hızlı ve kesintisiz internet erişimi.",
+    icon: <span style={{ fontSize: 18 }}>📶</span>,
+  },
+];
+
 export default function MatchCreatePage() {
   const [selectedPitch, setSelectedPitch] = useState(mockField.pitches[0]);
   const [selectedDate, setSelectedDate] = useState(today);
@@ -72,7 +112,6 @@ export default function MatchCreatePage() {
     );
   };
 
-  const totalPrice = selectedSlots.length * selectedPitch.price;
   const canBook = selectedSlots.length > 0;
 
   const dayNames = ["Paz", "Pzt", "Sal", "Çrş", "Per", "Cum", "Cmt"];
@@ -287,13 +326,16 @@ export default function MatchCreatePage() {
 
             <div>
               <h2 style={{ fontSize: 17, fontWeight: 700, color: "#111827", marginBottom: 14 }}>Özellikler</h2>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-                {mockField.features.map((f) => (
-                  <div key={f.name} style={{ background: "rgba(255,255,255,0.56)", borderRadius: 10, padding: "14px 8px", textAlign: "center" }}>
-                    <div style={{ fontSize: 22, marginBottom: 4 }}>{f.icon}</div>
-                    <div style={{ fontSize: 12, color: "#6b7280", fontWeight: 500 }}>{f.name}</div>
-                  </div>
-                ))}
+              <div style={{ display: "flex", justifyContent: "center" }}>
+                <Carousel
+                  items={featureCarouselItems}
+                  baseWidth={320}
+                  autoplay
+                  autoplayDelay={3200}
+                  pauseOnHover
+                  loop
+                  round={false}
+                />
               </div>
             </div>
           </div>
@@ -335,46 +377,12 @@ export default function MatchCreatePage() {
         </div>
       </div>
 
-      <div
-        style={{
-          position: "fixed",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          background: "white",
-          borderTop: "1px solid #f0f0f0",
-          padding: "16px 20px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          zIndex: 50,
-          boxShadow: "0 -4px 20px rgba(0,0,0,0.08)",
-        }}
-      >
-        <div>
-          {canBook ? (
-            <>
-              <p style={{ fontSize: 20, fontWeight: 900, color: "#111827" }}>₺{totalPrice}</p>
-              <p style={{ fontSize: 12, color: "#9ca3af" }}>{selectedSlots.length} saat</p>
-            </>
-          ) : (
-            <p style={{ fontSize: 14, color: "#9ca3af" }}>Saat seçin</p>
-          )}
-        </div>
+      <div className="match-booking-bar">
         <Link
+          className={`match-booking-button ${canBook ? "is-active" : "is-disabled"}`}
           href={canBook ? `/booking/${mockField.id}` : "#"}
           style={{
-            background: canBook ? "#2E7D32" : "#e5e7eb",
-            color: canBook ? "white" : "#9ca3af",
-            padding: "14px 28px",
-            borderRadius: "14px",
-            fontWeight: 800,
-            fontSize: 15,
             textDecoration: "none",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            boxShadow: canBook ? "0 4px 12px rgba(46,125,50,0.3)" : "none",
             pointerEvents: canBook ? "auto" : "none",
           }}
         >
