@@ -2,6 +2,7 @@ import Navbar from "@/components/common/Navbar";
 import Link from "next/link";
 import { Search, MapPin, Calendar, Users, ArrowRight, Star, Shield, Clock, ChevronRight } from "lucide-react";
 import MapSection from "@/components/map/MapSection";
+import Aurora from "@/components/ui/Aurora/Aurora";
 
 const featuredFields = [
   { id: "1", name: "Kadıköy Merkez Halı Saha", address: "Zühtüpaşa, Kadıköy / İstanbul", rating: 4.8, reviews: 124, features: ["🚿", "🅿️", "🍔", "💡"], color: "from-emerald-700 to-teal-600" },
@@ -137,26 +138,26 @@ export default function Home() {
           {/* RIGHT: Location Cards — outer wrapper scrolls, inner wrapper gives padding so scale() doesn't clip */}
           <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", maxHeight: 520, borderRadius: 8 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem", padding: "6px 6px 6px 2px" }}>
-            {/* Placeholder cards – user will fill in later */}
-            {[
-              { name: "Saha 1", district: "İlçe", address: "Adres bilgisi gelecek" },
-              { name: "Saha 2", district: "İlçe", address: "Adres bilgisi gelecek" },
-              { name: "Saha 3", district: "İlçe", address: "Adres bilgisi gelecek" },
-              { name: "Saha 4", district: "İlçe", address: "Adres bilgisi gelecek" },
-              { name: "Saha 5", district: "İlçe", address: "Adres bilgisi gelecek" },
-              { name: "Saha 6", district: "İlçe", address: "Adres bilgisi gelecek" },
-            ].map((saha, i) => (
-              <a
-                key={i}
-                href="#"
-                className="location-card">
-                <span style={{ fontSize: 11, fontWeight: 700, color: "#2E7D32", letterSpacing: "0.08em", textTransform: "uppercase" }}>{saha.district}</span>
-                <span style={{ fontSize: "1.05rem", fontWeight: 700, color: "#111827" }}>{saha.name}</span>
-                <span style={{ fontSize: "0.85rem", color: "#6b7280", display: "flex", alignItems: "center", gap: 4 }}>
-                  <MapPin size={12} /> {saha.address}
-                </span>
-              </a>
-            ))}
+              {/* Placeholder cards – user will fill in later */}
+              {[
+                { name: "Saha 1", district: "İlçe", address: "Adres bilgisi gelecek" },
+                { name: "Saha 2", district: "İlçe", address: "Adres bilgisi gelecek" },
+                { name: "Saha 3", district: "İlçe", address: "Adres bilgisi gelecek" },
+                { name: "Saha 4", district: "İlçe", address: "Adres bilgisi gelecek" },
+                { name: "Saha 5", district: "İlçe", address: "Adres bilgisi gelecek" },
+                { name: "Saha 6", district: "İlçe", address: "Adres bilgisi gelecek" },
+              ].map((saha, i) => (
+                <a
+                  key={i}
+                  href="#"
+                  className="location-card">
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#2E7D32", letterSpacing: "0.08em", textTransform: "uppercase" }}>{saha.district}</span>
+                  <span style={{ fontSize: "1.05rem", fontWeight: 700, color: "#111827" }}>{saha.name}</span>
+                  <span style={{ fontSize: "0.85rem", color: "#6b7280", display: "flex", alignItems: "center", gap: 4 }}>
+                    <MapPin size={12} /> {saha.address}
+                  </span>
+                </a>
+              ))}
             </div>
           </div>
 
@@ -262,70 +263,82 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Trust row */}
-      <section style={{ background: "white", borderTop: "1px solid #f0f0f0", padding: "32px 0" }}>
-        <div className="content-container">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              { icon: Shield, color: "#2E7D32", title: "Güvenli Ödeme", desc: "256-bit SSL şifreli, güvenli altyapı." },
-              { icon: Clock, color: "#1565C0", title: "7/24 Destek", desc: "Her zaman yanınızdayız, anında çözüm." },
-              { icon: Star, color: "#E65100", title: "Doğrulanmış Sahalar", desc: "Tüm sahalar yerinde ziyaret edilerek onaylandı." },
-            ].map(item => {
-              const Icon = item.icon;
-              return (
-                <div key={item.title} style={{ display: "flex", alignItems: "flex-start", gap: 16, padding: "20px", background: "#fafafa", borderRadius: "14px", border: "1px solid #f0f0f0" }}>
-                  <div style={{ flexShrink: 0, width: 44, height: 44, borderRadius: "12px", background: `${item.color}15`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Icon size={20} style={{ color: item.color }} />
-                  </div>
-                  <div>
-                    <p style={{ fontWeight: 700, fontSize: 14, color: "#111827" }}>{item.title}</p>
-                    <p style={{ fontSize: 13, color: "#9ca3af", marginTop: 4, lineHeight: 1.5 }}>{item.desc}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+      {/* Footer Öncesi Ortak Aurora Alanı (Trust Row + CTA) */}
+      <section className="relative overflow-hidden" style={{ borderTop: "1px solid #f0f0f0", background: "#0f2e1a" }}>
+        {/* Ortak Arka Plan: Aurora */}
+        <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", zIndex: 0, opacity: 1 }}>
+          <Aurora
+            colorStops={["#114B32", "#2E7D32", "#4CAF50"]}
+            amplitude={2.0}
+            blend={0.6}
+          />
         </div>
-      </section>
 
-      {/* CTA */}
-      <section className="relative overflow-hidden text-white py-20 px-4" style={{ background: "linear-gradient(135deg, #2E7D32, #1B5E20)" }}>
-        <div className="content-container text-center relative">
-          <div style={{ fontSize: 40, marginBottom: 16 }}>⚽</div>
-          <h2 className="text-4xl font-black mb-3 tracking-tight">Hemen Başla, Ücretsiz</h2>
-          <p className="mb-8 text-lg" style={{ color: "rgba(255,255,255,0.8)" }}>
-            Binlerce kullanıcıyla saha kirasında zaman ve para kaybetme.
-          </p>
-          <Link href="/register" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "white", color: "#2E7D32", padding: "16px 36px", borderRadius: "16px", fontWeight: 800, fontSize: 16, boxShadow: "0 8px 24px rgba(0,0,0,0.2)", textDecoration: "none" }}>
-            Ücretsiz Üye Ol <ArrowRight size={20} />
-          </Link>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer style={{ background: "#111827", color: "white", padding: "48px 16px 32px" }}>
-        <div className="content-container">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-10">
-            <div>
-              <p className="text-2xl font-black tracking-tight">
-                Halı<span style={{ color: "#4CAF50" }}>SahaApp</span>
-              </p>
-              <p style={{ fontSize: 13, color: "#9ca3af", marginTop: 4 }}>Türkiye&apos;nin halı saha rezervasyon platformu.</p>
-            </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "24px" }}>
-              {[["Ana Sayfa", "/"], ["Sahalar", "#map"], ["Gruplar", "/groups"], ["Giriş Yap", "/login"], ["Kayıt Ol", "/register"]].map(([label, href]) => (
-                <Link key={label} href={href} style={{ color: "#9ca3af", fontSize: 14, textDecoration: "none" }}
-                  className="hover:text-white transition-colors">
-                  {label}
-                </Link>
-              ))}
+        {/* --- Trust Row İçeriği --- */}
+        <div className="relative" style={{ padding: "48px 0 16px 0", zIndex: 1 }}>
+          <div className="content-container relative">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[
+                { icon: Shield, color: "#2E7D32", title: "Güvenli Ödeme", desc: "256-bit SSL şifreli, güvenli altyapı." },
+                { icon: Clock, color: "#1565C0", title: "7/24 Destek", desc: "Her zaman yanınızdayız, anında çözüm." },
+                { icon: Star, color: "#E65100", title: "Doğrulanmış Sahalar", desc: "Tüm sahalar yerinde ziyaret edilerek onaylandı." },
+              ].map(item => {
+                const Icon = item.icon;
+                return (
+                  <div key={item.title} style={{ display: "flex", alignItems: "flex-start", gap: 16, padding: "20px", background: "rgba(255, 255, 255, 0.95)", borderRadius: "14px", border: "1px solid rgba(255,255,255,0.5)", boxShadow: "0 8px 30px rgba(0,0,0,0.12)", backdropFilter: "blur(10px)" }}>
+                    <div style={{ flexShrink: 0, width: 44, height: 44, borderRadius: "12px", background: `${item.color}15`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <Icon size={20} style={{ color: item.color }} />
+                    </div>
+                    <div>
+                      <p style={{ fontWeight: 700, fontSize: 14, color: "#111827" }}>{item.title}</p>
+                      <p style={{ fontSize: 13, color: "#9ca3af", marginTop: 4, lineHeight: 1.5 }}>{item.desc}</p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
-          <div style={{ borderTop: "1px solid #1f2937", paddingTop: "24px", textAlign: "center", color: "#6b7280", fontSize: 13 }}>
-            © 2026 HalıSahaApp. Tüm hakları saklıdır.
+        </div>
+
+        {/* --- CTA İçeriği --- */}
+        <div className="relative text-white py-16 px-4" style={{ zIndex: 1 }}>
+          <div className="content-container text-center relative">
+            <div style={{ fontSize: 40, marginBottom: 16 }}>⚽</div>
+            <h2 className="text-4xl font-black mb-3 tracking-tight">Hemen Başla, Ücretsiz</h2>
+            <p className="mb-8 text-lg" style={{ color: "rgba(255,255,255,0.9)" }}>
+              Binlerce kullanıcıyla saha kirasında zaman ve para kaybetme.
+            </p>
+            <Link href="/register" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "white", color: "#2E7D32", padding: "16px 36px", borderRadius: "16px", fontWeight: 800, fontSize: 16, boxShadow: "0 8px 24px rgba(0,0,0,0.2)", textDecoration: "none" }}>
+              Ücretsiz Üye Ol <ArrowRight size={20} />
+            </Link>
           </div>
         </div>
-      </footer>
+
+        {/* --- Footer İçeriği --- */}
+        <footer className="relative text-white pt-12 pb-8 px-4" style={{ zIndex: 1, borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+          <div className="content-container">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-10">
+              <div>
+                <p className="text-2xl font-black tracking-tight">
+                  Halı<span style={{ color: "#4CAF50" }}>SahaApp</span>
+                </p>
+                <p style={{ fontSize: 13, color: "rgba(255,255,255, 0.7)", marginTop: 4 }}>Türkiye&apos;nin halı saha rezervasyon platformu.</p>
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "24px" }}>
+                {[["Ana Sayfa", "/"], ["Sahalar", "#map"], ["Gruplar", "/groups"], ["Giriş Yap", "/login"], ["Kayıt Ol", "/register"]].map(([label, href]) => (
+                  <Link key={label} href={href} style={{ color: "rgba(255,255,255, 0.7)", fontSize: 14, textDecoration: "none" }}
+                    className="hover:text-white transition-colors">
+                    {label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+            <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "24px", textAlign: "center", color: "rgba(255,255,255, 0.5)", fontSize: 13 }}>
+              © 2026 HalıSahaApp. Tüm hakları saklıdır.
+            </div>
+          </div>
+        </footer>
+      </section>
     </div>
   );
 }
