@@ -130,13 +130,9 @@ export default function Aurora(props: AuroraProps) {
         const ctn = ctnDom.current;
         if (!ctn) return;
 
-        // Some devices/browsers block or run out of WebGL contexts.
-        // Fail gracefully so the page still renders without Aurora.
         const probeCanvas = document.createElement('canvas');
         const canUseWebGL = !!probeCanvas.getContext('webgl2') || !!probeCanvas.getContext('webgl');
-        if (!canUseWebGL) {
-            return;
-        }
+        if (!canUseWebGL) return;
 
         let renderer: Renderer;
         try {
