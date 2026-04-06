@@ -33,6 +33,15 @@ import com.example.HaliSahaApp.ui.components.FacilityCard
 import com.example.HaliSahaApp.ui.viewmodels.MapViewModel
 import com.example.HaliSahaApp.utils.AppColors
 import com.example.HaliSahaApp.utils.AppIcons
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapProperties
+import com.google.maps.android.compose.MapUiSettings
+import com.google.maps.android.compose.MarkerComposable
+import com.google.maps.android.compose.MarkerState
+import com.google.maps.android.compose.rememberCameraPositionState
 // import com.google.android.gms.maps.CameraUpdateFactory (Şimdilik kapalı)
 // import com.google.android.gms.maps.model.CameraPosition
 // import com.google.android.gms.maps.model.LatLng
@@ -54,7 +63,6 @@ fun MapScreen(
     var showFilterSheet by remember { mutableStateOf(false) }
     var showListSheet by remember { mutableStateOf(false) }
 
-    /* GOOGLE MAP STATE (YORUM SATIRI)
     val cameraPositionState = rememberCameraPositionState {
         position = uiState.cameraPosition ?: CameraPosition.fromLatLngZoom(LatLng(41.0082, 28.9784), 10f)
     }
@@ -64,12 +72,9 @@ fun MapScreen(
             cameraPositionState.animate(CameraUpdateFactory.newCameraPosition(it))
         }
     }
-    */
 
     Box(modifier = Modifier.fillMaxSize()) {
 
-        // 1. HARİTA (GEÇİCİ OLARAK KAPALI)
-        /*
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
@@ -90,36 +95,6 @@ fun MapScreen(
                 ) {
                     FacilityMapPin(isSelected = isSelected)
                 }
-            }
-        }
-        */
-
-        // YERİNE GEÇİCİ PLACEHOLDER
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.LightGray),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(
-                    imageVector = Icons.Default.LocationOn,
-                    contentDescription = null,
-                    tint = Color.Gray,
-                    modifier = Modifier.size(60.dp)
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Harita Yüklenemedi",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.DarkGray
-                )
-                Text(
-                    text = "Google Maps API Key eksik.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.DarkGray
-                )
             }
         }
 
