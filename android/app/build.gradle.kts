@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,11 +8,18 @@ plugins {
     id("com.google.gms.google-services")
 }
 
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+
+if (localPropertiesFile.exists()) {
+    localProperties.load(FileInputStream(localPropertiesFile))
+}
 android {
     namespace = "com.example.HaliSahaApp"
     compileSdk = 35
 
     defaultConfig {
+        manifestPlaceholders["GEO_API_KEY"] = localProperties.getProperty("GEO_API_KEY")
         applicationId = "com.example.HaliSahaApp"
         minSdk = 28
         targetSdk = 35
