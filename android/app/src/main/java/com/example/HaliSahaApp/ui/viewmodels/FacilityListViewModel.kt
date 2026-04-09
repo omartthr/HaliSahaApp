@@ -63,9 +63,8 @@ class FacilityListViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
-            // Mock Data veya Service
-            val facilities = facilityService.loadMockFacilities()
-            // Gerçek implementation: facilityService.fetchAllFacilities()
+            // Gerçek implementation: firebase üzerinden verileri çek
+            val facilities = facilityService.fetchAllFacilities()
 
             _uiState.update {
                 it.copy(

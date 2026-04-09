@@ -167,10 +167,30 @@ object AdminService {
         }
     }
 
+    // MARK: - Fetch All Bookings
+    suspend fun fetchAllBookings(): List<Booking> {
+        val userId = firebaseService.currentUserId ?: throw AdminError.NotAuthenticated
+        return try {
+            // Gerçek senaryoda ownerı olduğu facility'leri alır ve onlara ait bookingleri çeker
+            val myFacilities = fetchMyFacilities()
+            val facilityIds = myFacilities.mapNotNull { it.id }
+            
+            if (facilityIds.isEmpty()) return emptyList()
+
+            // NOT: Firebase'te '.whereIn' 10 id ile sınırlıdır.
+            val query = firebaseService.bookingsCollection
+                .whereIn("facilityId", facilityIds.take(10)) 
+            
+            firebaseService.fetchDocuments(query)
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
     // MARK: - Create/Update Facility
     suspend fun createFacility(facility: Facility): String {
         val userId = firebaseService.currentUserId ?: throw AdminError.NotAuthenticated
-        val newFacility = facility.copy(ownerId = userId, status = FacilityStatus.PENDING)
+        val newFacility = facility.copy(ownerId = userId, status = FacilityStatus.pending)
 
         return try {
             firebaseService.createDocument(firebaseService.facilitiesCollection, newFacility)
@@ -192,14 +212,14 @@ object AdminService {
 
     // MARK: - Booking Actions
     suspend fun confirmBooking(bookingId: String) {
-        updateBookingStatus(bookingId, BookingStatus.CONFIRMED)
+        updateBookingStatus(bookingId, BookingStatus.confirmed)
     }
 
     suspend fun rejectBooking(bookingId: String, reason: String) {
         val updates = mapOf(
-            FirestoreField.STATUS to BookingStatus.CANCELLED.rawValue,
+            FirestoreField.STATUS to BookingStatus.cancelled.rawValue,
             "cancellationReason" to reason,
-            "paymentStatus" to PaymentStatus.REFUNDED.rawValue,
+            "paymentStatus" to PaymentStatus.refunded.rawValue,
             FirestoreField.UPDATED_AT to FieldValue.serverTimestamp()
         )
         try {
@@ -244,8 +264,8 @@ object AdminService {
                 depositAmount = 130.0,
                 remainingAmount = 520.0,
                 currency = "TRY",
-                status = com.example.HaliSahaApp.data.models.BookingStatus.CONFIRMED,
-                paymentStatus = com.example.HaliSahaApp.data.models.PaymentStatus.DEPOSIT_PAID,
+                status = com.example.HaliSahaApp.data.models.BookingStatus.confirmed,
+                paymentStatus = com.example.HaliSahaApp.data.models.PaymentStatus.depositPaid,
                 ticketNumber = "HS-2024-001"
             ),
             Booking(
@@ -266,8 +286,8 @@ object AdminService {
                 depositAmount = 130.0,
                 remainingAmount = 520.0,
                 currency = "TRY",
-                status = com.example.HaliSahaApp.data.models.BookingStatus.PENDING, // Bekleyen örnek
-                paymentStatus = com.example.HaliSahaApp.data.models.PaymentStatus.DEPOSIT_PAID,
+                status = com.example.HaliSahaApp.data.models.BookingStatus.pending, // Bekleyen örnek
+                paymentStatus = com.example.HaliSahaApp.data.models.PaymentStatus.depositPaid,
                 ticketNumber = "HS-2024-002"
             ),
             Booking(
@@ -288,8 +308,8 @@ object AdminService {
                 depositAmount = 140.0,
                 remainingAmount = 560.0,
                 currency = "TRY",
-                status = com.example.HaliSahaApp.data.models.BookingStatus.CONFIRMED,
-                paymentStatus = com.example.HaliSahaApp.data.models.PaymentStatus.DEPOSIT_PAID,
+                status = com.example.HaliSahaApp.data.models.BookingStatus.confirmed,
+                paymentStatus = com.example.HaliSahaApp.data.models.PaymentStatus.depositPaid,
                 ticketNumber = "HS-2024-003"
             )
         )
@@ -315,7 +335,7 @@ object AdminService {
                     isIndoor = false,
                     hasLighting = true
                 ),
-                status = FacilityStatus.APPROVED,
+                status = FacilityStatus.approved,
                 averageRating = 4.8,
                 totalReviews = 256
             )

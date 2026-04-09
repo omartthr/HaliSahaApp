@@ -28,7 +28,7 @@ class AdminFacilitiesViewModel : ViewModel() {
     fun loadFacilities() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            val facilities = adminService.loadMockAdminFacilities()
+            val facilities = adminService.fetchMyFacilities()
             _uiState.update {
                 it.copy(facilities = facilities, isLoading = false)
             }

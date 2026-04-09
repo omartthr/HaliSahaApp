@@ -36,27 +36,21 @@ class AdminDashboardViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
-            // Mock Data
-            val facilities = adminService.loadMockAdminFacilities()
-            val allBookings = adminService.loadMockAdminBookings() // Buna erişim açılmalı (public yap)
-            val todayBookings = allBookings.filter { isSameDay(it.date, Date()) }
+            try {
+                val stats = adminService.fetchDashboardStats()
+                val facilities = adminService.fetchMyFacilities()
+                val todayBookings = adminService.todayBookings.value
 
-            // Stats
-            val stats = AdminService.DashboardStats(
-                totalFacilities = facilities.size,
-                todayBookings = todayBookings.size,
-                pendingBookings = allBookings.count { it.status == com.example.HaliSahaApp.data.models.BookingStatus.PENDING },
-                monthlyRevenue = 15750.0,
-                averageRating = 4.8
-            )
-
-            _uiState.update {
-                it.copy(
-                    stats = stats,
-                    todayBookings = todayBookings,
-                    facilities = facilities,
-                    isLoading = false
-                )
+                _uiState.update {
+                    it.copy(
+                        stats = stats,
+                        todayBookings = todayBookings,
+                        facilities = facilities,
+                        isLoading = false
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }

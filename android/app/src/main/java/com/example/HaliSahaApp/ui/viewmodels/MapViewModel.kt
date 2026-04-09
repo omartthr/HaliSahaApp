@@ -33,6 +33,7 @@ data class MapUiState(
 
     // Map State
     val userLocation: UserLocation? = null,
+    val mapCenter: UserLocation? = null,
     val cameraPosition: CameraPosition? = null // Harita kamerasını güncellemek için
 ) {
     val hasActiveFilters: Boolean
@@ -58,7 +59,7 @@ class MapViewModel : ViewModel() {
         setupBindings()
 
         viewModelScope.launch {
-            loadFacilities()
+            loadFacilities(forceRefresh = false)
         }
     }
 
@@ -80,24 +81,25 @@ class MapViewModel : ViewModel() {
     }
 
     // MARK: - Load Facilities
-    private suspend fun loadFacilities() {
-        _uiState.update { it.copy(isLoading = true, error = null) }
+    fun loadFacilities(forceRefresh: Boolean = false) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
 
-        try {
-            // Şimdilik Mock Data (Service'deki)
-            val loadedFacilities = facilityService.loadMockFacilities()
-            // İleride: facilityService.fetchAllFacilities()
+            try {
+                // Gerçek zamanlı Firebase verilerini çek
+                val loadedFacilities = facilityService.fetchAllFacilities(forceRefresh)
 
-            _uiState.update {
-                it.copy(
-                    facilities = loadedFacilities,
-                    isLoading = false
-                )
+                _uiState.update {
+                    it.copy(
+                        facilities = loadedFacilities,
+                        isLoading = false
+                    )
+                }
+                applyFilters() // İlk yüklemede filtreleri uygula
+
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, error = e.localizedMessage) }
             }
-            applyFilters() // İlk yüklemede filtreleri uygula
-
-        } catch (e: Exception) {
-            _uiState.update { it.copy(isLoading = false, error = e.localizedMessage) }
         }
     }
 
@@ -129,11 +131,12 @@ class MapViewModel : ViewModel() {
             if (filters.hasCafe) result = result.filter { it.amenities.hasCafe }
         }
 
-        // Sıralama (Opsiyonel: Yakına göre sırala)
-        currentState.userLocation?.let { userLoc ->
+        // Sıralama (Yakına göre sırala - Önce mapCenter, yoksa userLocation)
+        val center = currentState.mapCenter ?: currentState.userLocation
+        center?.let { loc ->
             result = result.sortedBy { facility ->
                 val facLoc = UserLocation(facility.latitude, facility.longitude)
-                userLoc.distanceTo(facLoc)
+                loc.distanceTo(facLoc)
             }
         }
 
@@ -190,8 +193,17 @@ class MapViewModel : ViewModel() {
     private fun centerOnFacility(facility: Facility) {
         val target = LatLng(facility.latitude, facility.longitude)
         _uiState.update {
-            it.copy(cameraPosition = CameraPosition.fromLatLngZoom(target, 16f))
+            it.copy(
+                cameraPosition = CameraPosition.fromLatLngZoom(target, 16f),
+                mapCenter = UserLocation(target.latitude, target.longitude)
+            )
         }
+    }
+    
+    fun onMapIdle(latitude: Double, longitude: Double) {
+        val newCenter = UserLocation(latitude, longitude)
+        _uiState.update { it.copy(mapCenter = newCenter) }
+        applyFilters() // Listeyi yeni merkeze göre sırala
     }
 
     fun requestLocationPermission(context: android.content.Context) {

@@ -62,6 +62,7 @@ fun MapScreen(
     val sheetState = rememberModalBottomSheetState()
     var showFilterSheet by remember { mutableStateOf(false) }
     var showListSheet by remember { mutableStateOf(false) }
+    var showSearchThisArea by remember { mutableStateOf(false) }
 
     val cameraPositionState = rememberCameraPositionState {
         position = uiState.cameraPosition ?: CameraPosition.fromLatLngZoom(LatLng(41.0082, 28.9784), 10f)
@@ -70,6 +71,19 @@ fun MapScreen(
     LaunchedEffect(uiState.cameraPosition) {
         uiState.cameraPosition?.let {
             cameraPositionState.animate(CameraUpdateFactory.newCameraPosition(it))
+        }
+    }
+
+    LaunchedEffect(cameraPositionState.isMoving) {
+        if (!cameraPositionState.isMoving) {
+            val position = cameraPositionState.position.target
+            viewModel.onMapIdle(position.latitude, position.longitude)
+            // Harita kaydırıldıysa ve yüklenmiyorsa "Bu Alanda Ara" butonunu göster
+            if (!uiState.isLoading) {
+                showSearchThisArea = true
+            }
+        } else {
+            showSearchThisArea = false
         }
     }
 
@@ -169,6 +183,28 @@ fun MapScreen(
                         modifier = Modifier.clickable { viewModel.clearFilters() }
                     )
                 }
+            }
+        }
+
+        // "Bu Alanda Ara" Butonu
+        if (showSearchThisArea) {
+            Button(
+                onClick = {
+                    viewModel.loadFacilities(forceRefresh = true)
+                    showSearchThisArea = false
+                },
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 110.dp)
+                    .shadow(4.dp, RoundedCornerShape(20.dp)),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = AppColors.Surface,
+                    contentColor = AppColors.Primary
+                )
+            ) {
+                Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Bu Alanda Ara", fontWeight = FontWeight.Bold)
             }
         }
 

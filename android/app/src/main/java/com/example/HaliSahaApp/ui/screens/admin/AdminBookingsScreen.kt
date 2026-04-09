@@ -125,7 +125,7 @@ fun AdminBookingsScreen(
 
                 val booking = selectedBooking!!
 
-                if (booking.status == BookingStatus.PENDING) {
+                if (booking.status == BookingStatus.pending) {
                     Button(onClick = { viewModel.confirmBooking(booking); showActionSheet = false }, modifier = Modifier.fillMaxWidth()) {
                         Text("Onayla")
                     }

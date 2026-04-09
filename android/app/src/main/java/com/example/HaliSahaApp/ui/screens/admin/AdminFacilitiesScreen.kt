@@ -152,8 +152,8 @@ fun AdminFacilityListCard(facility: Facility, onClick: () -> Unit) {
 @Composable
 fun StatusBadge(status: FacilityStatus) {
     val color = when(status) {
-        FacilityStatus.APPROVED -> AppColors.Success
-        FacilityStatus.PENDING -> AppColors.Warning
+        FacilityStatus.approved -> AppColors.Success
+        FacilityStatus.pending -> AppColors.Warning
         else -> Color.Gray
     }
     Surface(

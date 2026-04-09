@@ -232,8 +232,8 @@ fun AdminFacilityCard(facility: Facility) {
 
             // Status Badge
             val statusColor = when (facility.status) {
-                FacilityStatus.APPROVED -> AppColors.Success
-                FacilityStatus.PENDING -> AppColors.Warning
+                FacilityStatus.approved -> AppColors.Success
+                FacilityStatus.pending -> AppColors.Warning
                 else -> Color.Gray
             }
             Surface(color = statusColor.copy(alpha = 0.1f), shape = RoundedCornerShape(4.dp)) {

@@ -93,9 +93,8 @@ class HomeViewModel : ViewModel() {
         _uiState.update { it.copy(isLoading = true) }
 
         try {
-            // 1. Tesisleri Servisten Çek (Şimdilik Mock)
-            // İleride burası facilityService.fetchNearbyFacilities() olacak
-            val allFacilities = facilityService.loadMockFacilities()
+            // 1. Tesisleri Servisten Çek
+            val allFacilities = facilityService.fetchAllFacilities()
 
             // 2. Maç İlanlarını Oluştur (Şimdilik Local Mock)
             // FacilityService'e MatchPost servisi eklediğimizde oradan çekeceğiz
@@ -151,7 +150,7 @@ class HomeViewModel : ViewModel() {
             neededPlayers = neededPlayers,
             currentPlayers = currentPlayers,
             maxPlayers = maxPlayers,
-            skillLevel = SkillLevel.INTERMEDIATE,
+            skillLevel = SkillLevel.intermediate,
             costPerPlayer = 80.0
         )
     }

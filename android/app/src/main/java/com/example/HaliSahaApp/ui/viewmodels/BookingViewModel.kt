@@ -42,8 +42,8 @@ class BookingsViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                // Şimdilik Mock Data (Gerçek data için: bookingService.fetchUserBookings())
-                val bookings = bookingService.loadMockBookings()
+                // Gerçek data çekiliyor
+                val bookings = bookingService.fetchUserBookings()
 
                 _uiState.update {
                     it.copy(bookings = bookings, isLoading = false)
@@ -63,9 +63,9 @@ class BookingsViewModel : ViewModel() {
     private fun applyFilter() {
         val currentState = _uiState.value
         val result = when (currentState.selectedFilter) {
-            BookingFilter.UPCOMING -> currentState.bookings.filter { !it.isPast && it.status == BookingStatus.CONFIRMED }
-            BookingFilter.PAST -> currentState.bookings.filter { it.isPast || it.status == BookingStatus.COMPLETED }
-            BookingFilter.CANCELLED -> currentState.bookings.filter { it.status == BookingStatus.CANCELLED }
+            BookingFilter.UPCOMING -> currentState.bookings.filter { !it.isPast && it.status == BookingStatus.confirmed }
+            BookingFilter.PAST -> currentState.bookings.filter { it.isPast || it.status == BookingStatus.completed }
+            BookingFilter.CANCELLED -> currentState.bookings.filter { it.status == BookingStatus.cancelled }
         }
         _uiState.update { it.copy(filteredBookings = result) }
     }

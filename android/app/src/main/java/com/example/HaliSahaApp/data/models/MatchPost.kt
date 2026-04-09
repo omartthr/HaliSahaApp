@@ -30,7 +30,7 @@ data class MatchPost(
     val currentPlayers: Int = 0,
     val maxPlayers: Int = 0,
     val preferredPositions: List<PlayerPosition> = emptyList(),
-    val skillLevel: SkillLevel = SkillLevel.ANY,
+    val skillLevel: SkillLevel = SkillLevel.any,
     val ageRange: AgeRange? = null,
     val costPerPlayer: Double? = null,
 
@@ -40,7 +40,7 @@ data class MatchPost(
     val rejectedIds: List<String> = emptyList(),
 
     // Durum
-    val status: MatchPostStatus = MatchPostStatus.ACTIVE,
+    val status: MatchPostStatus = MatchPostStatus.active,
     val createdAt: Date = Date(),
     val updatedAt: Date = Date(),
     val expiresAt: Date = Date()
@@ -64,7 +64,7 @@ data class MatchPost(
 
     // MARK: - Helper Methods
     fun canApply(userId: String): Boolean {
-        if (status != MatchPostStatus.ACTIVE || isExpired || isFull) return false
+        if (status != MatchPostStatus.active || isExpired || isFull) return false
         return userId !in applicantIds && userId !in acceptedIds && userId != creatorId
     }
 
@@ -112,7 +112,7 @@ data class MatchPost(
             currentPlayers = 10,
             maxPlayers = 14,
             preferredPositions = listOf(PlayerPosition.DEFENDER, PlayerPosition.MIDFIELDER),
-            skillLevel = SkillLevel.INTERMEDIATE,
+            skillLevel = SkillLevel.intermediate,
             costPerPlayer = 100.0
         )
     }
@@ -121,19 +121,19 @@ data class MatchPost(
 // MARK: - Enums & Secondary Models
 
 enum class MatchPostStatus(val rawValue: String, val displayName: String, val color: String) {
-    ACTIVE("active", "Aktif", "green"),
-    FULL("full", "Kadro Tamamlandı", "blue"),
-    COMPLETED("completed", "Tamamlandı", "gray"),
-    CANCELLED("cancelled", "İptal Edildi", "red"),
-    EXPIRED("expired", "Süresi Doldu", "gray");
+    active("active", "Aktif", "green"),
+    full("full", "Kadro Tamamlandı", "blue"),
+    completed("completed", "Tamamlandı", "gray"),
+    cancelled("cancelled", "İptal Edildi", "red"),
+    expired("expired", "Süresi Doldu", "gray");
 }
 
 enum class SkillLevel(val rawValue: String, val displayName: String, val icon: String) {
-    BEGINNER("beginner", "Başlangıç", "⭐"),
-    INTERMEDIATE("intermediate", "Orta Seviye", "⭐⭐"),
-    ADVANCED("advanced", "İleri Seviye", "⭐⭐⭐"),
-    PROFESSIONAL("professional", "Profesyonel", "🏆"),
-    ANY("any", "Farketmez", "🎯");
+    beginner("beginner", "Başlangıç", "⭐"),
+    intermediate("intermediate", "Orta Seviye", "⭐⭐"),
+    advanced("advanced", "İleri Seviye", "⭐⭐⭐"),
+    professional("professional", "Profesyonel", "🏆"),
+    any("any", "Farketmez", "🎯");
 }
 
 data class AgeRange(
@@ -160,14 +160,14 @@ data class MatchPostApplication(
     val userPosition: PlayerPosition = PlayerPosition.UNSPECIFIED,
     val userReliabilityScore: Double = 5.0,
     val message: String? = null,
-    val status: ApplicationStatus = ApplicationStatus.PENDING,
+    val status: ApplicationStatus = ApplicationStatus.pending,
     val createdAt: Date = Date(),
     val updatedAt: Date = Date()
 )
 
 enum class ApplicationStatus(val rawValue: String, val displayName: String) {
-    PENDING("pending", "Bekliyor"),
-    ACCEPTED("accepted", "Kabul Edildi"),
-    REJECTED("rejected", "Reddedildi"),
-    WITHDRAWN("withdrawn", "Geri Çekildi");
+    pending("pending", "Bekliyor"),
+    accepted("accepted", "Kabul Edildi"),
+    rejected("rejected", "Reddedildi"),
+    withdrawn("withdrawn", "Geri Çekildi");
 }

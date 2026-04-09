@@ -35,8 +35,8 @@ data class Booking(
     val currency: String = "TRY",
 
     // Durum bilgileri
-    val status: BookingStatus = BookingStatus.PENDING,
-    val paymentStatus: PaymentStatus = PaymentStatus.PENDING,
+    val status: BookingStatus = BookingStatus.pending,
+    val paymentStatus: PaymentStatus = PaymentStatus.pending,
     val cancellationReason: String? = null,
 
     // QR Kod / Bilet
@@ -69,7 +69,7 @@ data class Booking(
 
     val canBeCancelled: Boolean
         get() {
-            if (status == BookingStatus.CANCELLED) return false
+            if (status == BookingStatus.cancelled) return false
             val calendar = Calendar.getInstance()
             calendar.time = date
             calendar.set(Calendar.HOUR_OF_DAY, startHour)
@@ -80,7 +80,7 @@ data class Booking(
         }
 
     val isRefundable: Boolean
-        get() = canBeCancelled && paymentStatus == PaymentStatus.DEPOSIT_PAID
+        get() = canBeCancelled && paymentStatus == PaymentStatus.depositPaid
 
     // MARK: - Helper Methods & Mock Data
     companion object {
@@ -107,8 +107,8 @@ data class Booking(
             totalPrice = 800.0,
             depositAmount = 160.0,
             remainingAmount = 640.0,
-            status = BookingStatus.CONFIRMED,
-            paymentStatus = PaymentStatus.DEPOSIT_PAID,
+            status = BookingStatus.confirmed,
+            paymentStatus = PaymentStatus.depositPaid,
             ticketNumber = "HS-2024-000123"
         )
     }
@@ -116,21 +116,21 @@ data class Booking(
 
 // MARK: - Booking Status Enum
 enum class BookingStatus(val rawValue: String, val displayName: String, val color: String, val icon: String) {
-    PENDING("pending", "Onay Bekliyor", "orange", "schedule"),
-    CONFIRMED("confirmed", "Onaylandı", "green", "check_circle"),
-    COMPLETED("completed", "Tamamlandı", "blue", "sports_score"),
-    CANCELLED("cancelled", "İptal Edildi", "red", "cancel"),
-    NO_SHOW("noShow", "Gelmedi", "gray", "person_off");
+    pending("pending", "Onay Bekliyor", "orange", "schedule"),
+    confirmed("confirmed", "Onaylandı", "green", "check_circle"),
+    completed("completed", "Tamamlandı", "blue", "sports_score"),
+    cancelled("cancelled", "İptal Edildi", "red", "cancel"),
+    noShow("noShow", "Gelmedi", "gray", "person_off");
 }
 
 // MARK: - Payment Status Enum
 enum class PaymentStatus(val rawValue: String, val displayName: String) {
-    PENDING("pending", "Ödeme Bekleniyor"),
-    DEPOSIT_PAID("depositPaid", "Kapora Ödendi"),
-    FULLY_PAID("fullyPaid", "Ödendi"),
-    REFUNDED("refunded", "İade Edildi"),
-    PARTIAL_REFUND("partialRefund", "Kısmi İade"),
-    FAILED("failed", "Başarısız");
+    pending("pending", "Ödeme Bekleniyor"),
+    depositPaid("depositPaid", "Kapora Ödendi"),
+    fullyPaid("fullyPaid", "Ödendi"),
+    refunded("refunded", "İade Edildi"),
+    partialRefund("partialRefund", "Kısmi İade"),
+    failed("failed", "Başarısız");
 }
 
 // MARK: - Cancellation Policy Utility
@@ -138,7 +138,7 @@ object CancellationPolicy {
     private const val FREE_REFUND_HOURS_LIMIT = 24
 
     fun canGetRefund(booking: Booking): Pair<Boolean, Double> {
-        if (booking.status == BookingStatus.CANCELLED) return Pair(false, 0.0)
+        if (booking.status == BookingStatus.cancelled) return Pair(false, 0.0)
 
         val calendar = Calendar.getInstance()
         calendar.time = booking.date

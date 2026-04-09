@@ -20,7 +20,7 @@ data class Facility(
     val images: List<String> = emptyList(),             // Fotoğraf URL'leri
     val amenities: FacilityAmenities = FacilityAmenities(), // Özellikler
     val operatingHours: OperatingHours = OperatingHours(),
-    val status: FacilityStatus = FacilityStatus.PENDING,
+    val status: FacilityStatus = FacilityStatus.pending,
     val averageRating: Double = 0.0,
     val totalReviews: Int = 0,
     val createdAt: Date = Date(),
@@ -58,7 +58,7 @@ data class Facility(
                 hasCafe = true,
                 hasLighting = true
             ),
-            status = FacilityStatus.APPROVED,
+            status = FacilityStatus.approved,
             averageRating = 4.5,
             totalReviews = 128
         )
@@ -67,10 +67,10 @@ data class Facility(
 
 // MARK: - Facility Status
 enum class FacilityStatus(val rawValue: String, val displayName: String, val color: String) {
-    PENDING("pending", "Onay Bekliyor", "orange"),
-    APPROVED("approved", "Aktif", "green"),
-    REJECTED("rejected", "Reddedildi", "red"),
-    SUSPENDED("suspended", "Askıya Alındı", "gray");
+    pending("pending", "Onay Bekliyor", "orange"),
+    approved("approved", "Aktif", "green"),
+    rejected("rejected", "Reddedildi", "red"),
+    suspended("suspended", "Askıya Alındı", "gray");
 }
 
 // MARK: - Facility Amenities (Özellikler)

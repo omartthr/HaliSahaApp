@@ -74,7 +74,7 @@ object BookingService {
         val query = firebaseService.bookingsCollection
             .whereEqualTo(FirestoreField.USER_ID, userId)
             .whereGreaterThanOrEqualTo(FirestoreField.DATE, Timestamp(today))
-            .whereEqualTo(FirestoreField.STATUS, BookingStatus.CONFIRMED.rawValue)
+            .whereEqualTo(FirestoreField.STATUS, BookingStatus.confirmed.rawValue)
 
         val bookings: List<Booking> = firebaseService.fetchDocuments(query)
         return bookings.sortedBy { it.date }
@@ -192,7 +192,7 @@ object BookingService {
             .whereEqualTo(FirestoreField.PITCH_ID, pitchId)
             .whereGreaterThanOrEqualTo(FirestoreField.DATE, Timestamp(startOfDay))
             .whereLessThan(FirestoreField.DATE, Timestamp(endOfDay))
-            .whereEqualTo(FirestoreField.STATUS, BookingStatus.CONFIRMED.rawValue)
+            .whereEqualTo(FirestoreField.STATUS, BookingStatus.confirmed.rawValue)
 
         val existingBookings: List<Booking> = firebaseService.fetchDocuments(query)
 
@@ -240,7 +240,7 @@ object BookingService {
             .whereEqualTo(FirestoreField.PITCH_ID, pitchId)
             .whereGreaterThanOrEqualTo(FirestoreField.DATE, Timestamp(startOfDay))
             .whereLessThan(FirestoreField.DATE, Timestamp(endOfDay))
-            .whereEqualTo(FirestoreField.STATUS, BookingStatus.CONFIRMED.rawValue)
+            .whereEqualTo(FirestoreField.STATUS, BookingStatus.confirmed.rawValue)
 
         val existingBookings: List<Booking> = firebaseService.fetchDocuments(query)
 
@@ -304,10 +304,10 @@ object BookingService {
             throw BookingError.CannotCancel
         }
 
-        val paymentStatus = if (booking.isRefundable) PaymentStatus.REFUNDED else PaymentStatus.PARTIAL_REFUND
+        val paymentStatus = if (booking.isRefundable) PaymentStatus.refunded else PaymentStatus.partialRefund
 
         val updates = mapOf(
-            FirestoreField.STATUS to BookingStatus.CANCELLED.rawValue,
+            FirestoreField.STATUS to BookingStatus.cancelled.rawValue,
             "paymentStatus" to paymentStatus.rawValue,
             "cancellationReason" to (reason ?: ""),
             FirestoreField.UPDATED_AT to FieldValue.serverTimestamp()
@@ -330,8 +330,8 @@ object BookingService {
             val bookingId = booking.id ?: throw BookingError.Unknown("Rezervasyon ID yok")
 
             val updates = mapOf(
-                FirestoreField.STATUS to BookingStatus.CONFIRMED.rawValue,
-                "paymentStatus" to PaymentStatus.DEPOSIT_PAID.rawValue,
+                FirestoreField.STATUS to BookingStatus.confirmed.rawValue,
+                "paymentStatus" to PaymentStatus.depositPaid.rawValue,
                 FirestoreField.UPDATED_AT to FieldValue.serverTimestamp()
             )
 
@@ -392,8 +392,8 @@ object BookingService {
                 depositAmount = 140.0,
                 remainingAmount = 400.0,
                 currency = "TRY",
-                status = BookingStatus.CONFIRMED,
-                paymentStatus = PaymentStatus.DEPOSIT_PAID,
+                status = BookingStatus.confirmed,
+                paymentStatus = PaymentStatus.depositPaid,
                 ticketNumber = Booking.generateTicketNumber()
             )
         )

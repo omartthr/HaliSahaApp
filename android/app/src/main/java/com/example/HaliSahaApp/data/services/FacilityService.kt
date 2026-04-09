@@ -46,7 +46,7 @@ object FacilityService {
 
         return try {
             val query = firebaseService.facilitiesCollection
-                .whereEqualTo(FirestoreField.STATUS, FacilityStatus.APPROVED.rawValue)
+                .whereEqualTo(FirestoreField.STATUS, FacilityStatus.approved.rawValue)
                 .whereEqualTo(FirestoreField.IS_ACTIVE, true)
 
             val fetchedFacilities: List<Facility> = firebaseService.fetchDocuments(query)
@@ -226,7 +226,7 @@ object FacilityService {
                 longitude = 29.1244,
                 images = emptyList(),
                 amenities = FacilityAmenities(hasParking = true, hasShower = true, hasLockerRoom = true, hasCafe = true, isIndoor = false, hasLighting = true),
-                status = FacilityStatus.APPROVED,
+                status = FacilityStatus.approved,
                 averageRating = 4.8,
                 totalReviews = 256
             ),
@@ -242,7 +242,7 @@ object FacilityService {
                 longitude = 29.0544,
                 images = emptyList(),
                 amenities = FacilityAmenities(hasParking = true, hasShower = true, hasLockerRoom = true, hasCafe = false, isIndoor = true, hasLighting = true, hasHeating = true),
-                status = FacilityStatus.APPROVED,
+                status = FacilityStatus.approved,
                 averageRating = 4.9,
                 totalReviews = 189
             )

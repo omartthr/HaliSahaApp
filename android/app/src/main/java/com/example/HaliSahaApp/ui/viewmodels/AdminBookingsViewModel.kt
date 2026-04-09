@@ -31,8 +31,8 @@ data class AdminBookingsUiState(
     val isLoading: Boolean = false,
     val selectedFilter: AdminBookingFilter = AdminBookingFilter.ALL
 ) {
-    val confirmedCount: Int get() = filteredBookings.count { it.status == BookingStatus.CONFIRMED }
-    val pendingCount: Int get() = filteredBookings.count { it.status == BookingStatus.PENDING }
+    val confirmedCount: Int get() = filteredBookings.count { it.status == BookingStatus.confirmed }
+    val pendingCount: Int get() = filteredBookings.count { it.status == BookingStatus.pending }
     val totalRevenue: Double get() = filteredBookings.sumOf { it.depositAmount }
 }
 
@@ -49,7 +49,7 @@ class AdminBookingsViewModel : ViewModel() {
     fun loadBookings() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            val bookings = adminService.loadMockAdminBookings() // Mock data
+            val bookings = adminService.fetchAllBookings() // Gerçek data
             _uiState.update {
                 it.copy(
                     allBookings = bookings,
@@ -68,10 +68,10 @@ class AdminBookingsViewModel : ViewModel() {
         val filtered = when (filter) {
             AdminBookingFilter.ALL -> all
             AdminBookingFilter.TODAY -> all.filter { isSameDay(it.date, Date()) }
-            AdminBookingFilter.PENDING -> all.filter { it.status == BookingStatus.PENDING }
-            AdminBookingFilter.CONFIRMED -> all.filter { it.status == BookingStatus.CONFIRMED }
-            AdminBookingFilter.COMPLETED -> all.filter { it.status == BookingStatus.COMPLETED }
-            AdminBookingFilter.CANCELLED -> all.filter { it.status == BookingStatus.CANCELLED }
+            AdminBookingFilter.PENDING -> all.filter { it.status == BookingStatus.pending }
+            AdminBookingFilter.CONFIRMED -> all.filter { it.status == BookingStatus.confirmed }
+            AdminBookingFilter.COMPLETED -> all.filter { it.status == BookingStatus.completed }
+            AdminBookingFilter.CANCELLED -> all.filter { it.status == BookingStatus.cancelled }
         }
 
         // Tarih filtresi (Sadece ALL seçili değilse tarihe göre de filtrele)
@@ -86,10 +86,10 @@ class AdminBookingsViewModel : ViewModel() {
         return when (filter) {
             AdminBookingFilter.ALL -> all.size
             AdminBookingFilter.TODAY -> all.count { isSameDay(it.date, Date()) }
-            AdminBookingFilter.PENDING -> all.count { it.status == BookingStatus.PENDING }
-            AdminBookingFilter.CONFIRMED -> all.count { it.status == BookingStatus.CONFIRMED }
-            AdminBookingFilter.COMPLETED -> all.count { it.status == BookingStatus.COMPLETED }
-            AdminBookingFilter.CANCELLED -> all.count { it.status == BookingStatus.CANCELLED }
+            AdminBookingFilter.PENDING -> all.count { it.status == BookingStatus.pending }
+            AdminBookingFilter.CONFIRMED -> all.count { it.status == BookingStatus.confirmed }
+            AdminBookingFilter.COMPLETED -> all.count { it.status == BookingStatus.completed }
+            AdminBookingFilter.CANCELLED -> all.count { it.status == BookingStatus.cancelled }
         }
     }
 

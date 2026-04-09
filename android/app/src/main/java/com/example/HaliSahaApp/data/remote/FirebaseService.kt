@@ -119,7 +119,9 @@ object FirebaseService {
             val snapshot = query.get().await()
             snapshot.documents.mapNotNull { it.toObject(T::class.java) }
         } catch (e: Exception) {
-            throw FirebaseError.DecodingError
+            println("fetchDocuments error: ${e.message}")
+            e.printStackTrace()
+            throw FirebaseError.Unknown(e.localizedMessage ?: "Veri çekilirken hata oluştu")
         }
     }
 }
