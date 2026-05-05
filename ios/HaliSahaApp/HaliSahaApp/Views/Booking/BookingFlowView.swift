@@ -446,7 +446,10 @@ struct BookingFlowView: View {
                 )
 
                 if result.success {
-                    createdBooking = booking
+                    var confirmedBooking = booking
+                    confirmedBooking.status = .confirmed
+                    confirmedBooking.paymentStatus = .depositPaid
+                    createdBooking = confirmedBooking
                     withAnimation {
                         currentStep = .confirmation
                     }
@@ -610,7 +613,7 @@ struct TicketCardView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
 
-                Text(booking.ticketNumber ?? "")
+                Text(booking.ticketNumber)
                     .font(.caption)
                     .fontWeight(.bold)
                     .foregroundColor(Color(hex: "2E7D32"))

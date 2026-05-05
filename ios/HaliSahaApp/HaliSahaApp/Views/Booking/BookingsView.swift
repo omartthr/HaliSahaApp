@@ -102,7 +102,11 @@ struct BookingsView: View {
             LazyVStack(spacing: 12) {
                 ForEach(viewModel.filteredBookings) { booking in
                     NavigationLink {
-                        BookingDetailView(booking: booking)
+                        BookingDetailView(booking: booking) {
+                            Task {
+                                await viewModel.loadBookings()
+                            }
+                        }
                     } label: {
                         BookingCard(booking: booking)
                     }
@@ -314,9 +318,16 @@ struct StatusBadge: View {
 struct BookingDetailView: View {
 
     let booking: Booking
+    var onBookingUpdated: () -> Void = {}
+
     @Environment(\.dismiss) private var dismiss
     @State private var showCancelAlert = false
     @State private var showQRCode = false
+    @State private var isCancelling = false
+    @State private var showCancelError = false
+    @State private var cancelErrorMessage = ""
+
+    private let bookingService = BookingService.shared
 
     var body: some View {
         ScrollView {
@@ -354,6 +365,11 @@ struct BookingDetailView: View {
         }
         .sheet(isPresented: $showQRCode) {
             QRCodeView(booking: booking)
+        }
+        .alert("İptal Edilemedi", isPresented: $showCancelError) {
+            Button("Tamam", role: .cancel) {}
+        } message: {
+            Text(cancelErrorMessage)
         }
     }
 
@@ -519,7 +535,8 @@ struct BookingDetailView: View {
                 PrimaryButton(
                     title: "Randevuyu İptal Et",
                     icon: "xmark.circle",
-                    style: .destructive
+                    style: .destructive,
+                    isLoading: isCancelling
                 ) {
                     showCancelAlert = true
                 }
@@ -530,7 +547,27 @@ struct BookingDetailView: View {
     // MARK: - Actions
     private func cancelBooking() {
         Task {
-            // Cancel booking logic
+            guard let bookingId = booking.id else {
+                cancelErrorMessage = "Rezervasyon ID bulunamadı."
+                showCancelError = true
+                return
+            }
+
+            isCancelling = true
+
+            do {
+                try await bookingService.cancelBooking(
+                    bookingId: bookingId,
+                    reason: "Kullanıcı tarafından iptal edildi"
+                )
+                isCancelling = false
+                onBookingUpdated()
+                dismiss()
+            } catch {
+                isCancelling = false
+                cancelErrorMessage = error.localizedDescription
+                showCancelError = true
+            }
         }
     }
 }

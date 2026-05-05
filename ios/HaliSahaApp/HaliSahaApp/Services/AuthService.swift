@@ -26,6 +26,7 @@ final class AuthService: ObservableObject {
     @Published var currentUser: User?
     @Published var isAuthenticated: Bool = false
     @Published var isLoading: Bool = false
+    @Published var hasCompletedInitialAuthCheck: Bool = false
     @Published var authError: AuthError?
     
     // MARK: - Private Properties
@@ -51,31 +52,80 @@ final class AuthService: ObservableObject {
             
             if let firebaseUser = firebaseUser {
                 Task {
-                    await self.fetchUserProfile(userId: firebaseUser.uid)
+                    await self.handleAuthenticatedUser(firebaseUser.uid)
                 }
             } else {
                 DispatchQueue.main.async {
                     self.currentUser = nil
                     self.isAuthenticated = false
+                    self.hasCompletedInitialAuthCheck = true
                 }
             }
         }
     }
     
+    // MARK: - Handle Authenticated User
+    @MainActor
+    private func handleAuthenticatedUser(_ userId: String) async {
+        isLoading = true
+        defer {
+            isLoading = false
+            hasCompletedInitialAuthCheck = true
+        }
+
+        do {
+            try await fetchUserProfile(userId: userId)
+        } catch let error as AuthError {
+            authError = error
+            try? auth.signOut()
+            GIDSignIn.sharedInstance.signOut()
+            currentUser = nil
+            isAuthenticated = false
+        } catch {
+            authError = .unknown(error.localizedDescription)
+            try? auth.signOut()
+            GIDSignIn.sharedInstance.signOut()
+            currentUser = nil
+            isAuthenticated = false
+        }
+    }
+
     // MARK: - Fetch User Profile
     @MainActor
-    private func fetchUserProfile(userId: String) async {
+    private func fetchUserProfile(userId: String) async throws {
         do {
             let user: User = try await firebaseService.fetchDocument(
                 from: firebaseService.usersCollection,
                 documentId: userId
             )
+
+            guard user.isActive else {
+                throw AuthError.accountDisabled
+            }
+
             self.currentUser = user
             self.isAuthenticated = true
+            self.authError = nil
+        } catch let error as AuthError {
+            currentUser = nil
+            isAuthenticated = false
+            throw error
+        } catch let error as FirebaseError {
+            currentUser = nil
+            isAuthenticated = false
+
+            switch error {
+            case .documentNotFound, .decodingError:
+                throw AuthError.profileNotFound
+            case .networkError:
+                throw AuthError.networkError
+            default:
+                throw AuthError.unknown(error.localizedDescription)
+            }
         } catch {
-            // Kullanıcı Firestore'da yoksa (ilk kayıt)
-            print("User profile not found: \(error.localizedDescription)")
-            self.isAuthenticated = false
+            currentUser = nil
+            isAuthenticated = false
+            throw AuthError.unknown(error.localizedDescription)
         }
     }
     
@@ -120,6 +170,7 @@ final class AuthService: ObservableObject {
             
             self.currentUser = newUser
             self.isAuthenticated = true
+            self.hasCompletedInitialAuthCheck = true
             
         } catch let error as NSError {
             throw mapAuthError(error)
@@ -136,7 +187,11 @@ final class AuthService: ObservableObject {
         
         do {
             let authResult = try await auth.signIn(withEmail: email, password: password)
-            await fetchUserProfile(userId: authResult.user.uid)
+            try await fetchUserProfile(userId: authResult.user.uid)
+            hasCompletedInitialAuthCheck = true
+        } catch let error as AuthError {
+            try? auth.signOut()
+            throw error
         } catch let error as NSError {
             throw mapAuthError(error)
         }
@@ -147,8 +202,10 @@ final class AuthService: ObservableObject {
     func signOut() throws {
         do {
             try auth.signOut()
+            GIDSignIn.sharedInstance.signOut()
             currentUser = nil
             isAuthenticated = false
+            hasCompletedInitialAuthCheck = true
         } catch {
             throw AuthError.signOutFailed
         }
@@ -212,11 +269,15 @@ final class AuthService: ObservableObject {
                 
                 self.currentUser = newUser
             } else {
-                await fetchUserProfile(userId: userId)
+                try await fetchUserProfile(userId: userId)
             }
             
             self.isAuthenticated = true
+            self.hasCompletedInitialAuthCheck = true
             
+        } catch let error as AuthError {
+            try? auth.signOut()
+            throw error
         } catch let error as NSError {
             throw mapAuthError(error)
         }
@@ -287,11 +348,16 @@ final class AuthService: ObservableObject {
                 
                 self.currentUser = newUser
             } else {
-                await fetchUserProfile(userId: userId)
+                try await fetchUserProfile(userId: userId)
             }
             
             self.isAuthenticated = true
+            self.hasCompletedInitialAuthCheck = true
             
+        } catch let error as AuthError {
+            try? auth.signOut()
+            GIDSignIn.sharedInstance.signOut()
+            throw error
         } catch let error as GIDSignInError {
             // Kullanıcı iptal ettiyse hata fırlatma
             if error.code == .canceled {
@@ -306,6 +372,8 @@ final class AuthService: ObservableObject {
     // MARK: - Guest Mode
     @MainActor
     func continueAsGuest() {
+        GIDSignIn.sharedInstance.signOut()
+
         let guestUser = User(
             id: "guest_\(UUID().uuidString)",
             email: "",
@@ -317,6 +385,7 @@ final class AuthService: ObservableObject {
         )
         currentUser = guestUser
         isAuthenticated = false // Misafir gerçek auth değil
+        hasCompletedInitialAuthCheck = true
     }
     
     // MARK: - Admin Registration (Saha Sahibi)
@@ -332,13 +401,14 @@ final class AuthService: ObservableObject {
     ) async throws {
         isLoading = true
         authError = nil
-        
+
         defer { isLoading = false }
-        
+
         do {
             let authResult = try await auth.createUser(withEmail: email, password: password)
             let userId = authResult.user.uid
-            
+
+            // 1. users/{uid} — genel kullanıcı profili (auth akışı buradan okur)
             let adminUser = User(
                 id: userId,
                 email: email,
@@ -346,20 +416,33 @@ final class AuthService: ObservableObject {
                 lastName: lastName,
                 username: generateUsername(from: email),
                 phone: phone,
-                userType: .admin // Admin olarak kayıt, ancak pending durumunda
+                userType: .admin
             )
-            
+
             _ = try await firebaseService.createDocument(
                 in: firebaseService.usersCollection,
                 data: adminUser,
                 documentId: userId
             )
-            
+
+            // 2. admins/{uid} — işletme verileri ve onay durumu
+            let adminProfile = AdminProfile(
+                id: userId,
+                businessName: businessName,
+                taxNumber: taxNumber,
+                approvalStatus: .pending
+            )
+
+            _ = try await firebaseService.createDocument(
+                in: firebaseService.adminsCollection,
+                data: adminProfile,
+                documentId: userId
+            )
+
             self.currentUser = adminUser
             self.isAuthenticated = true
-            
-            // Not: Facility oluşturma FacilityService'de yapılacak
-            
+            self.hasCompletedInitialAuthCheck = true
+
         } catch let error as NSError {
             throw mapAuthError(error)
         }
@@ -398,6 +481,7 @@ final class AuthService: ObservableObject {
         
         currentUser = nil
         isAuthenticated = false
+        hasCompletedInitialAuthCheck = true
     }
     
     // MARK: - Helper Methods
@@ -443,6 +527,8 @@ enum AuthError: LocalizedError {
     case networkError
     case tooManyRequests
     case notAuthenticated
+    case profileNotFound
+    case accountDisabled
     case signOutFailed
     case notImplemented
     case unknown(String)
@@ -465,6 +551,10 @@ enum AuthError: LocalizedError {
             return "Çok fazla deneme. Lütfen bekleyin."
         case .notAuthenticated:
             return "Oturum açmanız gerekiyor."
+        case .profileNotFound:
+            return "Kullanıcı profili bulunamadı. Lütfen tekrar kayıt olun veya destek ile iletişime geçin."
+        case .accountDisabled:
+            return "Hesabınız pasif durumda. Lütfen destek ile iletişime geçin."
         case .signOutFailed:
             return "Çıkış yapılamadı."
         case .notImplemented:

@@ -65,9 +65,25 @@ struct AdminDashboardView: View {
         .sheet(isPresented: $showAddFacility) {
             AddFacilityView()
         }
+        .onChange(of: showAddFacility) { oldValue, newValue in
+            if oldValue == true && newValue == false {
+                Task {
+                    await ImageCacheService.shared.clearMemoryCache()
+                    await viewModel.loadData()
+                }
+            }
+        }
         .sheet(isPresented: $showAddPitch) {
             if let facility = selectedFacilityForPitch, let facilityId = facility.id {
                 AddPitchView(facilityId: facilityId)
+            }
+        }
+        .onChange(of: showAddPitch) { oldValue, newValue in
+            if oldValue == true && newValue == false {
+                Task {
+                    await ImageCacheService.shared.clearMemoryCache()
+                    await viewModel.loadData()
+                }
             }
         }
         .sheet(isPresented: $showFacilitySelector) {

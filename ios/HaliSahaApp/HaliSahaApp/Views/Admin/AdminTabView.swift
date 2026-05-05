@@ -56,7 +56,7 @@ struct AdminTabView: View {
     @StateObject private var adminService = AdminService.shared
     
     // Badge counts
-    @State private var pendingBookings: Int = 3
+    @State private var pendingBookings: Int = 0
     
     // MARK: - Body
     var body: some View {
@@ -127,6 +127,10 @@ struct AdminTabView: View {
             // Haptic feedback
             let impact = UIImpactFeedbackGenerator(style: .light)
             impact.impactOccurred()
+
+            Task {
+                await loadPendingCount()
+            }
         }
         .task {
             await loadPendingCount()
@@ -135,8 +139,11 @@ struct AdminTabView: View {
     
     // MARK: - Load Pending Count
     private func loadPendingCount() async {
-        // Mock data için
-        pendingBookings = 3
+        do {
+            pendingBookings = try await adminService.fetchDashboardStats().pendingBookings
+        } catch {
+            pendingBookings = 0
+        }
     }
 }
 

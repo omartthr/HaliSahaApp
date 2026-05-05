@@ -721,8 +721,10 @@ struct OperatingHoursEditSheet: View {
                     Button("Kaydet") {
                         Task {
                             await viewModel.saveHours()
-                            onSave?()
-                            dismiss()
+                            if viewModel.saveSuccess {
+                                onSave?()
+                                dismiss()
+                            }
                         }
                     }
                     .fontWeight(.semibold)
@@ -773,6 +775,7 @@ final class OperatingHoursEditViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var showError = false
     @Published var errorMessage = ""
+    @Published var saveSuccess = false
 
     init(facility: Facility) {
         self.facility = facility
@@ -817,6 +820,7 @@ final class OperatingHoursEditViewModel: ObservableObject {
         }
 
         isLoading = true
+        saveSuccess = false
 
         let operatingHours = OperatingHours(
             mondayOpen: mondayOpen,
@@ -841,6 +845,7 @@ final class OperatingHoursEditViewModel: ObservableObject {
 
         do {
             try await adminService.updateFacility(updatedFacility)
+            saveSuccess = true
         } catch {
             errorMessage = error.localizedDescription
             showError = true

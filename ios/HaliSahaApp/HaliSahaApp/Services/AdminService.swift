@@ -88,12 +88,32 @@ final class AdminService: ObservableObject {
         self.todayBookings = myTodayBookings
 
         // Bekleyen rezervasyonlar
-        stats.pendingBookings = pendingBookings.count
+        let pendingQuery = firebaseService.bookingsCollection
+            .whereField(FirestoreField.status, isEqualTo: BookingStatus.pending.rawValue)
+
+        let allPendingBookings: [Booking] = try await firebaseService.fetchDocuments(
+            query: pendingQuery)
+        let myPendingBookings = allPendingBookings.filter { facilityIds.contains($0.facilityId) }
+
+        stats.pendingBookings = myPendingBookings.count
+        self.pendingBookings = myPendingBookings
 
         // Aylık gelir ve rezervasyon
         let startOfMonth = Calendar.current.date(
             from: Calendar.current.dateComponents([.year, .month], from: Date()))!
-        let monthlyBookings = myTodayBookings.filter { $0.createdAt >= startOfMonth }
+        let startOfNextMonth = Calendar.current.date(
+            byAdding: .month, value: 1, to: startOfMonth)!
+
+        let monthlyQuery = firebaseService.bookingsCollection
+            .whereField(FirestoreField.date, isGreaterThanOrEqualTo: Timestamp(date: startOfMonth))
+            .whereField(FirestoreField.date, isLessThan: Timestamp(date: startOfNextMonth))
+
+        let allMonthlyBookings: [Booking] = try await firebaseService.fetchDocuments(
+            query: monthlyQuery)
+        let monthlyBookings = allMonthlyBookings.filter {
+            facilityIds.contains($0.facilityId)
+                && ($0.status == .confirmed || $0.status == .completed)
+        }
 
         stats.monthlyBookings = monthlyBookings.count
         stats.monthlyRevenue = monthlyBookings.reduce(0) { $0 + $1.depositAmount }
@@ -137,11 +157,12 @@ final class AdminService: ObservableObject {
     // MARK: - Create Facility
     @MainActor
     func createFacility(_ facility: Facility) async throws -> String {
-        guard firebaseService.currentUserId != nil else {
+        guard let userId = firebaseService.currentUserId else {
             throw AdminError.notAuthenticated
         }
 
         var newFacility = facility
+        newFacility.ownerId = userId
         newFacility.status = .pending  // Onay bekliyor
 
         let documentId = try await firebaseService.createDocument(
@@ -172,6 +193,7 @@ final class AdminService: ObservableObject {
                 "address": facility.address,
                 "latitude": facility.latitude,
                 "longitude": facility.longitude,
+                "images": facility.images,
                 "amenities": try Firestore.Encoder().encode(facility.amenities),
                 "operatingHours": try Firestore.Encoder().encode(facility.operatingHours),
                 "isActive": facility.isActive,
@@ -218,6 +240,10 @@ final class AdminService: ObservableObject {
     // MARK: - Create Pitch
     @MainActor
     func createPitch(_ pitch: Pitch, facilityId: String) async throws -> String {
+        guard !facilityId.isEmpty else {
+            throw AdminError.invalidData
+        }
+
         var newPitch = pitch
         newPitch.facilityId = facilityId
 
@@ -248,6 +274,7 @@ final class AdminService: ObservableObject {
                 "size": pitch.size.rawValue,
                 "capacity": pitch.capacity,
                 "isActive": pitch.isActive,
+                "images": pitch.images,
                 "pricing": try Firestore.Encoder().encode(pitch.pricing),
                 FirestoreField.updatedAt: Timestamp(date: Date()),
             ]
@@ -286,6 +313,24 @@ final class AdminService: ObservableObject {
     // MARK: - Delete Pitch
     @MainActor
     func deletePitch(pitchId: String, facilityId: String) async throws {
+        let todayStart = Calendar.current.startOfDay(for: Date())
+
+        let futureBookingsQuery = firebaseService.bookingsCollection
+            .whereField(FirestoreField.pitchId, isEqualTo: pitchId)
+            .whereField(FirestoreField.date, isGreaterThanOrEqualTo: Timestamp(date: todayStart))
+
+        let futureBookings: [Booking] = try await firebaseService.fetchDocuments(
+            query: futureBookingsQuery)
+        let activeBookings = futureBookings.filter {
+            $0.status == .pending || $0.status == .confirmed
+        }
+
+        if !activeBookings.isEmpty {
+            throw AdminError.operationFailed(
+                "Bu sahada \(activeBookings.count) aktif rezervasyon bulunuyor. Önce rezervasyonları iptal edin."
+            )
+        }
+
         try await firebaseService.deleteDocument(
             from: firebaseService.pitchesCollection(for: facilityId),
             documentId: pitchId
@@ -310,9 +355,10 @@ final class AdminService: ObservableObject {
         }
 
         // 2. Aktif rezervasyon kontrolü (gelecek rezervasyonları al, status'u client-side filtrele)
+        let todayStart = Calendar.current.startOfDay(for: Date())
         let futureBookingsQuery = firebaseService.bookingsCollection
             .whereField(FirestoreField.facilityId, isEqualTo: facilityId)
-            .whereField(FirestoreField.date, isGreaterThanOrEqualTo: Timestamp(date: Date()))
+            .whereField(FirestoreField.date, isGreaterThanOrEqualTo: Timestamp(date: todayStart))
 
         let futureBookings: [Booking] = try await firebaseService.fetchDocuments(
             query: futureBookingsQuery)

@@ -22,6 +22,7 @@ final class BookingService: ObservableObject {
 
     // MARK: - Private Properties
     private let firebaseService = FirebaseService.shared
+    private let pendingHoldDuration: TimeInterval = 15 * 60
 
     // Cache
     private var timeSlotsCache: [String: [TimeSlot]] = [:]  // key: "facilityId_pitchId_date"
@@ -146,6 +147,7 @@ final class BookingService: ObservableObject {
             date: date,
             startHour: startHour,
             endHour: endHour,
+            duration: duration,
             totalPrice: totalPrice,
             depositAmount: depositAmount,
             remainingAmount: remainingAmount,
@@ -182,18 +184,20 @@ final class BookingService: ObservableObject {
         let startOfDay = Calendar.current.startOfDay(for: date)
         let endOfDay = Calendar.current.date(byAdding: .day, value: 1, to: startOfDay)!
 
-        // Aynı saha, tarih ve saat aralığında onaylı rezervasyon var mı?
+        // Aynı saha, tarih ve saat aralığında aktif rezervasyon var mı?
         let query = firebaseService.bookingsCollection
             .whereField(FirestoreField.pitchId, isEqualTo: pitchId)
             .whereField(FirestoreField.date, isGreaterThanOrEqualTo: Timestamp(date: startOfDay))
             .whereField(FirestoreField.date, isLessThan: Timestamp(date: endOfDay))
-            .whereField(FirestoreField.status, isEqualTo: BookingStatus.confirmed.rawValue)
 
         let existingBookings: [Booking] = try await firebaseService.fetchDocuments(query: query)
 
         // Çakışma kontrolü
         for booking in existingBookings {
-            if startHour < booking.endHour && endHour > booking.startHour {
+            if blocksTimeSlot(booking)
+                && startHour < booking.endHour
+                && endHour > booking.startHour
+            {
                 return false
             }
         }
@@ -232,7 +236,6 @@ final class BookingService: ObservableObject {
             .whereField(FirestoreField.pitchId, isEqualTo: pitchId)
             .whereField(FirestoreField.date, isGreaterThanOrEqualTo: Timestamp(date: startOfDay))
             .whereField(FirestoreField.date, isLessThan: Timestamp(date: endOfDay))
-            .whereField(FirestoreField.status, isEqualTo: BookingStatus.confirmed.rawValue)
 
         let existingBookings: [Booking] = try await firebaseService.fetchDocuments(query: query)
 
@@ -258,7 +261,7 @@ final class BookingService: ObservableObject {
 
         for hour in openHourInt..<closeHourInt {
             let isBooked = existingBookings.contains { booking in
-                hour >= booking.startHour && hour < booking.endHour
+                blocksTimeSlot(booking) && hour >= booking.startHour && hour < booking.endHour
             }
 
             // Geçmiş saatleri kontrol et
@@ -278,7 +281,9 @@ final class BookingService: ObservableObject {
                 hour: hour,
                 isAvailable: !isBooked && !isPast,
                 bookingId: isBooked
-                    ? existingBookings.first { $0.startHour <= hour && $0.endHour > hour }?.id
+                    ? existingBookings.first {
+                        blocksTimeSlot($0) && $0.startHour <= hour && $0.endHour > hour
+                    }?.id
                     : nil,
                 price: price
             )
@@ -326,6 +331,7 @@ final class BookingService: ObservableObject {
                 FirestoreField.status: BookingStatus.cancelled.rawValue,
                 "paymentStatus": paymentStatus.rawValue,
                 "cancellationReason": reason ?? "",
+                "cancelledAt": Timestamp(date: Date()),
                 FirestoreField.updatedAt: Timestamp(date: Date()),
             ]
         )
@@ -346,12 +352,12 @@ final class BookingService: ObservableObject {
         // %95 başarı oranı simülasyonu
         let isSuccessful = Double.random(in: 0...1) > 0.05
 
+        guard let bookingId = booking.id else {
+            throw BookingError.unknown("Rezervasyon ID bulunamadı")
+        }
+
         if isSuccessful {
             // Rezervasyon durumunu güncelle
-            guard let bookingId = booking.id else {
-                throw BookingError.unknown("Rezervasyon ID bulunamadı")
-            }
-
             try await firebaseService.updateDocument(
                 in: firebaseService.bookingsCollection,
                 documentId: bookingId,
@@ -368,6 +374,11 @@ final class BookingService: ObservableObject {
                 message: "Ödeme başarıyla tamamlandı"
             )
         } else {
+            try await markPaymentFailed(
+                booking: booking,
+                reason: "Ödeme işlemi başarısız oldu."
+            )
+
             return PaymentResult(
                 success: false,
                 transactionId: nil,
@@ -379,7 +390,7 @@ final class BookingService: ObservableObject {
     // MARK: - Generate QR Code Data
     private func generateQRCodeData(for booking: Booking) -> String {
         let data: [String: Any] = [
-            "ticketNumber": booking.ticketNumber ?? "",
+            "ticketNumber": booking.ticketNumber,
             "date": booking.date.ISO8601Format(),
             "startHour": booking.startHour,
             "endHour": booking.endHour,
@@ -393,7 +404,45 @@ final class BookingService: ObservableObject {
             return jsonString
         }
 
-        return booking.ticketNumber ?? UUID().uuidString
+        return booking.ticketNumber
+    }
+
+    // MARK: - Mark Payment Failed
+    @MainActor
+    func markPaymentFailed(booking: Booking, reason: String) async throws {
+        guard let bookingId = booking.id else {
+            throw BookingError.unknown("Rezervasyon ID bulunamadı")
+        }
+
+        try await firebaseService.updateDocument(
+            in: firebaseService.bookingsCollection,
+            documentId: bookingId,
+            fields: [
+                FirestoreField.status: BookingStatus.cancelled.rawValue,
+                "paymentStatus": PaymentStatus.failed.rawValue,
+                "cancellationReason": reason,
+                "cancelledAt": Timestamp(date: Date()),
+                FirestoreField.updatedAt: Timestamp(date: Date()),
+            ]
+        )
+
+        clearTimeSlotCache(
+            facilityId: booking.facilityId,
+            pitchId: booking.pitchId,
+            date: booking.date
+        )
+    }
+
+    // MARK: - Slot Blocking
+    private func blocksTimeSlot(_ booking: Booking) -> Bool {
+        switch booking.status {
+        case .confirmed:
+            return true
+        case .pending:
+            return Date().timeIntervalSince(booking.createdAt) < pendingHoldDuration
+        case .completed, .cancelled, .noShow:
+            return false
+        }
     }
 
     // MARK: - Clear Cache
