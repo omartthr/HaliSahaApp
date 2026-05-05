@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import Navbar from "@/components/common/Navbar";
+import Navbar from "@/frontend/components/common/Navbar";
 import Link from "next/link";
-import Carousel from "@/components/Carousel";
+import Carousel from "@/frontend/components/Carousel";
 import { MapPin, Star, ChevronLeft, Check, ArrowRight } from "lucide-react";
 
 // Maç Kur kartı için, öne çıkan saha detay tasarımının kopyası
@@ -122,6 +122,7 @@ export default function MatchCreatePage() {
       <Navbar />
 
       <div
+        className="match-hero"
         style={{
           height: 280,
           background: "linear-gradient(180deg, #114B32 0%, #1A754E 100%)",
@@ -179,8 +180,8 @@ export default function MatchCreatePage() {
         </div>
       </div>
 
-      <div className="content-container" style={{ position: "relative", zIndex: 2, marginTop: -220, paddingTop: 24, paddingBottom: 100 }}>
-        <div className="auth-dynamo-glass match-dynamo-card" style={{ padding: 24, marginBottom: 16, borderRadius: 24 }}>
+      <div className="content-container match-main-content" style={{ position: "relative", zIndex: 2, marginTop: -220, paddingTop: 24, paddingBottom: 100 }}>
+        <div className="auth-dynamo-glass match-dynamo-card match-card" style={{ padding: 24, marginBottom: 16, borderRadius: 24 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, gap: 12, flexWrap: "wrap" }}>
             <h2 style={{ fontSize: 18, fontWeight: 700, color: "#111827" }}>Saha ve Oyun Tipi Seçimi</h2>
             <span className="pill pill-outline">{mockField.isIndoor ? "🏠 Kapalı Alan" : "☀️ Açık Alan"}</span>
@@ -287,7 +288,7 @@ export default function MatchCreatePage() {
           </div>
         </div>
 
-        <div className="auth-dynamo-glass match-dynamo-card" style={{ padding: 24, marginBottom: 16, borderRadius: 24 }}>
+        <div className="auth-dynamo-glass match-dynamo-card match-card" style={{ padding: 24, marginBottom: 16, borderRadius: 24 }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 18, alignItems: "start" }}>
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
@@ -298,7 +299,7 @@ export default function MatchCreatePage() {
                   </span>
                 )}
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+              <div className="match-time-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
                 {timeSlots.map((slot) => {
                   const isSelected = selectedSlots.includes(slot.hour);
                   const cls = `time-slot ${!slot.available ? "booked" : isSelected ? "selected" : "available"}`;
@@ -329,7 +330,7 @@ export default function MatchCreatePage() {
               <div style={{ display: "flex", justifyContent: "center" }}>
                 <Carousel
                   items={featureCarouselItems}
-                  baseWidth={320}
+                  baseWidth={280}
                   autoplay
                   autoplayDelay={3200}
                   pauseOnHover
@@ -341,12 +342,12 @@ export default function MatchCreatePage() {
           </div>
         </div>
 
-        <div className="auth-dynamo-glass match-dynamo-card" style={{ padding: 24, marginBottom: 16, borderRadius: 24 }}>
+        <div className="auth-dynamo-glass match-dynamo-card match-card" style={{ padding: 24, marginBottom: 16, borderRadius: 24 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ fontSize: 17, fontWeight: 700, color: "#111827" }}>Değerlendirmeler</h2>
             <span style={{ fontSize: 13, color: "#2E7D32", fontWeight: 600, cursor: "pointer" }}>Tümü →</span>
           </div>
-          <div style={{ display: "flex", gap: 24, alignItems: "center", background: "rgba(255,255,255,0.56)", borderRadius: 12, padding: 16 }}>
+          <div className="match-rating-layout" style={{ display: "flex", gap: 24, alignItems: "center", background: "rgba(255,255,255,0.56)", borderRadius: 12, padding: 16 }}>
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: 40, fontWeight: 900, color: "#111827" }}>{mockField.rating}</div>
               <div style={{ display: "flex", gap: 2, justifyContent: "center" }}>

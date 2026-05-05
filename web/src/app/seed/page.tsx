@@ -1,10 +1,10 @@
 "use client";
 
 import React from "react";
-import { db } from "@/lib/firebase";
+import { db } from "@/database/firebase";
 import { collection, addDoc } from "firebase/firestore";
 import { toast } from "react-hot-toast";
-import Navbar from "@/components/common/Navbar";
+import Navbar from "@/frontend/components/common/Navbar";
 
 const SeedPage = () => {
   const seedData = async () => {

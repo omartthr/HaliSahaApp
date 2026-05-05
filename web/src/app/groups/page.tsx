@@ -1,133 +1,239 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { db, auth } from "@/lib/firebase";
-import { collection, query, onSnapshot, addDoc, serverTimestamp, doc, getDoc } from "firebase/firestore";
-import { useAuth } from "@/context/AuthContext";
-import Navbar from "@/components/common/Navbar";
-import { toast } from "react-hot-toast";
-import { Users, Plus, MessageCircle, ChevronRight, UserPlus } from "lucide-react";
+import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
+import Navbar from "@/frontend/components/common/Navbar";
+import { ArrowRight, ChevronLeft, MapPin, Users } from "lucide-react";
 
-const GroupsPage = () => {
-  const { user } = useAuth();
-  const [groups, setGroups] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newGroupName, setNewGroupName] = useState("");
+type Listing = {
+  id: string;
+  title: string;
+  district: string;
+  address: string;
+  date: string;
+  neededPlayers: number;
+  level: string;
+  lat: number;
+  lng: number;
+};
 
-  useEffect(() => {
-    const q = query(collection(db, "groups"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const groupList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setGroups(groupList);
-      setLoading(false);
-    });
+const listings: Listing[] = [
+  {
+    id: "g1",
+    title: "5v5 Akşam Maçı - Kadıköy",
+    district: "Kadıköy",
+    address: "Moda Sahili Halı Saha",
+    date: "Bugün 21:00",
+    neededPlayers: 3,
+    level: "Orta Seviye",
+    lat: 40.9857,
+    lng: 29.0265,
+  },
+  {
+    id: "g2",
+    title: "7v7 Hafta Sonu - Üsküdar",
+    district: "Üsküdar",
+    address: "Bağlarbaşı Spor Tesisi",
+    date: "Cumartesi 19:00",
+    neededPlayers: 5,
+    level: "İleri Seviye",
+    lat: 41.0243,
+    lng: 29.0209,
+  },
+  {
+    id: "g3",
+    title: "Dostluk Maçı - Beşiktaş",
+    district: "Beşiktaş",
+    address: "Abbasağa Halı Saha",
+    date: "Pazar 18:00",
+    neededPlayers: 2,
+    level: "Başlangıç",
+    lat: 41.0437,
+    lng: 29.0047,
+  },
+  {
+    id: "g4",
+    title: "Gece Maçı - Ataşehir",
+    district: "Ataşehir",
+    address: "Kayışdağı Arena",
+    date: "Cuma 22:30",
+    neededPlayers: 4,
+    level: "Orta Seviye",
+    lat: 40.9918,
+    lng: 29.1283,
+  },
+];
 
-    return () => unsubscribe();
-  }, []);
+const GroupsListingsMap = dynamic(() => import("@/frontend/components/map/GroupsListingsMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-full w-full bg-gray-100 animate-pulse flex items-center justify-center text-gray-400">
+      Harita yukleniyor...
+    </div>
+  ),
+});
 
-  const createGroup = async () => {
-    if (!user) return toast.error("Grup oluşturmak için giriş yapmalısınız.");
-    if (!newGroupName) return toast.error("Grup ismi gerekli.");
+export default function GroupsPage() {
+  const [selectedListingId, setSelectedListingId] = useState(listings[0].id);
 
-    try {
-      await addDoc(collection(db, "groups"), {
-        name: newGroupName,
-        createdBy: user.uid,
-        creatorName: user.displayName || "Kullanıcı",
-        members: [user.uid],
-        createdAt: serverTimestamp(),
-      });
-      setNewGroupName("");
-      setShowCreateModal(false);
-      toast.success("Grup oluşturuldu!");
-    } catch (error) {
-      toast.error("Hata: " + error);
-    }
-  };
+  const selectedListing = useMemo(
+    () => listings.find((listing) => listing.id === selectedListingId) ?? listings[0],
+    [selectedListingId]
+  );
+
+  const canBook = Boolean(selectedListingId);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="page-wrapper groups-page-wrapper">
       <Navbar />
-      <div className="max-w-5xl mx-auto w-full p-4 lg:p-8">
-        <header className="flex justify-between items-center mb-10">
-          <div>
-            <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">Ekipler & Gruplar</h1>
-            <p className="text-gray-500 mt-2 font-medium">Arkadaşlarınla maç organize et veya yeni ekiplere katıl.</p>
-          </div>
-          <button 
-            onClick={() => setShowCreateModal(true)}
-            className="bg-emerald-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-emerald-700 transition flex items-center gap-2 shadow-xl shadow-emerald-100"
-          >
-            <Plus size={20} /> Yeni Grup Kur
-          </button>
-        </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {groups.length === 0 && !loading && (
-            <div className="col-span-full py-20 text-center bg-white rounded-3xl border-2 border-dashed border-gray-100 italic text-gray-400">
-              Henüz bir grup bulunmuyor. İlk grubu sen kur!
-            </div>
-          )}
-          {groups.map((group) => (
-            <div key={group.id} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
-              <div className="flex justify-between items-start mb-6">
-                <div className="bg-emerald-100 p-4 rounded-2xl text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors duration-300">
-                  <Users size={28} />
-                </div>
-                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{group.members?.length || 1} Üye</span>
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2 truncate">{group.name}</h3>
-              <p className="text-gray-500 text-sm mb-8 line-clamp-1 font-medium italic">Kurucu: {group.creatorName}</p>
-              
-              <div className="flex gap-2">
-                <Link
-                  href={`/groups/${group.id}`}
-                  className="flex-1 bg-gray-900 text-white py-3 rounded-xl font-bold text-center hover:bg-black transition flex items-center justify-center gap-2"
-                >
-                  <MessageCircle size={18} /> Sohbet
-                </Link>
-                <button className="bg-gray-100 text-gray-600 p-3 rounded-xl hover:bg-emerald-50 hover:text-emerald-600 transition">
-                  <UserPlus size={20} />
-                </button>
-              </div>
-            </div>
-          ))}
+      <div
+        className="groups-hero"
+        style={{
+          height: 280,
+          background: "linear-gradient(180deg, #114B32 0%, #1A754E 100%)",
+          position: "relative",
+          zIndex: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <div style={{ position: "absolute", top: 16, left: 16 }}>
+          <Link
+            href="/"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              background: "rgba(0,0,0,0.3)",
+              backdropFilter: "blur(8px)",
+              color: "white",
+              textDecoration: "none",
+            }}
+          >
+            <ChevronLeft size={20} />
+          </Link>
+        </div>
+
+        <div
+          style={{
+            position: "absolute",
+            bottom: -118,
+            left: 0,
+            width: "100%",
+            lineHeight: 0,
+            zIndex: 0,
+            pointerEvents: "none",
+          }}
+        >
+          <svg
+            data-name="Layer 1"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 1200 120"
+            preserveAspectRatio="none"
+            style={{ display: "block", width: "calc(100% + 1.3px)", height: 120, overflow: "visible" }}
+          >
+            <defs>
+              <filter id="groups-wave-soft-shadow" x="-8%" y="-8%" width="116%" height="180%">
+                <feGaussianBlur stdDeviation="7" />
+              </filter>
+            </defs>
+            <path
+              d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z"
+              fill="rgba(0,0,0,0.22)"
+              transform="translate(0, 14)"
+              filter="url(#groups-wave-soft-shadow)"
+            />
+            <path
+              d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z"
+              fill="#1A754E"
+            />
+          </svg>
         </div>
       </div>
 
-      {/* Create Group Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8 scale-in">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6 tracking-tight">Ekibini Kur</h2>
-            <input
-              type="text"
-              placeholder="Grup İsmi (örn: Mahalle Muhtarları)"
-              className="w-full px-5 py-4 rounded-2xl border border-gray-200 mb-6 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition font-medium"
-              value={newGroupName}
-              onChange={(e) => setNewGroupName(e.target.value)}
-            />
-            <div className="flex gap-3">
-              <button 
-                onClick={() => setShowCreateModal(false)}
-                className="flex-1 px-6 py-4 rounded-2xl font-bold text-gray-500 hover:bg-gray-100 transition"
-              >
-                Vazgeç
-              </button>
-              <button 
-                onClick={createGroup}
-                className="flex-1 bg-emerald-600 text-white px-6 py-4 rounded-2xl font-bold hover:bg-emerald-700 transition shadow-lg shadow-emerald-600/20"
-              >
-                Oluştur
-              </button>
+      <div className="content-container groups-main-content" style={{ position: "relative", zIndex: 2, marginTop: -220, paddingTop: 24, paddingBottom: 100 }}>
+        <div className="auth-dynamo-glass match-dynamo-card groups-main-card" style={{ padding: 24, borderRadius: 24, display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, gap: 12, flexWrap: "wrap" }}>
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: "#111827", display: "flex", alignItems: "center", gap: 8 }}>
+              <Users size={18} style={{ color: "#2E7D32" }} /> Oyuncu Aranan Ilanlar
+            </h2>
+            <span className="pill pill-outline">Toplam {listings.length} ilan</span>
+          </div>
+
+          <div className="groups-split-grid" style={{ display: "grid", gap: 16, flex: 1, minHeight: 0 }}>
+            <div className="groups-map-panel" style={{ borderRadius: 20, overflow: "hidden", height: "100%", boxShadow: "0 8px 32px rgba(0,0,0,0.1)" }}>
+              <GroupsListingsMap
+                center={[selectedListing.lat, selectedListing.lng]}
+                listings={listings}
+              />
+            </div>
+
+            <div className="groups-list-panel" style={{ height: "100%", overflowY: "auto", overflowX: "hidden", borderRadius: 12 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, paddingRight: 4 }}>
+                {listings.map((listing) => {
+                  const isSelected = listing.id === selectedListingId;
+
+                  return (
+                    <button
+                      key={listing.id}
+                      onClick={() => setSelectedListingId(listing.id)}
+                      style={{
+                        textAlign: "left",
+                        borderRadius: 18,
+                        padding: "14px 16px",
+                        border: `1px solid ${isSelected ? "#2E7D32" : "rgba(15,23,42,0.08)"}`,
+                        background: isSelected ? "rgba(232,245,233,0.85)" : "rgba(255,255,255,0.82)",
+                        boxShadow: isSelected ? "0 10px 26px rgba(46,125,50,0.12)" : "0 8px 24px rgba(0,0,0,0.04)",
+                        cursor: "pointer",
+                        transition: "all 0.2s ease",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 6 }}>
+                        <p style={{ fontWeight: 700, fontSize: 15, color: "#111827", lineHeight: 1.3 }}>{listing.title}</p>
+                        <span style={{ background: "#2E7D32", color: "white", borderRadius: 999, padding: "4px 10px", fontSize: 12, fontWeight: 700 }}>
+                          {listing.neededPlayers} kisi
+                        </span>
+                      </div>
+
+                      <p style={{ fontSize: 12, color: "#2E7D32", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 4 }}>
+                        {listing.district}
+                      </p>
+
+                      <p style={{ display: "flex", alignItems: "center", gap: 6, color: "#6b7280", fontSize: 13, marginBottom: 8 }}>
+                        <MapPin size={13} /> {listing.address}
+                      </p>
+
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
+                        <span style={{ color: "#9ca3af" }}>{listing.date}</span>
+                        <span style={{ color: "#2E7D32", fontWeight: 700 }}>{listing.level}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
-      )}
+      </div>
+
+      <div className="match-booking-bar">
+        <Link
+          className={`match-booking-button ${canBook ? "is-active" : "is-disabled"}`}
+          href={canBook ? `/booking/${selectedListing.id}` : "#"}
+          style={{
+            textDecoration: "none",
+            pointerEvents: canBook ? "auto" : "none",
+          }}
+        >
+          Rezervasyon Yap <ArrowRight size={18} />
+        </Link>
+      </div>
     </div>
   );
-};
-
-export default GroupsPage;
+}

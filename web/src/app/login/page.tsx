@@ -3,11 +3,10 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { loginWithEmailPassword } from "@/backend/services/authService";
 import { toast } from "react-hot-toast";
 import { Mail, Lock, ArrowRight } from "lucide-react";
-import Aurora from "@/components/ui/Aurora/Aurora";
+import Aurora from "@/frontend/components/ui/Aurora/Aurora";
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
@@ -19,11 +18,16 @@ const LoginPage = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await loginWithEmailPassword(email, password);
       toast.success("Başarıyla giriş yapıldı!");
       router.push("/");
     } catch (error: any) {
-      const msg = error.code === "auth/invalid-credential" ? "E-posta veya şifre hatalı." : "Giriş yapılamadı.";
+      const msg =
+        error?.message === "admin_not_approved"
+          ? "Hesabınız henüz onaylanmadı. Lütfen yönetici onayını bekleyin."
+          : error?.code === "auth/invalid-credential"
+          ? "E-posta veya şifre hatalı."
+          : "Giriş yapılamadı.";
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -31,7 +35,7 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="home-aurora-section" style={{ minHeight: "100vh", background: "#f5f5f7", display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
+    <div className="home-aurora-section" style={{ minHeight: "100vh", background: "#f5f5f7", display: "flex", flexDirection: "column", position: "relative", overflowX: "hidden" }}>
       <div className="aurora-bg-layer" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", zIndex: 0, opacity: 1, transform: "scaleY(-1)", pointerEvents: "none" }}>
         <Aurora
           colorStops={["#114B32", "#2E7D32", "#4CAF50"]}

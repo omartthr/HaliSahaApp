@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { db } from "@/lib/firebase";
+import { db } from "@/database/firebase";
 import { collection, query, where, onSnapshot, updateDoc, doc } from "firebase/firestore";
-import Navbar from "@/components/common/Navbar";
+import Navbar from "@/frontend/components/common/Navbar";
 import { toast } from "react-hot-toast";
 import { ShieldCheck, UserCheck, UserX, AlertCircle, Building } from "lucide-react";
 

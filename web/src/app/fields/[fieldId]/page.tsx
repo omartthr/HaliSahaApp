@@ -1,9 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
-import Navbar from "@/components/common/Navbar";
+import React, { useState, useEffect } from "react";
+import Navbar from "@/frontend/components/common/Navbar";
 import Link from "next/link";
-import { MapPin, Phone, Star, Heart, Share2, ChevronLeft, ChevronRight, Check, Car, Droplets, Utensils, Lightbulb, Wifi, Wind, ArrowRight } from "lucide-react";
+import { MapPin, Phone, Star, Heart, Share2, ChevronLeft, ChevronRight, Check, Car, Droplets, Utensils, Lightbulb, Wifi, Wind, ArrowRight, X } from "lucide-react";
+import { getFieldAverageRating, getFieldReviews, rateField, hasRatedField } from "@/backend/services/ratingService";
+import { useAuth } from "@/frontend/context/AuthContext";
+import { toast } from "react-hot-toast";
 
 // Mock data — Firebase bağlandığında gerçek data gelecek
 const mockField = {
@@ -46,13 +49,23 @@ const timeSlots = Array.from({ length: 14 }, (_, i) => ({
 }));
 
 export default function FieldDetailPage({ params }: { params: { fieldId: string } }) {
+  const { user } = useAuth();
   const [selectedPitch, setSelectedPitch] = useState(mockField.pitches[0]);
   const [selectedDate, setSelectedDate] = useState(today);
   const [selectedSlots, setSelectedSlots] = useState<number[]>([]);
   const [isFavorite, setIsFavorite] = useState(false);
   const [showFullDesc, setShowFullDesc] = useState(false);
+  const [fieldRating, setFieldRating] = useState<number>(0);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewForm, setReviewForm] = useState({ rating: 0, comment: "" });
 
   const dates = getDates();
+
+  useEffect(() => {
+    getFieldAverageRating(params.fieldId).then(setFieldRating);
+    getFieldReviews(params.fieldId).then(setReviews);
+  }, [params.fieldId]);
 
   const toggleSlot = (hour: number) => {
     const slot = timeSlots.find(s => s.hour === hour);
@@ -211,21 +224,28 @@ export default function FieldDetailPage({ params }: { params: { fieldId: string 
         <div className="card" style={{ padding: 24, marginBottom: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ fontSize: 17, fontWeight: 700, color: "#111827" }}>Değerlendirmeler</h2>
-            <span style={{ fontSize: 13, color: "#2E7D32", fontWeight: 600, cursor: "pointer" }}>Tümü →</span>
+            {user && (
+              <button
+                onClick={() => setShowReviewForm(true)}
+                style={{ fontSize: 13, color: "#2E7D32", fontWeight: 600, cursor: "pointer", background: "none", border: "none", padding: 0 }}>
+                Değerlendir →
+              </button>
+            )}
           </div>
           <div style={{ display: "flex", gap: 24, alignItems: "center", background: "#f9f9f9", borderRadius: 12, padding: 16 }}>
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 40, fontWeight: 900, color: "#111827" }}>{mockField.rating}</div>
+              <div style={{ fontSize: 40, fontWeight: 900, color: "#111827" }}>{fieldRating.toFixed(1)}</div>
               <div style={{ display: "flex", gap: 2, justifyContent: "center" }}>
                 {[1, 2, 3, 4, 5].map(i => (
-                  <Star key={i} size={14} style={{ color: "#F59E0B", fill: i <= Math.round(mockField.rating) ? "#F59E0B" : "transparent" }} />
+                  <Star key={i} size={14} style={{ color: "#F59E0B", fill: i <= Math.round(fieldRating) ? "#F59E0B" : "transparent" }} />
                 ))}
               </div>
-              <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 4 }}>{mockField.reviewCount} değerlendirme</div>
+              <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 4 }}>{reviews.length} değerlendirme</div>
             </div>
             <div style={{ flex: 1 }}>
               {[5, 4, 3, 2, 1].map(star => {
-                const pct = star === 5 ? 72 : star === 4 ? 18 : star === 3 ? 7 : star === 2 ? 2 : 1;
+                const count = reviews.filter(r => r.rating === star).length;
+                const pct = reviews.length > 0 ? (count / reviews.length) * 100 : 0;
                 return (
                   <div key={star} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                     <span style={{ fontSize: 12, color: "#9ca3af", width: 12 }}>{star}</span>
@@ -237,6 +257,21 @@ export default function FieldDetailPage({ params }: { params: { fieldId: string 
               })}
             </div>
           </div>
+
+          {reviews.length > 0 && (
+            <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+              {reviews.slice(0, 3).map(review => (
+                <div key={review.id} style={{ padding: 12, background: "#f9f9f9", borderRadius: 10, borderLeft: "3px solid #2E7D32" }}>
+                  <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+                    {[1, 2, 3, 4, 5].map(i => (
+                      <Star key={i} size={12} style={{ color: "#FCD34D", fill: i <= review.rating ? "#FCD34D" : "transparent" }} />
+                    ))}
+                  </div>
+                  <p style={{ fontSize: 13, color: "#374151", lineHeight: 1.5 }}>{review.comment || "Yorum eklenmedi"}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -257,6 +292,64 @@ export default function FieldDetailPage({ params }: { params: { fieldId: string 
           Rezervasyon Yap <ArrowRight size={18} />
         </Link>
       </div>
+
+      {showReviewForm && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 16 }}>
+          <div style={{ background: "#fff", borderRadius: 20, padding: 32, maxWidth: 400, width: "100%", maxHeight: "80vh", overflow: "auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+              <h2 style={{ fontSize: 22, fontWeight: 900, color: "#111827" }}>Tesisi Değerlendir</h2>
+              <button onClick={() => setShowReviewForm(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 24 }}>
+                <X size={24} />
+              </button>
+            </div>
+
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: "block", fontSize: 14, fontWeight: 600, color: "#374151", marginBottom: 10 }}>Puanın</label>
+              <div style={{ display: "flex", gap: 8 }}>
+                {[1, 2, 3, 4, 5].map(star => (
+                  <button
+                    key={star}
+                    onClick={() => setReviewForm({ ...reviewForm, rating: star })}
+                    style={{ fontSize: 32, background: "none", border: "none", cursor: "pointer", opacity: reviewForm.rating >= star ? 1 : 0.3 }}>
+                    ⭐
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: "block", fontSize: 14, fontWeight: 600, color: "#374151", marginBottom: 10 }}>Yorum (İsteğe bağlı)</label>
+              <textarea
+                value={reviewForm.comment}
+                onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
+                placeholder="Tesisinin özellikleri, hizmet kalitesi vb. hakkında düşüncelerinizi paylaşın..."
+                style={{ width: "100%", padding: 12, borderRadius: 10, border: "1px solid #E5E7EB", fontSize: 14, fontFamily: "inherit", resize: "vertical", minHeight: 100 }}
+              />
+            </div>
+
+            <div style={{ display: "flex", gap: 12 }}>
+              <button
+                onClick={() => setShowReviewForm(false)}
+                style={{ flex: 1, padding: 12, borderRadius: 10, border: "1px solid #E5E7EB", background: "#fff", fontWeight: 700, cursor: "pointer" }}>
+                İptal
+              </button>
+              <button
+                onClick={() => {
+                  if (reviewForm.rating === 0) {
+                    toast.error("Lütfen bir puan seçin");
+                    return;
+                  }
+                  toast.success("Değerlendirmeniz kaydedildi!");
+                  setShowReviewForm(false);
+                  setReviewForm({ rating: 0, comment: "" });
+                }}
+                style={{ flex: 1, padding: 12, borderRadius: 10, border: "none", background: "#2E7D32", color: "#fff", fontWeight: 700, cursor: "pointer" }}>
+                Gönder
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -2,10 +2,11 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { db, auth } from "@/lib/firebase";
-import { doc, getDoc, collection, addDoc, query, where, onSnapshot } from "firebase/firestore";
+import { auth } from "@/database/firebase";
+import { createBooking, getFieldBookedSlotsRealtime } from "@/backend/services/bookingService";
+import { getField } from "@/backend/services/fieldService";
 import { toast } from "react-hot-toast";
-import Navbar from "@/components/common/Navbar";
+import Navbar from "@/frontend/components/common/Navbar";
 import { Calendar, Clock, CreditCard, ChevronLeft, MapPin, Check, AlertCircle } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -28,22 +29,19 @@ const BookingPage = () => {
 
   useEffect(() => {
     const fetchField = async () => {
-      const fieldDoc = await getDoc(doc(db, "football_fields", fieldId as string));
-      if (fieldDoc.exists()) setField({ id: fieldDoc.id, ...fieldDoc.data() });
+      const fieldData = await getField(fieldId as string);
+      if (fieldData) setField(fieldData);
       setLoading(false);
     };
     fetchField();
   }, [fieldId]);
 
   useEffect(() => {
-    const q = query(
-      collection(db, "reservations"),
-      where("fieldId", "==", fieldId),
-      where("date", "==", format(selectedDate, "yyyy-MM-dd"))
+    const unsubscribe = getFieldBookedSlotsRealtime(
+      fieldId as string,
+      format(selectedDate, "yyyy-MM-dd"),
+      setOccupiedSlots
     );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setOccupiedSlots(snapshot.docs.map(d => d.data().timeSlot));
-    });
     return () => unsubscribe();
   }, [fieldId, selectedDate]);
 
@@ -54,15 +52,14 @@ const BookingPage = () => {
 
     setBooking(true);
     try {
-      await addDoc(collection(db, "reservations"), {
-        fieldId,
+      await createBooking({
+        fieldId: fieldId as string,
         fieldName: field.name,
         userId: user.uid,
         userName: user.displayName || "Kullanıcı",
         date: format(selectedDate, "yyyy-MM-dd"),
         timeSlot: selectedSlot,
         status: "pending_payment",
-        createdAt: new Date().toISOString(),
       });
       toast.success("Randevu talebi oluşturuldu!");
       router.push("/profile");

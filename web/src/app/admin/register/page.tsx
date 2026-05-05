@@ -4,10 +4,10 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth, db } from "@/lib/firebase";
+import { auth, db } from "@/database/firebase";
 import { doc, setDoc } from "firebase/firestore";
 import { toast } from "react-hot-toast";
-import Navbar from "@/components/common/Navbar";
+import Navbar from "@/frontend/components/common/Navbar";
 
 const AdminRegisterPage = () => {
   const [formData, setFormData] = useState({
@@ -49,7 +49,7 @@ const AdminRegisterPage = () => {
 
       toast.success("Kayıt talebiniz alındı! Yönetici onayı bekliyor.");
       await auth.signOut();
-      router.push("/admin/login");
+      router.push("/login");
     } catch (error: any) {
       toast.error("Hata: " + (error.message || "Kayıt yapılamadı"));
     } finally {
@@ -160,8 +160,8 @@ const AdminRegisterPage = () => {
           <div className="mt-8 text-center text-sm text-gray-600">
             <p>
               Zaten kaydınız var mı?{" "}
-              <Link href="/admin/login" className="text-emerald-700 font-bold hover:underline">
-                Yönetici Girişi
+              <Link href="/login" className="text-emerald-700 font-bold hover:underline">
+                Giriş Yap
               </Link>
             </p>
           </div>

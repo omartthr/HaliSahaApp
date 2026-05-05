@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Poppins, Geist } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from "@/context/AuthContext";
+import { AuthProvider } from "@/frontend/context/AuthContext";
 import { Toaster } from "react-hot-toast";
 import { cn } from "@/lib/utils";
 

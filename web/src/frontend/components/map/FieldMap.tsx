@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { db } from "@/lib/firebase";
+import { db } from "@/database/firebase";
 import { collection, onSnapshot } from "firebase/firestore";
 import { Star, Phone, Info } from "lucide-react";
 

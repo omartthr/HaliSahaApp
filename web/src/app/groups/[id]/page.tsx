@@ -2,10 +2,9 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { db, auth } from "@/lib/firebase";
-import { collection, query, onSnapshot, addDoc, serverTimestamp, doc, getDoc, orderBy, limit } from "firebase/firestore";
-import { useAuth } from "@/context/AuthContext";
-import Navbar from "@/components/common/Navbar";
+import { getGroupById, getGroupMessagesRealtime, sendGroupMessage } from "@/backend/services/groupService";
+import { useAuth } from "@/frontend/context/AuthContext";
+import Navbar from "@/frontend/components/common/Navbar";
 import { toast } from "react-hot-toast";
 import { Send, ChevronLeft, Users, Shield } from "lucide-react";
 import { format } from "date-fns";
@@ -22,23 +21,14 @@ const ChatPage = () => {
 
   useEffect(() => {
     const fetchGroup = async () => {
-      const groupDoc = await getDoc(doc(db, "groups", id as string));
-      if (groupDoc.exists()) {
-        setGroup({ id: groupDoc.id, ...groupDoc.data() });
-      }
+      const groupData = await getGroupById(id as string);
+      if (groupData) setGroup(groupData);
       setLoading(false);
     };
 
     fetchGroup();
 
-    const q = query(
-      collection(db, "groups", id as string, "messages"),
-      orderBy("createdAt", "asc"),
-      limit(100)
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const msgList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const unsubscribe = getGroupMessagesRealtime(id as string, (msgList) => {
       setMessages(msgList);
       // Auto scroll to bottom
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -52,11 +42,10 @@ const ChatPage = () => {
     if (!user || !newMessage.trim()) return;
 
     try {
-      await addDoc(collection(db, "groups", id as string, "messages"), {
+      await sendGroupMessage(id as string, {
         text: newMessage,
         senderId: user.uid,
         senderName: user.displayName || "Kullanıcı",
-        createdAt: serverTimestamp(),
       });
       setNewMessage("");
     } catch (error) {
