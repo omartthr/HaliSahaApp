@@ -51,6 +51,7 @@ enum TabItem: Int, CaseIterable {
 // MARK: - Notification Names
 extension Notification.Name {
     static let switchToBookingsTab = Notification.Name("switchToBookingsTab")
+    static let switchToHomeTab = Notification.Name("switchToHomeTab")
 }
 
 // MARK: - Main Tab View
@@ -150,6 +151,9 @@ struct MainTabView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .switchToBookingsTab)) { _ in
             selectedTab = .bookings
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .switchToHomeTab)) { _ in
+            selectedTab = .home
         }
     }
 

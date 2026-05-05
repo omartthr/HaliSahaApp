@@ -410,42 +410,99 @@ struct FacilityDetailView: View {
 
                 Spacer()
 
-                NavigationLink {
-                    // ReviewsListView
-                    Text("Değerlendirmeler - ADIM 8'de")
-                } label: {
-                    Text("Tümü")
-                        .font(.subheadline)
-                        .foregroundColor(Color(hex: "2E7D32"))
-                }
-            }
-
-            HStack(spacing: 16) {
-                // Rating
-                VStack {
-                    Text(viewModel.facility.formattedRating)
-                        .font(.system(size: 40, weight: .bold))
-
-                    RatingStarsView(rating: viewModel.facility.averageRating)
-
-                    Text("\(viewModel.facility.totalReviews) değerlendirme")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-
-                Spacer()
-
-                // Rating Bars
-                VStack(spacing: 4) {
-                    ForEach((1...5).reversed(), id: \.self) { star in
-                        RatingBar(star: star, percentage: Double.random(in: 0.1...1.0))
+                if viewModel.facility.totalReviews > 0 {
+                    NavigationLink {
+                        // ReviewsListView
+                        Text("Değerlendirmeler - ADIM 8'de")
+                    } label: {
+                        Text("Tümü")
+                            .font(.subheadline)
+                            .foregroundColor(Color(hex: "2E7D32"))
                     }
                 }
             }
-            .padding()
-            .background(Color(.systemGray6))
-            .cornerRadius(12)
+
+            if viewModel.facility.totalReviews == 0 {
+                noReviewsPlaceholder
+            } else {
+                reviewsBreakdown
+            }
         }
+    }
+
+    // MARK: - No Reviews Placeholder
+    private var noReviewsPlaceholder: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "text.bubble")
+                .font(.title2)
+                .foregroundColor(.secondary)
+
+            Text("Henüz değerlendirme yok")
+                .font(.subheadline)
+                .fontWeight(.medium)
+
+            Text("Bu sahaya ilk değerlendirmeyi yapan sen ol!")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 24)
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
+    }
+
+    // MARK: - Reviews Breakdown
+    private var reviewsBreakdown: some View {
+        HStack(spacing: 16) {
+            // Rating
+            VStack {
+                Text(viewModel.facility.formattedRating)
+                    .font(.system(size: 40, weight: .bold))
+
+                RatingStarsView(rating: viewModel.facility.averageRating)
+
+                Text("\(viewModel.facility.totalReviews) değerlendirme")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer()
+
+            // Rating Bars (averageRating'e göre deterministik dağılım)
+            VStack(spacing: 4) {
+                ForEach((1...5).reversed(), id: \.self) { star in
+                    RatingBar(
+                        star: star,
+                        percentage: ratingDistribution(
+                            for: star,
+                            average: viewModel.facility.averageRating
+                        )
+                    )
+                }
+            }
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
+    }
+
+    // MARK: - Deterministic Rating Distribution
+    /// Verilen ortalama puana göre yıldız bazlı dağılım üretir.
+    /// Her yıldızın ortalamaya yakınlığına göre çan eğrisi (Gaussian) ağırlığı hesaplanır,
+    /// toplam %100 olacak şekilde normalize edilir. Aynı `average` daima aynı sonucu verir.
+    private func ratingDistribution(for star: Int, average: Double) -> Double {
+        let variance = 1.2  // dağılımın yayılması (küçük = daha sivri)
+
+        func weight(for s: Int) -> Double {
+            let distance = Double(s) - average
+            return exp(-pow(distance, 2) / (2 * variance))
+        }
+
+        let total = (1...5).reduce(0.0) { $0 + weight(for: $1) }
+        guard total > 0 else { return 0 }
+
+        return weight(for: star) / total
     }
 
     // MARK: - Bottom Bar
@@ -632,14 +689,19 @@ struct TimeSlotButton: View {
                 Text(slot.hour.asHourString)
                     .font(.subheadline)
                     .fontWeight(isSelected ? .semibold : .regular)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
 
                 if slot.price > 0 {
                     Text(slot.price.asShortCurrency)
                         .font(.caption2)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                 }
             }
-            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 8)
             .padding(.vertical, 10)
+            .frame(maxWidth: .infinity)
             .foregroundColor(foregroundColor)
             .background(backgroundColor)
             .cornerRadius(8)

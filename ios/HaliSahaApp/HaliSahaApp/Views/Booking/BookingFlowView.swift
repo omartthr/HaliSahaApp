@@ -248,32 +248,62 @@ struct BookingFlowView: View {
                         placeholder: "1234 5678 9012 3456",
                         text: $cardNumber,
                         icon: "creditcard.fill",
-                        keyboardType: .numberPad
+                        keyboardType: .numberPad,
+                        textContentType: .creditCardNumber,
+                        errorMessage: cardNumberError
                     )
+                    .onChange(of: cardNumber) { _, newValue in
+                        let formattedValue = PaymentInputFormatter.cardNumber(newValue)
+                        if formattedValue != newValue {
+                            cardNumber = formattedValue
+                        }
+                    }
 
                     CustomTextField(
                         title: "Kart Sahibi",
                         placeholder: "AD SOYAD",
                         text: $cardHolder,
                         icon: "person.fill",
-                        autocapitalization: .characters
+                        textContentType: .name,
+                        autocapitalization: .characters,
+                        errorMessage: cardHolderError
                     )
+                    .onChange(of: cardHolder) { _, newValue in
+                        let formattedValue = PaymentInputFormatter.cardHolder(newValue)
+                        if formattedValue != newValue {
+                            cardHolder = formattedValue
+                        }
+                    }
 
                     HStack(spacing: 12) {
                         CustomTextField(
                             title: "Son Kullanma",
                             placeholder: "AA/YY",
                             text: $expiryDate,
-                            keyboardType: .numberPad
+                            keyboardType: .numberPad,
+                            errorMessage: expiryDateError
                         )
+                        .onChange(of: expiryDate) { _, newValue in
+                            let formattedValue = PaymentInputFormatter.expiryDate(newValue)
+                            if formattedValue != newValue {
+                                expiryDate = formattedValue
+                            }
+                        }
 
                         CustomTextField(
                             title: "CVV",
                             placeholder: "123",
                             text: $cvv,
                             keyboardType: .numberPad,
-                            isSecure: true
+                            isSecure: true,
+                            errorMessage: cvvError
                         )
+                        .onChange(of: cvv) { _, newValue in
+                            let formattedValue = PaymentInputFormatter.cvv(newValue)
+                            if formattedValue != newValue {
+                                cvv = formattedValue
+                            }
+                        }
                     }
                 }
                 .padding()
@@ -397,7 +427,45 @@ struct BookingFlowView: View {
         if selectedPaymentMethod == .wallet {
             return true
         }
-        return !cardNumber.isEmpty && !cardHolder.isEmpty && !expiryDate.isEmpty && !cvv.isEmpty
+        return PaymentFormValidator.isValidCardNumber(cardNumber)
+            && PaymentFormValidator.isValidCardHolder(cardHolder)
+            && PaymentFormValidator.isValidExpiryDate(expiryDate)
+            && PaymentFormValidator.isValidCVV(cvv, cardNumber: cardNumber)
+    }
+
+    private var cardNumberError: String? {
+        guard !cardNumber.isEmpty else { return nil }
+
+        let digits = PaymentInputFormatter.digitsOnly(cardNumber)
+        if digits.count < PaymentFormValidator.minimumCardNumberLength {
+            return "Kart numarası eksik"
+        }
+
+        return PaymentFormValidator.isValidCardNumber(cardNumber)
+            ? nil : "Kart numarası geçerli değil"
+    }
+
+    private var cardHolderError: String? {
+        guard !cardHolder.isEmpty else { return nil }
+        return PaymentFormValidator.isValidCardHolder(cardHolder) ? nil : "Ad ve soyad girin"
+    }
+
+    private var expiryDateError: String? {
+        guard !expiryDate.isEmpty else { return nil }
+
+        let digits = PaymentInputFormatter.digitsOnly(expiryDate)
+        if digits.count < 4 {
+            return "AA/YY formatında girin"
+        }
+
+        return PaymentFormValidator.isValidExpiryDate(expiryDate)
+            ? nil : "Son kullanma tarihi geçerli değil"
+    }
+
+    private var cvvError: String? {
+        guard !cvv.isEmpty else { return nil }
+        return PaymentFormValidator.isValidCVV(cvv, cardNumber: cardNumber)
+            ? nil : "CVV \(PaymentFormValidator.requiredCVVLength(for: cardNumber)) haneli olmalı"
     }
 
     // MARK: - Actions
@@ -481,6 +549,145 @@ enum BookingStep: Int, CaseIterable {
     }
 }
 
+// MARK: - Payment Input Formatting
+enum PaymentInputFormatter {
+    static func digitsOnly(_ value: String) -> String {
+        value.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
+    }
+
+    static func cardNumber(_ value: String) -> String {
+        let digits = String(digitsOnly(value).prefix(PaymentFormValidator.maximumCardNumberLength))
+        return stride(from: 0, to: digits.count, by: 4)
+            .map { index in
+                let start = digits.index(digits.startIndex, offsetBy: index)
+                let end = digits.index(start, offsetBy: min(4, digits.distance(from: start, to: digits.endIndex)))
+                return String(digits[start..<end])
+            }
+            .joined(separator: " ")
+    }
+
+    static func cardHolder(_ value: String) -> String {
+        let allowedCharacters = CharacterSet.letters
+            .union(.whitespaces)
+            .union(CharacterSet(charactersIn: "-'"))
+
+        let filteredValue = String(value.unicodeScalars.filter { allowedCharacters.contains($0) })
+        let normalizedSpacing = filteredValue.replacingOccurrences(
+            of: "\\s+",
+            with: " ",
+            options: .regularExpression
+        )
+
+        return String(normalizedSpacing.uppercased(with: Locale(identifier: "tr_TR")).prefix(40))
+    }
+
+    static func expiryDate(_ value: String) -> String {
+        let digits = String(digitsOnly(value).prefix(4))
+
+        guard !digits.isEmpty else { return "" }
+
+        if digits.count == 1 {
+            guard let monthFirstDigit = Int(digits), monthFirstDigit > 1 else {
+                return digits
+            }
+
+            return "0\(digits)/"
+        }
+
+        let month = String(digits.prefix(2))
+        let year = String(digits.dropFirst(2))
+
+        guard !year.isEmpty else {
+            return "\(month)/"
+        }
+
+        return "\(month)/\(year)"
+    }
+
+    static func cvv(_ value: String) -> String {
+        String(digitsOnly(value).prefix(PaymentFormValidator.maximumCVVLength))
+    }
+}
+
+// MARK: - Payment Form Validation
+enum PaymentFormValidator {
+    static let minimumCardNumberLength = 13
+    static let maximumCardNumberLength = 19
+    static let maximumCVVLength = 4
+
+    static func isValidCardNumber(_ value: String) -> Bool {
+        let digits = PaymentInputFormatter.digitsOnly(value)
+
+        guard (minimumCardNumberLength...maximumCardNumberLength).contains(digits.count) else {
+            return false
+        }
+
+        return passesLuhnCheck(digits)
+    }
+
+    static func isValidCardHolder(_ value: String) -> Bool {
+        let words = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            .split(separator: " ")
+
+        return words.count >= 2 && words.allSatisfy { word in
+            word.filter(\.isLetter).count >= 2
+        }
+    }
+
+    static func isValidExpiryDate(_ value: String, today: Date = Date()) -> Bool {
+        let digits = PaymentInputFormatter.digitsOnly(value)
+
+        guard digits.count == 4,
+            let month = Int(digits.prefix(2)),
+            let yearSuffix = Int(digits.suffix(2)),
+            (1...12).contains(month)
+        else {
+            return false
+        }
+
+        let fullYear = 2000 + yearSuffix
+        let calendar = Calendar.current
+        let currentYear = calendar.component(.year, from: today)
+        let currentMonth = calendar.component(.month, from: today)
+
+        return fullYear > currentYear || (fullYear == currentYear && month >= currentMonth)
+    }
+
+    static func isValidCVV(_ value: String, cardNumber: String) -> Bool {
+        PaymentInputFormatter.digitsOnly(value).count == requiredCVVLength(for: cardNumber)
+    }
+
+    static func requiredCVVLength(for cardNumber: String) -> Int {
+        isAmericanExpress(cardNumber) ? 4 : 3
+    }
+
+    private static func isAmericanExpress(_ cardNumber: String) -> Bool {
+        let digits = PaymentInputFormatter.digitsOnly(cardNumber)
+        return digits.hasPrefix("34") || digits.hasPrefix("37")
+    }
+
+    private static func passesLuhnCheck(_ digits: String) -> Bool {
+        let reversedDigits = digits.reversed().compactMap { Int(String($0)) }
+
+        guard reversedDigits.count == digits.count else {
+            return false
+        }
+
+        let checksum = reversedDigits.enumerated().reduce(0) { partialResult, item in
+            let (index, digit) = item
+
+            guard index.isMultiple(of: 2) == false else {
+                return partialResult + digit
+            }
+
+            let doubledDigit = digit * 2
+            return partialResult + (doubledDigit > 9 ? doubledDigit - 9 : doubledDigit)
+        }
+
+        return checksum.isMultiple(of: 10)
+    }
+}
+
 // MARK: - Supporting Views
 
 struct PriceRow: View {
@@ -555,16 +762,11 @@ struct TicketCardView: View {
 
                 Spacer()
 
-                // QR Code Placeholder
-                ZStack {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color.white)
-                        .frame(width: 60, height: 60)
-
-                    Image(systemName: "qrcode")
-                        .font(.title)
-                        .foregroundColor(.black)
-                }
+                // QR Code (gerçek)
+                QRCodeImage(
+                    data: booking.qrCode.isEmpty ? booking.ticketNumber : booking.qrCode,
+                    size: 60
+                )
             }
 
             // Dashed Divider

@@ -111,123 +111,135 @@ struct ProfileView: View {
 
     // MARK: - Hero Section
     private var heroSection: some View {
-        ZStack {
-            // Gradient background + dekoratif daireler (rounded rect ile kırpılır)
-            ZStack {
-                LinearGradient(
-                    colors: [
-                        Color(hex: "2E7D32"),
-                        Color(hex: "1B5E20"),
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
+        ZStack(alignment: .top) {
+            heroCardBackground
+                .frame(height: 240)
+                .padding(.top, 58)
 
-                Circle()
-                    .fill(Color.white.opacity(0.10))
-                    .frame(width: 220, height: 220)
-                    .offset(x: 140, y: -90)
+            VStack(spacing: 0) {
+                avatarButton
 
-                Circle()
-                    .fill(Color.white.opacity(0.07))
-                    .frame(width: 150, height: 150)
-                    .offset(x: -130, y: 100)
+                VStack(spacing: 12) {
+                    VStack(spacing: 4) {
+                        Text(authService.currentUser?.fullName ?? "Kullanıcı")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+
+                        if let username = authService.currentUser?.username, !username.isEmpty {
+                            Text("@\(username)")
+                                .font(.subheadline)
+                                .foregroundColor(.white.opacity(0.68))
+                                .lineLimit(1)
+                        }
+                    }
+
+                    if let user = authService.currentUser {
+                        HStack(spacing: 6) {
+                            Text(user.preferredPosition.icon)
+                                .font(.caption)
+                            Text(user.preferredPosition.displayName)
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 6)
+                        .background(Color.white.opacity(0.16))
+                        .foregroundColor(.white.opacity(0.85))
+                        .clipShape(Capsule())
+                    }
+
+                    NavigationLink {
+                        EditProfileView()
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "pencil")
+                            Text("Profili Düzenle")
+                        }
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(Color(hex: "2E7D32"))
+                        .padding(.horizontal, 22)
+                        .padding(.vertical, 10)
+                        .background(
+                            Capsule()
+                                .fill(Color.white)
+                        )
+                        .shadow(color: .black.opacity(0.14), radius: 4, x: 0, y: 2)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 2)
+                }
+                .padding(.top, 20)
             }
-            .clipShape(RoundedRectangle(cornerRadius: 24))
+            .padding(.top, 0)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 28)
+        }
+        .padding(.top, 18)
+    }
 
-            // İçerik
-            VStack(spacing: 14) {
-                // Avatar + foto düzenle
-                ZStack(alignment: .bottomTrailing) {
-                    avatarView
-                        .frame(width: 96, height: 96)
-                        .clipShape(Circle())
+    private var heroCardBackground: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color(hex: "3E7F37"),
+                    Color(hex: "28652A"),
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            Circle()
+                .fill(Color.white.opacity(0.10))
+                .frame(width: 220, height: 220)
+                .offset(x: 160, y: -25)
+
+            Circle()
+                .fill(Color.white.opacity(0.08))
+                .frame(width: 150, height: 150)
+                .offset(x: -150, y: 95)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 24))
+    }
+
+    private var avatarButton: some View {
+        ZStack(alignment: .bottomTrailing) {
+            avatarView
+                .frame(width: 124, height: 124)
+                .clipShape(Circle())
+                .overlay {
+                    Circle()
+                        .stroke(Color(.systemGroupedBackground), lineWidth: 5)
+                }
+                .shadow(color: .black.opacity(0.25), radius: 8, x: 0, y: 4)
+
+            Button {
+                showPhotoOptions = true
+            } label: {
+                ZStack {
+                    Circle()
+                        .fill(Color(hex: "69A95B"))
+                        .frame(width: 40, height: 40)
                         .overlay {
                             Circle()
-                                .stroke(Color.white, lineWidth: 4)
+                                .stroke(Color(.systemGroupedBackground), lineWidth: 4)
                         }
-                        .shadow(color: .black.opacity(0.25), radius: 8, x: 0, y: 4)
 
-                    Button {
-                        showPhotoOptions = true
-                    } label: {
-                        ZStack {
-                            Circle()
-                                .fill(Color.white)
-                                .frame(width: 32, height: 32)
-                                .shadow(color: .black.opacity(0.15), radius: 3, x: 0, y: 1)
-
-                            if viewModel.isUploadingPhoto {
-                                ProgressView()
-                                    .progressViewStyle(
-                                        CircularProgressViewStyle(tint: Color(hex: "2E7D32")))
-                                    .scaleEffect(0.7)
-                            } else {
-                                Image(systemName: "camera.fill")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundColor(Color(hex: "2E7D32"))
-                            }
-                        }
-                    }
-                    .disabled(viewModel.isUploadingPhoto)
-                }
-
-                // İsim + kullanıcı adı
-                VStack(spacing: 4) {
-                    Text(authService.currentUser?.fullName ?? "Kullanıcı")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                        .lineLimit(1)
-
-                    if let username = authService.currentUser?.username, !username.isEmpty {
-                        Text("@\(username)")
-                            .font(.subheadline)
-                            .foregroundColor(.white.opacity(0.85))
-                            .lineLimit(1)
+                    if viewModel.isUploadingPhoto {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .scaleEffect(0.7)
+                    } else {
+                        Image(systemName: "camera.fill")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(.white)
                     }
                 }
-
-                // Mevki çipi
-                if let user = authService.currentUser {
-                    HStack(spacing: 6) {
-                        Text(user.preferredPosition.icon)
-                            .font(.caption)
-                        Text(user.preferredPosition.displayName)
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 6)
-                    .background(Color.white.opacity(0.20))
-                    .foregroundColor(.white)
-                    .clipShape(Capsule())
-                }
-
-                // Profili Düzenle butonu (beyaz arka plan, yeşil metin)
-                NavigationLink {
-                    EditProfileView()
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "pencil")
-                        Text("Profili Düzenle")
-                    }
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(Color(hex: "2E7D32"))
-                    .padding(.horizontal, 22)
-                    .padding(.vertical, 10)
-                    .background(
-                        Capsule()
-                            .fill(Color.white)
-                    )
-                    .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
-                }
-                .buttonStyle(.plain)
-                .padding(.top, 2)
             }
-            .padding(.vertical, 24)
-            .padding(.horizontal, 20)
+            .disabled(viewModel.isUploadingPhoto)
+            .offset(x: -3, y: -4)
         }
     }
 

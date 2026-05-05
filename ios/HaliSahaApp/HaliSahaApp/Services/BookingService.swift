@@ -92,6 +92,42 @@ final class BookingService: ObservableObject {
         }
     }
 
+    // MARK: - Fetch Booking by Ticket Number (QR doğrulama için)
+    @MainActor
+    func fetchBookingByTicketNumber(_ ticketNumber: String) async throws -> Booking {
+        let trimmed = ticketNumber.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { throw BookingError.notFound }
+
+        let query = firebaseService.bookingsCollection
+            .whereField("ticketNumber", isEqualTo: trimmed)
+            .limit(to: 1)
+
+        let bookings: [Booking] = try await firebaseService.fetchDocuments(query: query)
+        guard let booking = bookings.first else {
+            throw BookingError.notFound
+        }
+        return booking
+    }
+
+    // MARK: - QR İçeriğini Parse Et
+    /// QR içinde JSON varsa `ticketNumber` alanını çeker; düz metin ise olduğu gibi döner.
+    static func parseTicketNumber(fromScannedCode code: String) -> String? {
+        let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        // JSON dene
+        if let data = trimmed.data(using: .utf8),
+            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let ticket = json["ticketNumber"] as? String,
+            !ticket.isEmpty
+        {
+            return ticket
+        }
+
+        // Düz bilet numarası (HS-YYYY-XXXXXX gibi)
+        return trimmed
+    }
+
     // MARK: - Create Booking
     @MainActor
     func createBooking(

@@ -123,10 +123,11 @@
 				};
 			};
 			buildConfigurationList = 84F842362EF95B7A003929DA /* Build configuration list for PBXProject "HaliSahaApp" */;
-			developmentRegion = en;
+			developmentRegion = tr;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
+				tr,
 				Base,
 			);
 			mainGroup = 84F842322EF95B7A003929DA;
@@ -300,6 +301,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = HaliSahaApp/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Rezervasyon QR kodlarını tarayabilmek için kameraya erişim gereklidir.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Yakındaki halı sahaları gösterebilmek için konumunuza ihtiyacımız var.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Yakındaki halı sahaları gösterebilmek için konumunuza ihtiyacımız var.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -332,6 +334,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = HaliSahaApp/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Rezervasyon QR kodlarını tarayabilmek için kameraya erişim gereklidir.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Yakındaki halı sahaları gösterebilmek için konumunuza ihtiyacımız var.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Yakındaki halı sahaları gösterebilmek için konumunuza ihtiyacımız var.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

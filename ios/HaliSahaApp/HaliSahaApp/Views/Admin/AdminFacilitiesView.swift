@@ -511,8 +511,8 @@ struct AdminFacilityDetailView: View {
                 )
             }
 
-            Button {
-                // QR Scanner
+            NavigationLink {
+                AdminQRScannerView()
             } label: {
                 AdminActionButton(
                     icon: "qrcode.viewfinder",
@@ -982,9 +982,12 @@ struct AdminActionButton: View {
             Text(title)
                 .font(.caption)
                 .foregroundColor(.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
-        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 8)
         .padding(.vertical, 16)
+        .frame(maxWidth: .infinity)
         .background(Color(.systemBackground))
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.03), radius: 8)
