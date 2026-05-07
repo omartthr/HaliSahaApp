@@ -45,13 +45,20 @@ struct AdminBookingsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
+                NavigationLink {
+                    AdminQRScannerView()
+                } label: {
+                    Image(systemName: "qrcode.viewfinder")
+                }
+            }
+            ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
                     Button {
                         exportAndShare()
                     } label: {
                         Label("Dışa Aktar", systemImage: "square.and.arrow.up")
                     }
-                    
+
                     Button {
                         printBookings()
                     } label: {

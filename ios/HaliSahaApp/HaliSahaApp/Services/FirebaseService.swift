@@ -24,6 +24,10 @@ final class FirebaseService {
     var usersCollection: CollectionReference {
         db.collection(FirestoreCollection.users)
     }
+
+    var adminsCollection: CollectionReference {
+        db.collection(FirestoreCollection.admins)
+    }
     
     var facilitiesCollection: CollectionReference {
         db.collection(FirestoreCollection.facilities)
@@ -83,6 +87,7 @@ final class FirebaseService {
 // MARK: - Firestore Collection Names
 struct FirestoreCollection {
     static let users = "users"
+    static let admins = "admins"
     static let facilities = "facilities"
     static let pitches = "pitches"
     static let bookings = "bookings"
@@ -131,6 +136,11 @@ struct FirestoreField {
     
     // Notification
     static let isRead = "isRead"
+
+    // Admin
+    static let businessName = "businessName"
+    static let taxNumber = "taxNumber"
+    static let approvalStatus = "approvalStatus"
 }
 
 // MARK: - Firebase Error

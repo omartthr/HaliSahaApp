@@ -136,22 +136,12 @@ struct FeaturedFacilityCard: View {
         VStack(alignment: .leading, spacing: 0) {
             // Image
             ZStack(alignment: .topTrailing) {
-                // Placeholder image
-                ZStack {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color(hex: "2E7D32"), Color(hex: "1B5E20")],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                    
-                    Image(systemName: "sportscourt.fill")
-                        .font(.system(size: 50))
-                        .foregroundColor(.white.opacity(0.3))
-                }
-                .frame(height: 140)
+                FacilityImageView(
+                    url: facility.mainImage,
+                    size: CGSize(width: 260, height: 140),
+                    cornerRadius: 16,
+                    placeholder: "sportscourt.fill"
+                )
                 
                 // Favorite button
                 Button {

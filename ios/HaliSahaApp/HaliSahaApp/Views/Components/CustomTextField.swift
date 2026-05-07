@@ -55,14 +55,13 @@ struct CustomTextField: View {
                 SwiftUI.Group {
                     if isSecure && !isSecureTextVisible {
                         SecureField(placeholder, text: $text)
-                            .textContentType(textContentType)
                     } else {
                         TextField(placeholder, text: $text)
-                            .keyboardType(keyboardType)
-                            .textContentType(textContentType)
-                            .textInputAutocapitalization(autocapitalization)
                     }
                 }
+                .keyboardType(keyboardType)
+                .textContentType(textContentType)
+                .textInputAutocapitalization(autocapitalization)
                 .focused($isFocused)
                 .disabled(isDisabled)
                 

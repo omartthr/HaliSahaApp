@@ -485,7 +485,7 @@ final class AddFacilityViewModel: ObservableObject {
         saturdayOpen = mondayOpen
         saturdayClose = mondayClose
         sundayOpen = mondayOpen
-        sundayClose = mondayOpen
+        sundayClose = mondayClose
     }
 }
 

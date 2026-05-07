@@ -11,10 +11,10 @@ import SwiftUI
 
 // MARK: - Admin Facilities View
 struct AdminFacilitiesView: View {
-    
+
     @StateObject private var viewModel = AdminFacilitiesViewModel()
     @State private var showAddFacility = false
-    
+
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 16) {
@@ -27,15 +27,15 @@ struct AdminFacilitiesView: View {
                         Image(systemName: "sportscourt")
                             .font(.system(size: 60))
                             .foregroundColor(.secondary)
-                        
+
                         Text("Henüz Tesis Eklemediniz")
                             .font(.title3)
                             .fontWeight(.semibold)
-                        
+
                         Text("İlk tesisinizi ekleyerek başlayın")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
-                        
+
                         Button {
                             showAddFacility = true
                         } label: {
@@ -64,7 +64,7 @@ struct AdminFacilitiesView: View {
                         .buttonStyle(.plain)
                     }
                 }
-                
+
                 // Add Button (eğer tesis varsa)
                 if !viewModel.facilities.isEmpty {
                     Button {
@@ -81,7 +81,9 @@ struct AdminFacilitiesView: View {
                         .padding()
                         .background(
                             RoundedRectangle(cornerRadius: 16)
-                                .stroke(Color(hex: "2E7D32"), style: StrokeStyle(lineWidth: 2, dash: [8]))
+                                .stroke(
+                                    Color(hex: "2E7D32"),
+                                    style: StrokeStyle(lineWidth: 2, dash: [8]))
                         )
                     }
                 }
@@ -124,24 +126,24 @@ final class AdminFacilitiesViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage = ""
     @Published var showError = false
-    
+
     private let adminService = AdminService.shared
-    
+
     func loadFacilities() async {
         isLoading = true
         errorMessage = ""
-        
+
         do {
             facilities = try await adminService.fetchMyFacilities()
         } catch {
             errorMessage = error.localizedDescription
             showError = true
-            facilities = [] // Hata durumunda boş liste
+            facilities = []  // Hata durumunda boş liste
         }
-        
+
         isLoading = false
     }
-    
+
     func refreshFacilities() async {
         // Önce memory cache'i temizle
         await ImageCacheService.shared.clearMemoryCache()
@@ -152,15 +154,17 @@ final class AdminFacilitiesViewModel: ObservableObject {
 // MARK: - Admin Facility List Card
 struct AdminFacilityListCard: View {
     let facility: Facility
-    
-    @State private var showFullScreenImages = false
-    @State private var selectedImageIndex = 0
-    
+
+    @StateObject private var statsViewModel: FacilityCardStatsViewModel
+
+    init(facility: Facility) {
+        self.facility = facility
+        _statsViewModel = StateObject(
+            wrappedValue: FacilityCardStatsViewModel(facilityId: facility.id ?? ""))
+    }
+
     var body: some View {
         VStack(spacing: 16) {
-            // DEBUG - Konsola facility bilgilerini yazdır
-            let _ = print("🔍 Facility: \(facility.name), ID: \(facility.id ?? "nil"), Images: \(facility.images)")
-            
             // Header
             HStack {
                 // Facility Image - Güncellendi
@@ -169,14 +173,14 @@ struct AdminFacilityListCard: View {
                     size: 70,
                     placeholder: "sportscourt.fill"
                 )
-                
+
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
                         Text(facility.name)
                             .font(.headline)
-                        
+
                         Spacer()
-                        
+
                         Text(facility.status.displayName)
                             .font(.caption)
                             .fontWeight(.medium)
@@ -186,11 +190,11 @@ struct AdminFacilityListCard: View {
                             .background(facility.status.color.opacity(0.1))
                             .cornerRadius(8)
                     }
-                    
+
                     Text(facility.address)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
-                    
+
                     HStack(spacing: 12) {
                         HStack(spacing: 4) {
                             Image(systemName: "star.fill")
@@ -200,7 +204,7 @@ struct AdminFacilityListCard: View {
                                 .font(.caption)
                                 .fontWeight(.medium)
                         }
-                        
+
                         HStack(spacing: 4) {
                             Image(systemName: "text.bubble")
                                 .font(.caption)
@@ -211,20 +215,23 @@ struct AdminFacilityListCard: View {
                     }
                 }
             }
-            
-            // Quick Stats
+
+            // Quick Stats - Gerçek Firebase verileri
             HStack(spacing: 0) {
-                QuickStat(value: "2", label: "Saha", icon: "sportscourt")
-                
+                QuickStat(
+                    value: statsViewModel.isLoading ? "-" : "\(statsViewModel.pitchCount)",
+                    label: "Saha",
+                    icon: "sportscourt"
+                )
+
                 Divider()
                     .frame(height: 30)
-                
-                QuickStat(value: "24", label: "Bu Ay", icon: "calendar")
-                
-                Divider()
-                    .frame(height: 30)
-                
-                QuickStat(value: "12.5K", label: "Gelir", icon: "turkishlirasign")
+
+                QuickStat(
+                    value: statsViewModel.isLoading ? "-" : statsViewModel.formattedRevenue,
+                    label: "Gelir",
+                    icon: "turkishlirasign"
+                )
             }
             .padding(.vertical, 8)
             .background(Color(.systemGray6))
@@ -234,14 +241,68 @@ struct AdminFacilityListCard: View {
         .background(Color(.systemBackground))
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.03), radius: 8)
+        .task {
+            await statsViewModel.loadStats()
+        }
     }
 }
 
+// MARK: - Facility Card Stats ViewModel
+@MainActor
+final class FacilityCardStatsViewModel: ObservableObject {
+    @Published var pitchCount: Int = 0
+    @Published var totalRevenue: Double = 0
+    @Published var isLoading = true
+
+    private let facilityId: String
+    private let adminService = AdminService.shared
+
+    init(facilityId: String) {
+        self.facilityId = facilityId
+    }
+
+    var formattedRevenue: String {
+        if totalRevenue >= 1000 {
+            return String(format: "%.1fK ₺", totalRevenue / 1000)
+        } else {
+            return String(format: "%.0f ₺", totalRevenue)
+        }
+    }
+
+    func loadStats() async {
+        guard !facilityId.isEmpty else {
+            isLoading = false
+            return
+        }
+
+        isLoading = true
+
+        // Pitch sayısını çek
+        do {
+            let pitches = try await adminService.fetchPitches(for: facilityId)
+            pitchCount = pitches.count
+        } catch {
+            print("❌ Pitch sayısı alınamadı: \(error)")
+        }
+
+        // Gelir hesapla (opsiyonel - booking verisi varsa)
+        do {
+            totalRevenue = try await adminService.fetchFacilityRevenue(for: facilityId)
+        } catch {
+            // Gelir verisi yoksa 0 göster
+            totalRevenue = 0
+        }
+
+        isLoading = false
+    }
+}
+
+// MARK: - Quick Stat View
 struct QuickStat: View {
     let value: String
     let label: String
     let icon: String
-    
+
     var body: some View {
         VStack(spacing: 4) {
             HStack(spacing: 4) {
@@ -262,42 +323,42 @@ struct QuickStat: View {
 
 // MARK: - Admin Facility Detail View
 struct AdminFacilityDetailView: View {
-    
+
     @Environment(\.dismiss) private var dismiss
-    
+
     let facility: Facility
     @StateObject private var viewModel: AdminFacilityDetailViewModel
-    
+
     // Sheet States
     @State private var showAddPitch = false
     @State private var showEditPitch = false
     @State private var showEditHours = false
     @State private var selectedPitchForEdit: Pitch?
     @State private var navigateToEditFacility = false
-    
+
     init(facility: Facility) {
         self.facility = facility
         _viewModel = StateObject(wrappedValue: AdminFacilityDetailViewModel(facility: facility))
     }
-    
+
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
                 // Fotoğraf Galerisi - YENİ
                 imageGallerySection
-                
+
                 // Facility Info Card
                 facilityInfoCard
-                
+
                 // Quick Actions
                 quickActions
-                
+
                 // Pitches Section
                 pitchesSection
-                
+
                 // Stats Section
                 statsSection
-                
+
                 // Operating Hours
                 operatingHoursSection
             }
@@ -354,6 +415,7 @@ struct AdminFacilityDetailView: View {
         }
         .task {
             await viewModel.loadPitches()
+            await viewModel.loadStats()
         }
         // selectedPitchForEdit değiştiğinde sheet'i aç
         .onChange(of: selectedPitchForEdit) { _, newValue in
@@ -362,7 +424,7 @@ struct AdminFacilityDetailView: View {
             }
         }
     }
-    
+
     // MARK: - Image Gallery Section (YENİ)
     private var imageGallerySection: some View {
         ImageGalleryView(
@@ -372,7 +434,7 @@ struct AdminFacilityDetailView: View {
             placeholder: "sportscourt.fill"
         )
     }
-    
+
     // MARK: - Facility Info Card
     private var facilityInfoCard: some View {
         VStack(spacing: 16) {
@@ -388,9 +450,9 @@ struct AdminFacilityDetailView: View {
                         .padding(.vertical, 6)
                         .background(facility.status.color)
                         .cornerRadius(20)
-                    
+
                     Spacer()
-                    
+
                     // Rating
                     HStack(spacing: 4) {
                         Image(systemName: "star.fill")
@@ -402,7 +464,7 @@ struct AdminFacilityDetailView: View {
                     }
                     .font(.subheadline)
                 }
-                
+
                 // Address
                 HStack {
                     Image(systemName: "mappin.circle.fill")
@@ -410,7 +472,7 @@ struct AdminFacilityDetailView: View {
                     Text(facility.address)
                         .font(.subheadline)
                 }
-                
+
                 // Phone
                 HStack {
                     Image(systemName: "phone.fill")
@@ -425,7 +487,7 @@ struct AdminFacilityDetailView: View {
         .background(Color(.systemBackground))
         .cornerRadius(16)
     }
-    
+
     // MARK: - Quick Actions
     private var quickActions: some View {
         HStack(spacing: 12) {
@@ -438,7 +500,7 @@ struct AdminFacilityDetailView: View {
                     color: .blue
                 )
             }
-            
+
             NavigationLink {
                 AdminReportsView()
             } label: {
@@ -448,9 +510,9 @@ struct AdminFacilityDetailView: View {
                     color: .purple
                 )
             }
-            
-            Button {
-                // QR Scanner
+
+            NavigationLink {
+                AdminQRScannerView()
             } label: {
                 AdminActionButton(
                     icon: "qrcode.viewfinder",
@@ -460,16 +522,16 @@ struct AdminFacilityDetailView: View {
             }
         }
     }
-    
+
     // MARK: - Pitches Section
     private var pitchesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("Sahalar")
                     .font(.headline)
-                
+
                 Spacer()
-                
+
                 Button {
                     showAddPitch = true
                 } label: {
@@ -481,7 +543,7 @@ struct AdminFacilityDetailView: View {
                     .foregroundColor(Color(hex: "2E7D32"))
                 }
             }
-            
+
             ForEach(viewModel.pitches) { pitch in
                 PitchManagementCard(pitch: pitch) {
                     // Edit pitch - Sheet'i aç
@@ -494,67 +556,79 @@ struct AdminFacilityDetailView: View {
             }
         }
     }
-    
+
     // MARK: - Stats Section
     private var statsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Bu Ay İstatistikler")
                 .font(.headline)
-            
+
             HStack(spacing: 12) {
                 StatBox(
                     title: "Rezervasyon",
-                    value: "24",
-                    change: "+12%",
+                    value: viewModel.statsLoading ? "-" : "\(viewModel.monthlyReservations)",
+                    change: "",
                     isPositive: true
                 )
-                
+
                 StatBox(
                     title: "Gelir",
-                    value: "12.5K ₺",
-                    change: "+8%",
+                    value: viewModel.statsLoading ? "-" : viewModel.formattedRevenue,
+                    change: "",
                     isPositive: true
                 )
             }
-            
+
             HStack(spacing: 12) {
                 StatBox(
                     title: "Doluluk",
-                    value: "%68",
-                    change: "+5%",
+                    value: viewModel.statsLoading ? "-" : viewModel.formattedOccupancy,
+                    change: "",
                     isPositive: true
                 )
-                
+
                 StatBox(
                     title: "İptal",
-                    value: "3",
-                    change: "-2",
-                    isPositive: true
+                    value: viewModel.statsLoading ? "-" : "\(viewModel.cancellations)",
+                    change: "",
+                    isPositive: viewModel.cancellations == 0
                 )
             }
         }
     }
-    
+
     // MARK: - Operating Hours Section
     private var operatingHoursSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("Çalışma Saatleri")
                     .font(.headline)
-                
+
                 Spacer()
-                
+
                 Button("Düzenle") {
                     showEditHours = true
                 }
                 .font(.subheadline)
                 .foregroundColor(Color(hex: "2E7D32"))
             }
-            
+
             VStack(spacing: 8) {
-                OperatingHourRow(day: "Pazartesi - Cuma", hours: "\(facility.operatingHours.mondayOpen) - \(facility.operatingHours.mondayClose)")
-                OperatingHourRow(day: "Cumartesi", hours: "\(facility.operatingHours.saturdayOpen) - \(facility.operatingHours.saturdayClose)")
-                OperatingHourRow(day: "Pazar", hours: "\(facility.operatingHours.sundayOpen) - \(facility.operatingHours.sundayClose)")
+                OperatingHourRow(
+                    day: "Pazartesi - Cuma",
+                    hours:
+                        "\(facility.operatingHours.mondayOpen) - \(facility.operatingHours.mondayClose)"
+                )
+                OperatingHourRow(
+                    day: "Cumartesi",
+                    hours:
+                        "\(facility.operatingHours.saturdayOpen) - \(facility.operatingHours.saturdayClose)"
+                )
+                OperatingHourRow(
+                    day: "Pazar",
+                    hours:
+                        "\(facility.operatingHours.sundayOpen) - \(facility.operatingHours.sundayClose)"
+                )
             }
             .padding()
             .background(Color(.systemBackground))
@@ -565,19 +639,19 @@ struct AdminFacilityDetailView: View {
 
 // MARK: - Operating Hours Edit Sheet
 struct OperatingHoursEditSheet: View {
-    
+
     let facility: Facility
     var onSave: (() -> Void)?
-    
+
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: OperatingHoursEditViewModel
-    
+
     init(facility: Facility, onSave: (() -> Void)? = nil) {
         self.facility = facility
         self.onSave = onSave
         _viewModel = StateObject(wrappedValue: OperatingHoursEditViewModel(facility: facility))
     }
-    
+
     var body: some View {
         NavigationStack {
             Form {
@@ -587,46 +661,46 @@ struct OperatingHoursEditSheet: View {
                         openTime: $viewModel.mondayOpen,
                         closeTime: $viewModel.mondayClose
                     )
-                    
+
                     OperatingHourEditRow(
                         day: "Salı",
                         openTime: $viewModel.tuesdayOpen,
                         closeTime: $viewModel.tuesdayClose
                     )
-                    
+
                     OperatingHourEditRow(
                         day: "Çarşamba",
                         openTime: $viewModel.wednesdayOpen,
                         closeTime: $viewModel.wednesdayClose
                     )
-                    
+
                     OperatingHourEditRow(
                         day: "Perşembe",
                         openTime: $viewModel.thursdayOpen,
                         closeTime: $viewModel.thursdayClose
                     )
-                    
+
                     OperatingHourEditRow(
                         day: "Cuma",
                         openTime: $viewModel.fridayOpen,
                         closeTime: $viewModel.fridayClose
                     )
                 }
-                
+
                 Section("Hafta Sonu") {
                     OperatingHourEditRow(
                         day: "Cumartesi",
                         openTime: $viewModel.saturdayOpen,
                         closeTime: $viewModel.saturdayClose
                     )
-                    
+
                     OperatingHourEditRow(
                         day: "Pazar",
                         openTime: $viewModel.sundayOpen,
                         closeTime: $viewModel.sundayClose
                     )
                 }
-                
+
                 Section {
                     Button("Tüm Günleri Aynı Yap") {
                         viewModel.applyToAllDays()
@@ -642,13 +716,15 @@ struct OperatingHoursEditSheet: View {
                         dismiss()
                     }
                 }
-                
+
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Kaydet") {
                         Task {
                             await viewModel.saveHours()
-                            onSave?()
-                            dismiss()
+                            if viewModel.saveSuccess {
+                                onSave?()
+                                dismiss()
+                            }
                         }
                     }
                     .fontWeight(.semibold)
@@ -675,10 +751,10 @@ struct OperatingHoursEditSheet: View {
 // MARK: - Operating Hours Edit ViewModel
 @MainActor
 final class OperatingHoursEditViewModel: ObservableObject {
-    
+
     private let facility: Facility
     private let adminService = AdminService.shared
-    
+
     // Operating Hours
     @Published var mondayOpen: String
     @Published var mondayClose: String
@@ -694,15 +770,16 @@ final class OperatingHoursEditViewModel: ObservableObject {
     @Published var saturdayClose: String
     @Published var sundayOpen: String
     @Published var sundayClose: String
-    
+
     // State
     @Published var isLoading = false
     @Published var showError = false
     @Published var errorMessage = ""
-    
+    @Published var saveSuccess = false
+
     init(facility: Facility) {
         self.facility = facility
-        
+
         // Mevcut saatleri yükle
         self.mondayOpen = facility.operatingHours.mondayOpen
         self.mondayClose = facility.operatingHours.mondayClose
@@ -719,7 +796,7 @@ final class OperatingHoursEditViewModel: ObservableObject {
         self.sundayOpen = facility.operatingHours.sundayOpen
         self.sundayClose = facility.operatingHours.sundayClose
     }
-    
+
     func applyToAllDays() {
         tuesdayOpen = mondayOpen
         tuesdayClose = mondayClose
@@ -734,16 +811,17 @@ final class OperatingHoursEditViewModel: ObservableObject {
         sundayOpen = mondayOpen
         sundayClose = mondayClose
     }
-    
+
     func saveHours() async {
         guard let facilityId = facility.id else {
             errorMessage = "Tesis ID bulunamadı"
             showError = true
             return
         }
-        
+
         isLoading = true
-        
+        saveSuccess = false
+
         let operatingHours = OperatingHours(
             mondayOpen: mondayOpen,
             mondayClose: mondayClose,
@@ -760,18 +838,19 @@ final class OperatingHoursEditViewModel: ObservableObject {
             sundayOpen: sundayOpen,
             sundayClose: sundayClose
         )
-        
+
         var updatedFacility = facility
         updatedFacility.operatingHours = operatingHours
         updatedFacility.updatedAt = Date()
-        
+
         do {
             try await adminService.updateFacility(updatedFacility)
+            saveSuccess = true
         } catch {
             errorMessage = error.localizedDescription
             showError = true
         }
-        
+
         isLoading = false
     }
 }
@@ -779,24 +858,43 @@ final class OperatingHoursEditViewModel: ObservableObject {
 // MARK: - Admin Facility Detail ViewModel
 @MainActor
 final class AdminFacilityDetailViewModel: ObservableObject {
-    
+
     @Published var pitches: [Pitch] = []
     @Published var isLoading = false
     @Published var errorMessage = ""
     @Published var showError = false
-    
+
+    // İstatistikler
+    @Published var monthlyReservations: Int = 0
+    @Published var monthlyRevenue: Double = 0
+    @Published var occupancyRate: Double = 0
+    @Published var cancellations: Int = 0
+    @Published var statsLoading = true
+
     private let facility: Facility
     private let adminService = AdminService.shared
-    
+
     init(facility: Facility) {
         self.facility = facility
     }
-    
+
+    var formattedRevenue: String {
+        if monthlyRevenue >= 1000 {
+            return String(format: "%.1fK ₺", monthlyRevenue / 1000)
+        } else {
+            return String(format: "%.0f ₺", monthlyRevenue)
+        }
+    }
+
+    var formattedOccupancy: String {
+        return String(format: "%%%.0f", occupancyRate)
+    }
+
     func loadPitches() async {
         guard let facilityId = facility.id else { return }
-        
+
         isLoading = true
-        
+
         do {
             pitches = try await adminService.fetchPitches(for: facilityId)
         } catch {
@@ -804,16 +902,63 @@ final class AdminFacilityDetailViewModel: ObservableObject {
             showError = true
             pitches = []
         }
-        
+
         isLoading = false
     }
-    
+
+    func loadStats() async {
+        guard let facilityId = facility.id else {
+            statsLoading = false
+            return
+        }
+
+        statsLoading = true
+
+        let calendar = Calendar.current
+        let startOfMonth = calendar.date(
+            from: calendar.dateComponents([.year, .month], from: Date()))!
+
+        do {
+            // Bu ayki tüm rezervasyonları çek
+            let bookings = try await adminService.fetchFacilityBookings(
+                facilityId: facilityId,
+                startDate: startOfMonth
+            )
+
+            // Toplam rezervasyon sayısı (iptal edilmemiş)
+            let validBookings = bookings.filter { $0.status != .cancelled }
+            monthlyReservations = validBookings.count
+
+            // Toplam gelir (confirmed + completed)
+            let paidBookings = bookings.filter {
+                $0.status == .confirmed || $0.status == .completed
+            }
+            monthlyRevenue = paidBookings.reduce(0.0) { $0 + $1.depositAmount }
+
+            // İptal sayısı
+            cancellations = bookings.filter { $0.status == .cancelled }.count
+
+            // Doluluk oranı hesapla (basitleştirilmiş)
+            // Toplam olası saat / Dolu saat
+            let totalPossibleHours = pitches.count * 30 * 14  // 30 gün, günde 14 saat
+            let bookedHours = validBookings.reduce(0) { $0 + ($1.endHour - $1.startHour) }
+            occupancyRate =
+                totalPossibleHours > 0
+                ? (Double(bookedHours) / Double(totalPossibleHours)) * 100 : 0
+
+        } catch {
+            print("❌ İstatistikler yüklenemedi: \(error)")
+        }
+
+        statsLoading = false
+    }
+
     func deletePitch(_ pitch: Pitch) async {
         guard let pitchId = pitch.id, let facilityId = facility.id else { return }
-        
+
         do {
             try await adminService.deletePitch(pitchId: pitchId, facilityId: facilityId)
-            await loadPitches() // Listeyi yenile
+            await loadPitches()  // Listeyi yenile
         } catch {
             errorMessage = error.localizedDescription
             showError = true
@@ -827,19 +972,22 @@ struct AdminActionButton: View {
     let icon: String
     let title: String
     let color: Color
-    
+
     var body: some View {
         VStack(spacing: 8) {
             Image(systemName: icon)
                 .font(.title2)
                 .foregroundColor(color)
-            
+
             Text(title)
                 .font(.caption)
                 .foregroundColor(.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
-        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 8)
         .padding(.vertical, 16)
+        .frame(maxWidth: .infinity)
         .background(Color(.systemBackground))
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.03), radius: 8)
@@ -850,7 +998,7 @@ struct PitchManagementCard: View {
     let pitch: Pitch
     var onEdit: () -> Void
     var onDelete: () -> Void
-    
+
     var body: some View {
         HStack(spacing: 12) {
             // Pitch Image - YENİ
@@ -859,15 +1007,15 @@ struct PitchManagementCard: View {
                 size: 60,
                 placeholder: "sportscourt"
             )
-            
+
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
                     Text(pitch.name)
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                    
+
                     Spacer()
-                    
+
                     // Status Badge
                     Text(pitch.isActive ? "Aktif" : "Pasif")
                         .font(.caption2)
@@ -875,32 +1023,38 @@ struct PitchManagementCard: View {
                         .foregroundColor(pitch.isActive ? Color(hex: "2E7D32") : .secondary)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(pitch.isActive ? Color(hex: "2E7D32").opacity(0.1) : Color(.systemGray5))
+                        .background(
+                            pitch.isActive ? Color(hex: "2E7D32").opacity(0.1) : Color(.systemGray5)
+                        )
                         .cornerRadius(8)
                 }
-                
+
                 HStack(spacing: 8) {
                     Label(pitch.size.displayName, systemImage: "person.2")
-                    Label(pitch.pitchType.displayName, systemImage: pitch.pitchType == .indoor ? "house" : "sun.max")
+                    Label(
+                        pitch.pitchType.displayName,
+                        systemImage: pitch.pitchType == .indoor ? "house" : "sun.max")
                 }
                 .font(.caption)
                 .foregroundColor(.secondary)
-                
-                Text("\(pitch.pricing.daytimePrice.asShortCurrency) - \(pitch.pricing.eveningPrice.asShortCurrency)")
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(Color(hex: "2E7D32"))
+
+                Text(
+                    "\(pitch.pricing.daytimePrice.asShortCurrency) - \(pitch.pricing.eveningPrice.asShortCurrency)"
+                )
+                .font(.caption)
+                .fontWeight(.medium)
+                .foregroundColor(Color(hex: "2E7D32"))
             }
-            
+
             Spacer()
-            
+
             Menu {
                 Button {
                     onEdit()
                 } label: {
                     Label("Düzenle", systemImage: "pencil")
                 }
-                
+
                 Button(role: .destructive) {
                     onDelete()
                 } label: {
@@ -923,17 +1077,17 @@ struct StatBox: View {
     let value: String
     let change: String
     let isPositive: Bool
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.caption)
                 .foregroundColor(.secondary)
-            
+
             Text(value)
                 .font(.title2)
                 .fontWeight(.bold)
-            
+
             HStack(spacing: 4) {
                 Image(systemName: isPositive ? "arrow.up.right" : "arrow.down.right")
                     .font(.caption2)
@@ -952,7 +1106,7 @@ struct StatBox: View {
 struct OperatingHourRow: View {
     let day: String
     let hours: String
-    
+
     var body: some View {
         HStack {
             Text(day)

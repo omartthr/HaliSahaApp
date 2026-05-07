@@ -47,8 +47,11 @@ struct PrimaryButton: View {
                     Text(title)
                         .font(size.font)
                         .fontWeight(.semibold)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                 }
             }
+            .padding(.horizontal, size.horizontalPadding)
             .frame(maxWidth: fullWidth ? .infinity : nil)
             .frame(height: size.height)
             .foregroundColor(style.foregroundColor)
@@ -159,6 +162,14 @@ extension PrimaryButton {
             case .large: return 12
             }
         }
+        
+        var horizontalPadding: CGFloat {
+            switch self {
+            case .small: return 16
+            case .medium: return 20
+            case .large: return 24
+            }
+        }
     }
 }
 
@@ -215,8 +226,11 @@ struct SocialSignInButton: View {
                     Text(provider.title)
                         .font(.body)
                         .fontWeight(.semibold)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                 }
             }
+            .padding(.horizontal, 16)
             .frame(maxWidth: .infinity)
             .frame(height: 52)
             .foregroundColor(provider.foregroundColor)

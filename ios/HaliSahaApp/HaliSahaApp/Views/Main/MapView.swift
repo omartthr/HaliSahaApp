@@ -34,15 +34,27 @@ struct MapView: View {
                 Spacer()
                 
                 // Bottom Controls
-                bottomControls
+                if !viewModel.showFacilityDetail {
+                    bottomControls
+                        .transition(.opacity)
+                }
             }
             .padding(.bottom, 8) 
             
             // Facility Detail Sheet
             if viewModel.showFacilityDetail, let facility = viewModel.selectedFacility {
-                facilityDetailSheet(facility: facility)
+                VStack {
+                    Spacer()
+                    
+                    facilityDetailSheet(facility: facility)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 16)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .zIndex(1)
             }
         }
+        .animation(.spring(response: 0.3, dampingFraction: 0.85), value: viewModel.showFacilityDetail)
         .toolbar(.hidden, for: .navigationBar)
         .ignoresSafeArea(edges: .top)
         .sheet(isPresented: $viewModel.showListView) {
