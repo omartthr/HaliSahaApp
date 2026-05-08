@@ -451,6 +451,13 @@ final class AdminService: ObservableObject {
                 FirestoreField.updatedAt: Timestamp(date: Date()),
             ]
         )
+
+        // Kullanıcıya bildirim
+        if let updated = try? await fetchBooking(id: bookingId) {
+            await AppNotificationService.shared.notify(
+                AppNotification.bookingConfirmed(userId: updated.userId, booking: updated)
+            )
+        }
     }
 
     // MARK: - Reject Booking
@@ -464,6 +471,26 @@ final class AdminService: ObservableObject {
                 "cancellationReason": reason,
                 FirestoreField.updatedAt: Timestamp(date: Date()),
             ]
+        )
+
+        // Kullanıcıya bildirim
+        if let updated = try? await fetchBooking(id: bookingId) {
+            await AppNotificationService.shared.notify(
+                AppNotification.bookingCancelled(
+                    userId: updated.userId,
+                    booking: updated,
+                    reason: reason
+                )
+            )
+        }
+    }
+
+    // MARK: - Helper: Booking by ID
+    @MainActor
+    private func fetchBooking(id: String) async throws -> Booking {
+        try await firebaseService.fetchDocument(
+            from: firebaseService.bookingsCollection,
+            documentId: id
         )
     }
 

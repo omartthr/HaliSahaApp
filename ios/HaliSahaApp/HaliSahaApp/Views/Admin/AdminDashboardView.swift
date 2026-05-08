@@ -14,6 +14,7 @@ struct AdminDashboardView: View {
 
     // MARK: - Properties
     @StateObject private var viewModel = AdminDashboardViewModel()
+    @StateObject private var notificationService = AppNotificationService.shared
 
     // Sheet States
     @State private var showAddFacility = false
@@ -21,6 +22,7 @@ struct AdminDashboardView: View {
     @State private var showFacilitySelector = false
     @State private var selectedFacilityForPitch: Facility?
     @State private var showNoFacilityAlert = false
+    @State private var showNotifications = false
 
     // MARK: - Body
     var body: some View {
@@ -43,7 +45,7 @@ struct AdminDashboardView: View {
             }
             .padding()
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color.appBackground)
         .navigationTitle("Admin Paneli")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
@@ -109,6 +111,10 @@ struct AdminDashboardView: View {
         } message: {
             Text("Saha ekleyebilmek için önce bir tesis eklemeniz gerekiyor.")
         }
+        // MARK: - Notifications Sheet
+        .sheet(isPresented: $showNotifications) {
+            NotificationsListView()
+        }
     }
 
     // MARK: - Header Section
@@ -129,29 +135,39 @@ struct AdminDashboardView: View {
             // Notification Bell
             ZStack(alignment: .topTrailing) {
                 Button {
-                    // Notifications
+                    showNotifications = true
                 } label: {
-                    Image(systemName: "bell.fill")
+                    Image(systemName: notificationService.unreadCount > 0 ? "bell.badge.fill" : "bell.fill")
                         .font(.title3)
                         .foregroundColor(.primary)
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(
+                            notificationService.unreadCount > 0 ? Color.red : .primary,
+                            Color.primary
+                        )
                         .padding(12)
-                        .background(Color(.systemBackground))
+                        .background(Color.appCardBackground)
                         .clipShape(Circle())
                         .shadow(color: .black.opacity(0.05), radius: 5)
                 }
 
-                if viewModel.stats.pendingBookings > 0 {
-                    Text("\(viewModel.stats.pendingBookings)")
-                        .font(.caption2)
-                        .fontWeight(.bold)
+                if notificationService.unreadCount > 0 {
+                    Text(notificationBadgeText)
+                        .font(.system(size: 10, weight: .bold))
                         .foregroundColor(.white)
-                        .padding(5)
-                        .background(Color.red)
-                        .clipShape(Circle())
-                        .offset(x: 5, y: -5)
+                        .frame(minWidth: 18, minHeight: 18)
+                        .padding(.horizontal, 4)
+                        .background(Capsule().fill(Color.red))
+                        .overlay(Capsule().stroke(Color.appCardBackground, lineWidth: 2))
+                        .offset(x: 6, y: -4)
                 }
             }
         }
+    }
+
+    private var notificationBadgeText: String {
+        let count = notificationService.unreadCount
+        return count > 99 ? "99+" : "\(count)"
     }
 
     // MARK: - Stats Section
@@ -489,7 +505,7 @@ struct AdminStatCard: View {
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.03), radius: 8)
     }
@@ -517,7 +533,7 @@ struct QuickActionButtonContent: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 16)
         .frame(maxWidth: .infinity)
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.03), radius: 8)
     }
@@ -560,7 +576,7 @@ struct EmptyStateCard: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 32)
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(12)
     }
 }
@@ -639,7 +655,7 @@ struct AdminBookingCard: View {
             }
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.03), radius: 8)
     }
@@ -697,7 +713,7 @@ struct AdminFacilityCard: View {
                 .foregroundColor(.secondary)
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.03), radius: 8)
     }

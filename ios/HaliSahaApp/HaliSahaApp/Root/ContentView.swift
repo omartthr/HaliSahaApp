@@ -72,11 +72,12 @@ struct SplashLottieView: UIViewRepresentable {
 }
 
 struct SplashView: View {
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         ZStack {
             // Background
-            Color(hex: "E5EFE5")
+            Color("LaunchScreenBackground")
                 .ignoresSafeArea()
             
             VStack(spacing: 24) {
@@ -87,11 +88,11 @@ struct SplashView: View {
                 VStack(spacing: 8) {
                     Text("ALO Halısaha")
                         .font(.system(size: 36, weight: .bold))
-                        .foregroundColor(Color(hex: "1B5E20"))
+                        .foregroundColor(titleColor)
                     
                     Text("Maça Başla!")
                         .font(.subheadline)
-                        .foregroundColor(Color(hex: "4B5563"))
+                        .foregroundColor(.secondary)
                 }
                 
                 // Loading Indicator
@@ -101,6 +102,10 @@ struct SplashView: View {
                     .padding(.top, 32)
             }
         }
+    }
+
+    private var titleColor: Color {
+        colorScheme == .dark ? Color(hex: "A5D6A7") : Color(hex: "1B5E20")
     }
 }
 

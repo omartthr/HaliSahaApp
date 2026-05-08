@@ -40,7 +40,7 @@ struct AdminRegisterView: View {
                 .padding(.vertical, 32)
             }
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color.appBackground)
         .navigationTitle("İşletme Kaydı")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
@@ -96,7 +96,7 @@ struct AdminRegisterView: View {
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 16)
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
     }
     
     // MARK: - Step Title
@@ -181,7 +181,7 @@ struct AdminRegisterView: View {
                 )
             }
             .padding(24)
-            .background(Color(.systemBackground))
+            .background(Color.appCardBackground)
             .cornerRadius(20)
             .shadow(color: .black.opacity(0.05), radius: 10)
         }
@@ -228,7 +228,7 @@ struct AdminRegisterView: View {
                 CustomTextField.phone(text: $viewModel.phone)
             }
             .padding(24)
-            .background(Color(.systemBackground))
+            .background(Color.appCardBackground)
             .cornerRadius(20)
             .shadow(color: .black.opacity(0.05), radius: 10)
             
@@ -251,7 +251,7 @@ struct AdminRegisterView: View {
                 .tint(Color(hex: "2E7D32"))
             }
             .padding(20)
-            .background(Color(.systemBackground))
+            .background(Color.appCardBackground)
             .cornerRadius(16)
             
             // Info Box

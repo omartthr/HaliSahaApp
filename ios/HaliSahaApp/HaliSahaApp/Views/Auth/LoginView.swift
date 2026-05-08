@@ -44,7 +44,7 @@ struct LoginView: View {
                 .padding(.horizontal, 24)
                 .padding(.vertical, 32)
             }
-            .background(Color(.systemGroupedBackground))
+            .background(Color.appBackground)
             .navigationBarHidden(true)
             .alert("Hata", isPresented: $viewModel.showError) {
                 Button("Tamam", role: .cancel) {}
@@ -129,7 +129,7 @@ struct LoginView: View {
             }
         }
         .padding(24)
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(20)
         .shadow(color: .black.opacity(0.05), radius: 10)
     }

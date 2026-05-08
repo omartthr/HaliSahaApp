@@ -87,7 +87,7 @@ struct EditProfileView: View {
             }
             .padding()
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color.appBackground)
         .navigationTitle("Profili Düzenle")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
@@ -155,7 +155,7 @@ struct EditProfileView: View {
             }
         }
         .padding(16)
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(16)
     }
 
@@ -186,7 +186,7 @@ struct EditProfileView: View {
             .padding(.vertical, 14)
             .background(
                 RoundedRectangle(cornerRadius: UIConstants.cornerRadiusMedium)
-                    .fill(Color(.systemGray6).opacity(0.6))
+                    .fill(Color.appElevatedBackground.opacity(0.6))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: UIConstants.cornerRadiusMedium)
@@ -227,7 +227,7 @@ struct EditProfileView: View {
             }
         }
         .padding(16)
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(16)
     }
 
@@ -292,7 +292,7 @@ struct PositionChip: View {
             .padding(.vertical, 12)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(isSelected ? Color(hex: "2E7D32") : Color(.systemGray6))
+                    .fill(isSelected ? Color(hex: "2E7D32") : Color.appElevatedBackground)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 12)

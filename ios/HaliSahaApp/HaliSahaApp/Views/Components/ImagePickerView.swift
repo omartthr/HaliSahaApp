@@ -365,7 +365,7 @@ struct ExistingImageCell: View {
         do {
             let image = try await ImageCacheService.shared.getImage(
                 from: url,
-                size: CGSize(width: 200, height: 200)
+                size: CGSize(width: 100 * UIScreen.main.scale, height: 100 * UIScreen.main.scale)
             )
             await MainActor.run {
                 loadState = .loaded(image)
@@ -417,7 +417,7 @@ struct SingleImagePicker: View {
                 } else if let url = existingImageURL, !url.isEmpty {
                     CachedAsyncImage(
                         url: url,
-                        targetSize: CGSize(width: 240, height: 240)
+                        targetSize: CGSize(width: 120 * UIScreen.main.scale, height: 120 * UIScreen.main.scale)
                     ) { image in
                         image
                             .resizable()

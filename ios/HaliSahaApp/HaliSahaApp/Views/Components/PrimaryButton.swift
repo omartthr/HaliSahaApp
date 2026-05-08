@@ -82,7 +82,7 @@ extension PrimaryButton {
         var backgroundColor: Color {
             switch self {
             case .primary: return Color(hex: "2E7D32")
-            case .secondary: return Color(.systemBackground)
+            case .secondary: return Color.appCardBackground
             case .outline: return .clear
             case .destructive: return .red
             case .ghost: return .clear
@@ -252,7 +252,7 @@ struct IconButton: View {
     
     let icon: String
     var size: CGFloat = 44
-    var backgroundColor: Color = Color(.systemGray6)
+    var backgroundColor: Color = Color.appElevatedBackground
     var foregroundColor: Color = .primary
     let action: () -> Void
     

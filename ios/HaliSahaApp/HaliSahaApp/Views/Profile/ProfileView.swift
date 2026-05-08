@@ -42,7 +42,7 @@ struct ProfileView: View {
             .padding(.horizontal, 16)
             .padding(.bottom, 32)
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color.appBackground)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
@@ -211,7 +211,7 @@ struct ProfileView: View {
                 .clipShape(Circle())
                 .overlay {
                     Circle()
-                        .stroke(Color(.systemGroupedBackground), lineWidth: 5)
+                        .stroke(Color.appBackground, lineWidth: 5)
                 }
                 .shadow(color: .black.opacity(0.25), radius: 8, x: 0, y: 4)
 
@@ -224,7 +224,7 @@ struct ProfileView: View {
                         .frame(width: 40, height: 40)
                         .overlay {
                             Circle()
-                                .stroke(Color(.systemGroupedBackground), lineWidth: 4)
+                                .stroke(Color.appBackground, lineWidth: 4)
                         }
 
                     if viewModel.isUploadingPhoto {
@@ -320,7 +320,7 @@ struct ProfileView: View {
             )
         }
         .padding(.vertical, 16)
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.04), radius: 6, x: 0, y: 2)
     }
@@ -419,7 +419,7 @@ struct ProfileView: View {
                     value: viewModel.memberSinceText
                 )
             }
-            .background(Color(.systemBackground))
+            .background(Color.appCardBackground)
             .cornerRadius(16)
             .shadow(color: .black.opacity(0.04), radius: 6, x: 0, y: 2)
         }
@@ -434,7 +434,7 @@ struct ProfileView: View {
     // MARK: - Version Footer
     private var versionFooter: some View {
         VStack(spacing: 4) {
-            Text("HaliSaha")
+            Text(AppConstants.appName)
                 .font(.caption)
                 .fontWeight(.medium)
                 .foregroundColor(.secondary)
@@ -505,7 +505,7 @@ struct QuickActionTile: View {
                         )
                         .overlay(
                             Capsule()
-                                .stroke(Color(.systemBackground), lineWidth: 2)
+                                .stroke(Color.appCardBackground, lineWidth: 2)
                         )
                         .offset(x: 6, y: -6)
                 }
@@ -531,7 +531,7 @@ struct QuickActionTile: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity)
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(14)
         .shadow(color: .black.opacity(0.04), radius: 6, x: 0, y: 2)
     }
@@ -578,7 +578,7 @@ private struct FollowingTile: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity)
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(14)
         .shadow(color: .black.opacity(0.04), radius: 6, x: 0, y: 2)
     }
@@ -619,7 +619,7 @@ private struct MatchesTile: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity)
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(14)
         .shadow(color: .black.opacity(0.04), radius: 6, x: 0, y: 2)
     }

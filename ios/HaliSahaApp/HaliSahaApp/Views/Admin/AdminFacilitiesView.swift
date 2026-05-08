@@ -90,7 +90,7 @@ struct AdminFacilitiesView: View {
             }
             .padding()
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color.appBackground)
         .navigationTitle("Tesislerim")
         .sheet(isPresented: $showAddFacility) {
             AddFacilityView()
@@ -234,11 +234,11 @@ struct AdminFacilityListCard: View {
                 )
             }
             .padding(.vertical, 8)
-            .background(Color(.systemGray6))
+            .background(Color.appElevatedBackground)
             .cornerRadius(10)
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.03), radius: 8)
         .task {
@@ -364,7 +364,7 @@ struct AdminFacilityDetailView: View {
             }
             .padding()
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color.appBackground)
         .navigationTitle(facility.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -484,7 +484,7 @@ struct AdminFacilityDetailView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(16)
     }
 
@@ -631,7 +631,7 @@ struct AdminFacilityDetailView: View {
                 )
             }
             .padding()
-            .background(Color(.systemBackground))
+            .background(Color.appCardBackground)
             .cornerRadius(12)
         }
     }
@@ -988,7 +988,7 @@ struct AdminActionButton: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 16)
         .frame(maxWidth: .infinity)
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.03), radius: 8)
     }
@@ -1067,7 +1067,7 @@ struct PitchManagementCard: View {
             }
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(12)
     }
 }
@@ -1098,7 +1098,7 @@ struct StatBox: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(12)
     }
 }

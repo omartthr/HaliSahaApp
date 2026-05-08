@@ -118,7 +118,7 @@ struct ChangePasswordView: View {
                     }
                 }
                 .padding(20)
-                .background(Color(.systemBackground))
+                .background(Color.appCardBackground)
                 .cornerRadius(16)
 
                 // Save Button
@@ -154,7 +154,7 @@ struct ChangePasswordView: View {
             }
             .padding()
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color.appBackground)
         .navigationTitle("Şifre Değiştir")
         .navigationBarTitleDisplayMode(.inline)
         .alert("Hata", isPresented: $showError) {

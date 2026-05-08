@@ -64,8 +64,7 @@ struct MainTabView: View {
 
     // Badge counts
     @State private var unreadBookings: Int = 0
-    @State private var unreadMessages: Int = 3  // Test için
-    @State private var unreadNotifications: Int = 2  // Test için
+    @State private var unreadMessages: Int = 0  // Sohbet özelliği eklenince beslenir
 
     // MARK: - Body
     var body: some View {
@@ -255,7 +254,7 @@ struct ChatListViewPlaceholder: View {
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.systemGroupedBackground))
+        .background(Color.appBackground)
         .navigationTitle("Sohbet")
     }
 }

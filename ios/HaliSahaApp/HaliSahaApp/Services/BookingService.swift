@@ -375,6 +375,57 @@ final class BookingService: ObservableObject {
         // Cache'i temizle
         clearTimeSlotCache(
             facilityId: booking.facilityId, pitchId: booking.pitchId, date: booking.date)
+
+        // Yan etkiler: yerel hatırlatmaları sil + admin'e bildirim
+        await triggerCancellationSideEffects(booking: booking)
+    }
+
+    // MARK: - Side Effects (Notifications & Reminders)
+
+    /// Ödeme başarısı sonrası: kullanıcının cihazında local reminder kur, admin'e bildirim yaz.
+    @MainActor
+    private func triggerNewBookingSideEffects(booking: Booking) async {
+        // 1) Local reminder (24/2 saat öncesi) — sadece bu cihazda
+        var confirmedBooking = booking
+        confirmedBooking.status = .confirmed
+        confirmedBooking.paymentStatus = .depositPaid
+        await NotificationService.shared.scheduleReminders(for: confirmedBooking)
+
+        // 2) Admin'e bildirim
+        guard let ownerId = await fetchFacilityOwnerId(facilityId: booking.facilityId)
+        else { return }
+
+        await AppNotificationService.shared.notify(
+            AppNotification.newBookingForAdmin(adminId: ownerId, booking: confirmedBooking)
+        )
+    }
+
+    /// Kullanıcı iptal etti: yerel hatırlatmaları sil + admin'e bildirim.
+    @MainActor
+    private func triggerCancellationSideEffects(booking: Booking) async {
+        // 1) Local reminder iptali
+        if let id = booking.id {
+            NotificationService.shared.cancelReminders(forBookingId: id)
+        }
+
+        // 2) Admin'e bildirim
+        guard let ownerId = await fetchFacilityOwnerId(facilityId: booking.facilityId)
+        else { return }
+
+        await AppNotificationService.shared.notify(
+            AppNotification.bookingCancelledByUser(adminId: ownerId, booking: booking)
+        )
+    }
+
+    /// Tesisin sahibinin (admin) userId'sini getirir. Hata durumunda nil.
+    @MainActor
+    private func fetchFacilityOwnerId(facilityId: String) async -> String? {
+        do {
+            let facility = try await FacilityService.shared.fetchFacility(id: facilityId)
+            return facility.ownerId
+        } catch {
+            return nil
+        }
     }
 
     // MARK: - Process Payment (Simulation)
@@ -403,6 +454,9 @@ final class BookingService: ObservableObject {
                     FirestoreField.updatedAt: Timestamp(date: Date()),
                 ]
             )
+
+            // Yan etkiler: yerel hatırlatmaları kur + admin'e bildirim
+            await triggerNewBookingSideEffects(booking: booking)
 
             return PaymentResult(
                 success: true,

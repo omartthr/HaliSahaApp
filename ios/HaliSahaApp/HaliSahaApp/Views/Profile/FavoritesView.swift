@@ -33,7 +33,7 @@ struct FavoritesView: View {
                 contentList
             }
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color.appBackground)
         .navigationTitle("Favorilerim")
         .navigationBarTitleDisplayMode(.inline)
         .task {
@@ -176,7 +176,7 @@ struct FavoriteFacilityCard: View {
             Spacer(minLength: 0)
         }
         .padding(12)
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(14)
         .shadow(color: .black.opacity(0.04), radius: 6, x: 0, y: 2)
     }
@@ -197,7 +197,7 @@ private struct TagPill: View {
         .foregroundColor(.secondary)
         .padding(.horizontal, 6)
         .padding(.vertical, 3)
-        .background(Color(.systemGray6))
+        .background(Color.appElevatedBackground)
         .clipShape(Capsule())
     }
 }

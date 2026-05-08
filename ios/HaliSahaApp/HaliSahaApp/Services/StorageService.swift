@@ -21,9 +21,9 @@ final class StorageService {
     
     // MARK: - Private Properties
     private let storage = Storage.storage()
-    private let maxImageSize: Int64 = 5 * 1024 * 1024 // 5MB
-    private let compressionQuality: CGFloat = 0.7
-    private let maxImageDimension: CGFloat = 1920 // Max genişlik/yükseklik
+    private let maxImageSize: Int64 = 8 * 1024 * 1024 // 8MB
+    private let compressionQuality: CGFloat = 0.85
+    private let maxImageDimension: CGFloat = 2560 // Max genişlik/yükseklik
     
     // Retry ve timeout ayarları
     private let maxRetries = 3
@@ -173,7 +173,7 @@ final class StorageService {
         // Boyut kontrolü
         if imageData.count > maxImageSize {
             // Daha fazla sıkıştır
-            guard let reducedData = optimizedImage.jpegData(compressionQuality: 0.5) else {
+            guard let reducedData = optimizedImage.jpegData(compressionQuality: 0.7) else {
                 throw StorageError.compressionFailed
             }
             

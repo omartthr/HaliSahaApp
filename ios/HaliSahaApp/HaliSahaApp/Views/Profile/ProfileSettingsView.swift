@@ -7,6 +7,7 @@
 
 import FirebaseAuth
 import SwiftUI
+import UserNotifications
 
 // MARK: - Profile Settings View
 struct ProfileSettingsView: View {
@@ -14,12 +15,13 @@ struct ProfileSettingsView: View {
     // MARK: - Dependencies
     @StateObject private var authService = AuthService.shared
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
 
     // MARK: - Settings (UserDefaults backed)
-    @AppStorage("settings.pushNotifications") private var pushNotifications = true
-    @AppStorage("settings.emailNotifications") private var emailNotifications = true
-    @AppStorage("settings.bookingReminders") private var bookingReminders = true
-    @AppStorage("settings.matchInvites") private var matchInvites = true
+    @AppStorage("settings.matchReminders") private var matchReminders = true
+
+    // MARK: - Notification permission state
+    @State private var notificationAuthStatus: UNAuthorizationStatus = .notDetermined
 
     // MARK: - UI State
     @State private var showLogoutAlert = false
@@ -53,7 +55,7 @@ struct ProfileSettingsView: View {
         .navigationTitle("Ayarlar")
         .navigationBarTitleDisplayMode(.inline)
         .scrollContentBackground(.hidden)
-        .background(Color(.systemGroupedBackground))
+        .background(Color.appBackground)
         .tint(Color(hex: "2E7D32"))
         .alert("Çıkış Yap", isPresented: $showLogoutAlert) {
             Button("Vazgeç", role: .cancel) {}
@@ -91,6 +93,9 @@ struct ProfileSettingsView: View {
                 LoadingView()
             }
         }
+        .task {
+            await loadAuthStatus()
+        }
     }
 
     // MARK: - Sections
@@ -115,23 +120,117 @@ struct ProfileSettingsView: View {
 
     private var notificationsSection: some View {
         Section {
-            Toggle(isOn: $pushNotifications) {
-                SettingsRow(icon: "bell.fill", iconColor: .orange, title: "Push Bildirimleri", chevron: false)
+            // Maç hatırlatması toggle'ı (24/2 saat öncesi)
+            Toggle(isOn: $matchReminders) {
+                VStack(alignment: .leading, spacing: 2) {
+                    SettingsRow(
+                        icon: "calendar.badge.clock",
+                        iconColor: .purple,
+                        title: "Maç Hatırlatmaları",
+                        chevron: false
+                    )
+                    Text("Maçtan 24 ve 2 saat önce hatırlatma alırsın")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .padding(.leading, 44)
+                }
+            }
+            .onChange(of: matchReminders) { _, _ in
+                Task { await syncRemindersAfterToggle() }
             }
 
-            Toggle(isOn: $emailNotifications) {
-                SettingsRow(icon: "envelope.fill", iconColor: .blue, title: "E-posta Bildirimleri", chevron: false)
-            }
-
-            Toggle(isOn: $bookingReminders) {
-                SettingsRow(icon: "calendar.badge.clock", iconColor: .purple, title: "Maç Hatırlatmaları", chevron: false)
-            }
-
-            Toggle(isOn: $matchInvites) {
-                SettingsRow(icon: "person.badge.plus", iconColor: Color(hex: "2E7D32"), title: "Maç Davetleri", chevron: false)
-            }
+            // İzin durumu satırı
+            permissionStatusRow
         } header: {
             Text("Bildirimler")
+        } footer: {
+            Text(
+                "Push ve sohbet bildirimleri yakında eklenecek."
+            )
+            .font(.caption2)
+        }
+    }
+
+    // MARK: - Permission Status Row
+    @ViewBuilder
+    private var permissionStatusRow: some View {
+        switch notificationAuthStatus {
+        case .denied:
+            Button {
+                openSystemSettings()
+            } label: {
+                HStack {
+                    SettingsRow(
+                        icon: "exclamationmark.bubble.fill",
+                        iconColor: .red,
+                        title: "Bildirimler Kapalı",
+                        chevron: false,
+                        titleColor: .red
+                    )
+                    Spacer()
+                    Text("Ayarları Aç")
+                        .font(.caption)
+                        .foregroundColor(Color(hex: "2E7D32"))
+                }
+            }
+
+        case .notDetermined:
+            Button {
+                Task { await requestPermission() }
+            } label: {
+                HStack {
+                    SettingsRow(
+                        icon: "bell.badge",
+                        iconColor: .orange,
+                        title: "Bildirim İzni Ver",
+                        chevron: false
+                    )
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+        case .authorized, .provisional, .ephemeral:
+            HStack {
+                SettingsRow(
+                    icon: "checkmark.circle.fill",
+                    iconColor: .green,
+                    title: "Bildirimler Açık",
+                    chevron: false
+                )
+                Spacer()
+            }
+
+        @unknown default:
+            EmptyView()
+        }
+    }
+
+    // MARK: - Notification Helpers
+    private func loadAuthStatus() async {
+        notificationAuthStatus = await NotificationService.shared.authorizationStatus()
+    }
+
+    private func requestPermission() async {
+        _ = await NotificationService.shared.requestPermission()
+        await loadAuthStatus()
+        await syncRemindersAfterToggle()
+    }
+
+    private func syncRemindersAfterToggle() async {
+        do {
+            let upcoming = try await BookingService.shared.fetchUpcomingBookings()
+            await NotificationService.shared.syncReminders(for: upcoming)
+        } catch {
+            // Bildirimler önemsiz hata — yutar
+        }
+    }
+
+    private func openSystemSettings() {
+        if let url = URL(string: UIApplication.openSettingsURLString) {
+            UIApplication.shared.open(url)
         }
     }
 
@@ -172,28 +271,8 @@ struct ProfileSettingsView: View {
 
     private var supportSection: some View {
         Section {
-            NavigationLink {
-                StaticInfoView(
-                    title: "Yardım Merkezi",
-                    icon: "questionmark.circle.fill",
-                    sections: [
-                        .init(
-                            heading: "Rezervasyon Nasıl Yapılır?",
-                            body:
-                                "Keşfet sekmesinden istediğiniz sahayı seçin, tarih ve saat belirleyin, ödemeyi tamamlayarak rezervasyonunuzu oluşturun."
-                        ),
-                        .init(
-                            heading: "İptal Politikası",
-                            body:
-                                "Rezervasyonunuzu maçtan en az 24 saat önce iptal ederseniz kapora ücreti tam olarak iade edilir. Daha kısa süre içinde iptaller için iade yapılmaz."
-                        ),
-                        .init(
-                            heading: "Ödeme Yöntemleri",
-                            body:
-                                "Kredi kartı, banka kartı veya uygulama içi cüzdan ile ödeme yapabilirsiniz. Tüm ödemeler 256-bit SSL ile şifrelenir."
-                        ),
-                    ]
-                )
+            Button {
+                openExternalLink(AppConstants.Links.helpCenter)
             } label: {
                 SettingsRow(icon: "questionmark.circle.fill", iconColor: .blue, title: "Yardım Merkezi")
             }
@@ -204,49 +283,14 @@ struct ProfileSettingsView: View {
                 SettingsRow(icon: "paperplane.fill", iconColor: .blue, title: "Bize Ulaşın")
             }
 
-            NavigationLink {
-                StaticInfoView(
-                    title: "Kullanım Koşulları",
-                    icon: "doc.text.fill",
-                    sections: [
-                        .init(
-                            heading: "Hizmet Koşulları",
-                            body:
-                                "Bu uygulamayı kullanarak, hizmet koşullarımızı kabul etmiş sayılırsınız. Tüm rezervasyonlar tesis sahibinin onayına tabidir."
-                        ),
-                        .init(
-                            heading: "Kullanıcı Sorumlulukları",
-                            body:
-                                "Saha kurallarına uymakla, sahayı temiz tutmakla ve diğer kullanıcılara saygılı davranmakla yükümlüsünüz. Aksi davranışlar hesabınızın askıya alınmasına neden olabilir."
-                        ),
-                    ]
-                )
+            Button {
+                openExternalLink(AppConstants.Links.termsOfUse)
             } label: {
                 SettingsRow(icon: "doc.text.fill", iconColor: .gray, title: "Kullanım Koşulları")
             }
 
-            NavigationLink {
-                StaticInfoView(
-                    title: "Gizlilik Politikası",
-                    icon: "hand.raised.fill",
-                    sections: [
-                        .init(
-                            heading: "Veri Toplama",
-                            body:
-                                "Hesap oluşturmak için ad, soyad, e-posta ve telefon bilgilerinizi topluyoruz. Bu veriler yalnızca hizmet sunmak için kullanılır."
-                        ),
-                        .init(
-                            heading: "Konum Bilgisi",
-                            body:
-                                "Yakınınızdaki sahaları gösterebilmek için konum izni isteriz. Konum verileriniz yalnızca cihazınızda kalır."
-                        ),
-                        .init(
-                            heading: "KVKK",
-                            body:
-                                "Kişisel verileriniz 6698 sayılı KVKK kanunu kapsamında korunmaktadır. Verilerinizin silinmesini istediğiniz zaman talep edebilirsiniz."
-                        ),
-                    ]
-                )
+            Button {
+                openExternalLink(AppConstants.Links.privacyPolicy)
             } label: {
                 SettingsRow(icon: "hand.raised.fill", iconColor: .green, title: "Gizlilik Politikası")
             }
@@ -302,7 +346,7 @@ struct ProfileSettingsView: View {
         } footer: {
             HStack {
                 Spacer()
-                Text("HaliSaha © \(currentYear)")
+                Text("\(AppConstants.appName) © \(currentYear)")
                     .font(.caption2)
                     .foregroundColor(.secondary)
                 Spacer()
@@ -349,8 +393,12 @@ struct ProfileSettingsView: View {
     }
 
     private func openMail() {
-        guard let url = URL(string: "mailto:destek@halisaha.app") else { return }
-        UIApplication.shared.open(url)
+        guard let url = URL(string: "mailto:\(AppConstants.supportEmail)") else { return }
+        openURL(url)
+    }
+    
+    private func openExternalLink(_ url: URL) {
+        openURL(url)
     }
 }
 
@@ -427,13 +475,13 @@ struct StaticInfoView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding()
-                    .background(Color(.systemBackground))
+                    .background(Color.appCardBackground)
                     .cornerRadius(12)
                 }
             }
             .padding()
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color.appBackground)
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
     }

@@ -36,7 +36,7 @@ struct AdminReportsView: View {
             }
             .padding()
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color.appBackground)
         .navigationTitle("Raporlar")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -63,7 +63,7 @@ struct AdminReportsView: View {
                         .foregroundColor(selectedPeriod == period ? .white : .primary)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
-                        .background(selectedPeriod == period ? Color(hex: "2E7D32") : Color(.systemGray6))
+                        .background(selectedPeriod == period ? Color(hex: "2E7D32") : Color.appElevatedBackground)
                         .cornerRadius(20)
                 }
             }
@@ -131,7 +131,7 @@ struct AdminReportsView: View {
             }
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(16)
     }
     
@@ -213,7 +213,7 @@ struct AdminReportsView: View {
                 }
             }
             .padding()
-            .background(Color(.systemBackground))
+            .background(Color.appCardBackground)
             .cornerRadius(12)
         }
     }
@@ -232,7 +232,7 @@ struct AdminReportsView: View {
                 PopularHourRow(hour: "17:00 - 18:00", percentage: 45)
             }
             .padding()
-            .background(Color(.systemBackground))
+            .background(Color.appCardBackground)
             .cornerRadius(12)
         }
     }
@@ -311,7 +311,7 @@ struct MetricCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(12)
     }
 }
@@ -379,6 +379,7 @@ struct PopularHourRow: View {
 struct AdminSettingsView: View {
     
     @StateObject private var authService = AuthService.shared
+    @Environment(\.openURL) private var openURL
     @State private var notificationsEnabled = true
     @State private var emailNotifications = true
     @State private var autoConfirm = false
@@ -450,22 +451,28 @@ struct AdminSettingsView: View {
             
             // Support
             Section("Destek") {
-                NavigationLink {
-                    Text("Yardım Merkezi")
+                Button {
+                    openExternalLink(AppConstants.Links.helpCenter)
                 } label: {
                     Label("Yardım Merkezi", systemImage: "questionmark.circle")
                 }
                 
-                NavigationLink {
-                    Text("İletişim")
+                Button {
+                    openMail()
                 } label: {
                     Label("Bize Ulaşın", systemImage: "envelope")
                 }
                 
-                NavigationLink {
-                    Text("Sözleşmeler")
+                Button {
+                    openExternalLink(AppConstants.Links.termsOfUse)
                 } label: {
                     Label("Kullanım Koşulları", systemImage: "doc.plaintext")
+                }
+                
+                Button {
+                    openExternalLink(AppConstants.Links.privacyPolicy)
+                } label: {
+                    Label("Gizlilik Politikası", systemImage: "hand.raised")
                 }
             }
             
@@ -502,6 +509,15 @@ struct AdminSettingsView: View {
         } message: {
             Text("Çıkış yapmak istediğinizden emin misiniz?")
         }
+    }
+    
+    private func openMail() {
+        guard let url = URL(string: "mailto:\(AppConstants.supportEmail)") else { return }
+        openURL(url)
+    }
+    
+    private func openExternalLink(_ url: URL) {
+        openURL(url)
     }
 }
 
