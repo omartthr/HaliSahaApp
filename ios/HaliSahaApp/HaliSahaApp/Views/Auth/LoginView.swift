@@ -44,7 +44,7 @@ struct LoginView: View {
                 .padding(.horizontal, 24)
                 .padding(.vertical, 32)
             }
-            .background(Color(.systemGroupedBackground))
+            .background(Color.appBackground)
             .navigationBarHidden(true)
             .alert("Hata", isPresented: $viewModel.showError) {
                 Button("Tamam", role: .cancel) {}
@@ -123,13 +123,15 @@ struct LoginView: View {
                 isLoading: viewModel.isLoading,
                 isDisabled: !viewModel.isLoginFormValid
             ) {
+                UIApplication.dismissKeyboard()
+                
                 Task {
                     await viewModel.login()
                 }
             }
         }
         .padding(24)
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(20)
         .shadow(color: .black.opacity(0.05), radius: 10)
     }
@@ -163,6 +165,8 @@ struct LoginView: View {
                     request.nonce = nonce
                 },
                 onCompletion: { result in
+                    UIApplication.dismissKeyboard()
+                    
                     Task {
                         await viewModel.handleAppleSignIn(result: result)
                     }
@@ -174,6 +178,8 @@ struct LoginView: View {
             
             // Google Sign In
             SocialSignInButton(provider: .google, isLoading: viewModel.isLoading) {
+                UIApplication.dismissKeyboard()
+                
                 Task {
                     await viewModel.signInWithGoogle()
                 }
@@ -189,6 +195,7 @@ struct LoginView: View {
                 .foregroundColor(.secondary)
             
             Button {
+                UIApplication.dismissKeyboard()
                 viewModel.continueAsGuest()
                 viewModel.isAuthenticated = true
             } label: {

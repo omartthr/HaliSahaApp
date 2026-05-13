@@ -106,6 +106,9 @@ final class AuthService: ObservableObject {
             self.currentUser = user
             self.isAuthenticated = true
             self.authError = nil
+
+            // Bildirim altyapısını başlat
+            await startNotificationServices(for: userId)
         } catch let error as AuthError {
             currentUser = nil
             isAuthenticated = false
@@ -206,8 +209,29 @@ final class AuthService: ObservableObject {
             currentUser = nil
             isAuthenticated = false
             hasCompletedInitialAuthCheck = true
+
+            // Bildirim altyapısını temizle
+            AppNotificationService.shared.clearAll()
+            NotificationService.shared.cancelAllReminders()
         } catch {
             throw AuthError.signOutFailed
+        }
+    }
+
+    // MARK: - Notification Bootstrapping
+    /// Login sonrası: in-app bildirim listener'ını başlat ve yaklaşan rezervasyonların
+    /// yerel hatırlatmalarını idempotent olarak senkronize et.
+    @MainActor
+    private func startNotificationServices(for userId: String) async {
+        // 1) Firestore listener — bildirim listesi/badge için
+        AppNotificationService.shared.startListening(for: userId)
+
+        // 2) Yaklaşan rezervasyonlara göre local hatırlatmaları senkronize et
+        do {
+            let upcoming = try await BookingService.shared.fetchUpcomingBookings()
+            await NotificationService.shared.syncReminders(for: upcoming)
+        } catch {
+            // Bildirim önemsiz hata — yutar
         }
     }
     

@@ -82,7 +82,7 @@ struct CustomTextField: View {
             .padding(.vertical, 14)
             .background(
                 RoundedRectangle(cornerRadius: UIConstants.cornerRadiusMedium)
-                    .fill(isDisabled ? Color.gray.opacity(0.1) : Color(.systemGray6))
+                    .fill(isDisabled ? Color.gray.opacity(0.1) : Color.appElevatedBackground)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: UIConstants.cornerRadiusMedium)
@@ -190,7 +190,7 @@ struct SearchTextField: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(Color(.systemGray6))
+        .background(Color.appElevatedBackground)
         .cornerRadius(UIConstants.cornerRadiusMedium)
     }
 }
@@ -232,7 +232,7 @@ struct CustomTextArea: View {
                         }
                     }
             }
-            .background(Color(.systemGray6))
+            .background(Color.appElevatedBackground)
             .cornerRadius(UIConstants.cornerRadiusMedium)
             .overlay(
                 RoundedRectangle(cornerRadius: UIConstants.cornerRadiusMedium)

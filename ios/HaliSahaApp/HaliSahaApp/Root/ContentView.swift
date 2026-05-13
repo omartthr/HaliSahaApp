@@ -24,10 +24,14 @@ struct ContentView: View {
             } else {
                 if authService.isAuthenticated || authService.currentUser?.userType == .guest {
                     // Kullanıcı tipine göre farklı Tab Bar
-                    if authService.currentUser?.userType == .admin {
+                    switch authService.currentUser?.userType {
+                    case .superAdmin:
+                        SuperAdminTabView()
+                            .transition(.opacity)
+                    case .admin:
                         AdminTabView()
                             .transition(.opacity)
-                    } else {
+                    default:
                         MainTabView()
                             .transition(.opacity)
                     }
@@ -39,6 +43,9 @@ struct ContentView: View {
         }
         .animation(.easeInOut(duration: 0.3), value: showSplash)
         .animation(.easeInOut(duration: 0.3), value: authService.isAuthenticated)
+        .onChange(of: authService.isAuthenticated) { _, _ in
+            UIApplication.dismissKeyboard()
+        }
         .onAppear {
             // Splash screen'i animasyonun daha net izlenmesi için biraz daha uzun göster
             DispatchQueue.main.asyncAfter(deadline: .now() + 3.2) {
@@ -72,11 +79,12 @@ struct SplashLottieView: UIViewRepresentable {
 }
 
 struct SplashView: View {
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         ZStack {
             // Background
-            Color(hex: "E5EFE5")
+            Color("LaunchScreenBackground")
                 .ignoresSafeArea()
             
             VStack(spacing: 24) {
@@ -87,11 +95,11 @@ struct SplashView: View {
                 VStack(spacing: 8) {
                     Text("ALO Halısaha")
                         .font(.system(size: 36, weight: .bold))
-                        .foregroundColor(Color(hex: "1B5E20"))
+                        .foregroundColor(titleColor)
                     
                     Text("Maça Başla!")
                         .font(.subheadline)
-                        .foregroundColor(Color(hex: "4B5563"))
+                        .foregroundColor(.secondary)
                 }
                 
                 // Loading Indicator
@@ -101,6 +109,10 @@ struct SplashView: View {
                     .padding(.top, 32)
             }
         }
+    }
+
+    private var titleColor: Color {
+        colorScheme == .dark ? Color(hex: "A5D6A7") : Color(hex: "1B5E20")
     }
 }
 

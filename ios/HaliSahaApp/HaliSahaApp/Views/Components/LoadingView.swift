@@ -35,7 +35,7 @@ struct LoadingView: View {
             .padding(32)
             .background(
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(Color(.systemBackground))
+                    .fill(Color.appCardBackground)
                     .shadow(color: .black.opacity(0.1), radius: 10)
             )
         }
@@ -119,7 +119,7 @@ struct CardSkeletonView: View {
             }
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.05), radius: 8)
     }
@@ -253,7 +253,7 @@ struct GuestRestrictionView: View {
             }
         }
         .padding(32)
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(24)
         .shadow(color: .black.opacity(0.15), radius: 20)
         .padding(24)

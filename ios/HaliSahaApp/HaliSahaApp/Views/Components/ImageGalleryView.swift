@@ -136,26 +136,35 @@ private struct GalleryImageCell: View {
     let onTap: () -> Void
     
     var body: some View {
-        CachedAsyncImage(
-            url: url,
-            targetSize: CGSize(width: UIScreen.main.bounds.width, height: height * 2)
-        ) { image in
-            image
-                .resizable()
-                .scaledToFill()
-                .frame(height: height)
-                .clipped()
-                .contentShape(Rectangle())
-                .onTapGesture(perform: onTap)
-        } placeholder: {
-            ZStack {
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .fill(Color.gray.opacity(0.2))
-                ProgressView()
-                    .scaleEffect(1.2)
+        GeometryReader { geometry in
+            let scale = UIScreen.main.scale
+            let targetSize = CGSize(
+                width: geometry.size.width * scale,
+                height: height * scale
+            )
+
+            CachedAsyncImage(
+                url: url,
+                targetSize: targetSize
+            ) { image in
+                image
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: geometry.size.width, height: height)
+                    .clipped()
+                    .contentShape(Rectangle())
+                    .onTapGesture(perform: onTap)
+            } placeholder: {
+                ZStack {
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .fill(Color.gray.opacity(0.2))
+                    ProgressView()
+                        .scaleEffect(1.2)
+                }
+                .frame(width: geometry.size.width, height: height)
             }
-            .frame(height: height)
         }
+        .frame(height: height)
     }
 }
 
@@ -197,7 +206,7 @@ struct CompactImageGallery: View {
         
         return CachedAsyncImage(
             url: validImages.first,
-            targetSize: CGSize(width: size * 2, height: size * 2)
+            targetSize: CGSize(width: size * UIScreen.main.scale, height: size * UIScreen.main.scale)
         ) { image in
             ZStack(alignment: .bottomTrailing) {
                 image

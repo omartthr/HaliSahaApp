@@ -13,9 +13,11 @@ struct HomeView: View {
     // MARK: - Properties
     @StateObject private var viewModel = HomeViewModel()
     @StateObject private var authService = AuthService.shared
+    @StateObject private var notificationService = AppNotificationService.shared
     @State private var showNotifications = false
     @State private var showFilters = false
     @State private var showAllFacilities = false
+    @FocusState private var isSearchFocused: Bool
     
     // MARK: - Body
     var body: some View {
@@ -38,7 +40,8 @@ struct HomeView: View {
                 }
             }
         }
-        .background(Color(.systemGroupedBackground))
+        .scrollDismissesKeyboard(.interactively)
+        .background(Color.appBackground)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
@@ -56,7 +59,7 @@ struct HomeView: View {
             await viewModel.loadData()
         }
         .sheet(isPresented: $showNotifications) {
-            NotificationsSheetView()
+            NotificationsListView()
         }
         .navigationDestination(isPresented: $showAllFacilities) {
             FacilityListView()
@@ -70,7 +73,7 @@ struct HomeView: View {
                 .font(.title3)
                 .foregroundColor(Color(hex: "2E7D32"))
             
-            Text("HaliSaha")
+            Text(AppConstants.appName)
                 .font(.title3)
                 .fontWeight(.bold)
                 .foregroundColor(.primary)
@@ -83,17 +86,32 @@ struct HomeView: View {
             showNotifications = true
         } label: {
             ZStack(alignment: .topTrailing) {
-                Image(systemName: "bell.fill")
+                Image(systemName: notificationService.unreadCount > 0 ? "bell.badge.fill" : "bell.fill")
                     .font(.body)
                     .foregroundColor(.primary)
-                
-                // Badge
-                Circle()
-                    .fill(Color.red)
-                    .frame(width: 8, height: 8)
-                    .offset(x: 2, y: -2)
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(
+                        notificationService.unreadCount > 0 ? Color.red : .primary,
+                        Color.primary
+                    )
+
+                if notificationService.unreadCount > 0 {
+                    Text(badgeText)
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(minWidth: 16, minHeight: 16)
+                        .padding(.horizontal, 4)
+                        .background(Capsule().fill(Color.red))
+                        .overlay(Capsule().stroke(Color.appCardBackground, lineWidth: 1.5))
+                        .offset(x: 8, y: -6)
+                }
             }
         }
+    }
+
+    private var badgeText: String {
+        let count = notificationService.unreadCount
+        return count > 99 ? "99+" : "\(count)"
     }
     
     // MARK: - Header Section
@@ -143,6 +161,11 @@ struct HomeView: View {
                 
                 TextField("Saha ara...", text: $viewModel.searchText)
                     .textInputAutocapitalization(.never)
+                    .submitLabel(.search)
+                    .focused($isSearchFocused)
+                    .onSubmit {
+                        isSearchFocused = false
+                    }
                 
                 if !viewModel.searchText.isEmpty {
                     Button {
@@ -156,12 +179,13 @@ struct HomeView: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
-            .background(Color(.systemBackground))
+            .background(Color.appCardBackground)
             .cornerRadius(12)
             .shadow(color: .black.opacity(0.04), radius: 4, x: 0, y: 2)
             
             // Filter Button
             Button {
+                isSearchFocused = false
                 showFilters.toggle()
             } label: {
                 Image(systemName: viewModel.hasActiveFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
@@ -394,7 +418,7 @@ struct FilterPill: View {
             .foregroundColor(isSelected ? .white : .primary)
             .background(
                 Capsule()
-                    .fill(isSelected ? Color(hex: "2E7D32") : Color(.systemBackground))
+                    .fill(isSelected ? Color(hex: "2E7D32") : Color.appCardBackground)
             )
             .overlay(
                 Capsule()
@@ -403,35 +427,6 @@ struct FilterPill: View {
         }
     }
 }
-
-// MARK: - Notifications Sheet View
-struct NotificationsSheetView: View {
-    
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        NavigationStack {
-            VStack {
-                // Notifications will be implemented in ADIM 8
-                EmptyStateView(
-                    icon: "bell.fill",
-                    title: "Bildirimler",
-                    message: "Henüz bildiriminiz yok."
-                )
-            }
-            .navigationTitle("Bildirimler")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Kapat") {
-                        dismiss()
-                    }
-                }
-            }
-        }
-    }
-}
-
 
 // MARK: - Match Post Detail View
 struct MatchPostDetailView: View {
@@ -457,7 +452,7 @@ struct MatchPostDetailView: View {
             .padding(.top, 12)
             .padding(.bottom, 100)
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color.appBackground)
         .navigationTitle("Maç Detayı")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -850,7 +845,7 @@ private struct MatchDetailSection<Content: View>: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(18)
         .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
     }

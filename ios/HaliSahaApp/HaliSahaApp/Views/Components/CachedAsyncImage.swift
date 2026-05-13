@@ -143,7 +143,10 @@ struct FacilityImageView: View {
     var body: some View {
         CachedAsyncImage(
             url: url,
-            targetSize: size
+            targetSize: CGSize(
+                width: size.width * UIScreen.main.scale,
+                height: size.height * UIScreen.main.scale
+            )
         ) { image in
             image
                 .resizable()

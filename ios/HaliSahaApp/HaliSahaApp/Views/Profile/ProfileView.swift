@@ -17,6 +17,7 @@ struct ProfileView: View {
 
     // Photo picker
     @State private var photoPickerItem: PhotosPickerItem?
+    @State private var isPhotoPickerPresented = false
     @State private var showPhotoOptions = false
     @State private var showRemovePhotoConfirm = false
 
@@ -42,7 +43,7 @@ struct ProfileView: View {
             .padding(.horizontal, 16)
             .padding(.bottom, 32)
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color.appBackground)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
@@ -73,8 +74,8 @@ struct ProfileView: View {
             isPresented: $showPhotoOptions,
             titleVisibility: .visible
         ) {
-            PhotosPicker(selection: $photoPickerItem, matching: .images, photoLibrary: .shared()) {
-                Text("Galeriden Seç")
+            Button("Galeriden Seç") {
+                presentPhotoPicker()
             }
             if hasProfilePhoto {
                 Button("Fotoğrafı Kaldır", role: .destructive) {
@@ -91,6 +92,12 @@ struct ProfileView: View {
         } message: {
             Text("Profil fotoğrafınız kaldırılacak.")
         }
+        .photosPicker(
+            isPresented: $isPhotoPickerPresented,
+            selection: $photoPickerItem,
+            matching: .images,
+            photoLibrary: .shared()
+        )
         .alert("Hata", isPresented: $viewModel.showError) {
             Button("Tamam", role: .cancel) {}
         } message: {
@@ -106,6 +113,13 @@ struct ProfileView: View {
                 }
                 photoPickerItem = nil
             }
+        }
+    }
+
+    private func presentPhotoPicker() {
+        showPhotoOptions = false
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            isPhotoPickerPresented = true
         }
     }
 
@@ -211,7 +225,7 @@ struct ProfileView: View {
                 .clipShape(Circle())
                 .overlay {
                     Circle()
-                        .stroke(Color(.systemGroupedBackground), lineWidth: 5)
+                        .stroke(Color.appBackground, lineWidth: 5)
                 }
                 .shadow(color: .black.opacity(0.25), radius: 8, x: 0, y: 4)
 
@@ -224,7 +238,7 @@ struct ProfileView: View {
                         .frame(width: 40, height: 40)
                         .overlay {
                             Circle()
-                                .stroke(Color(.systemGroupedBackground), lineWidth: 4)
+                                .stroke(Color.appBackground, lineWidth: 4)
                         }
 
                     if viewModel.isUploadingPhoto {
@@ -295,7 +309,7 @@ struct ProfileView: View {
     private var statsCard: some View {
         HStack(spacing: 0) {
             ProfileStatTile(
-                value: "\(authService.currentUser?.totalMatches ?? 0)",
+                value: "\(viewModel.bookingStats.completed + viewModel.bookingStats.upcoming)",
                 label: "Toplam Maç",
                 icon: "sportscourt.fill"
             )
@@ -320,16 +334,16 @@ struct ProfileView: View {
             )
         }
         .padding(.vertical, 16)
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.04), radius: 6, x: 0, y: 2)
     }
 
     private var attendanceText: String {
-        guard let user = authService.currentUser, user.totalMatches > 0 else {
-            return "—"
-        }
-        return "%\(Int(user.attendanceRate))"
+        let stats = viewModel.bookingStats
+        let total = stats.completed + stats.cancelled
+        guard total > 0 else { return "—" }
+        return "%\(Int(Double(stats.completed) / Double(total) * 100))"
     }
 
     // MARK: - Quick Actions Grid
@@ -339,10 +353,8 @@ struct ProfileView: View {
                 .font(.headline)
                 .padding(.horizontal, 4)
 
-            LazyVGrid(
-                columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
-                spacing: 12
-            ) {
+            // Favorilerim + Geçmişim yan yana
+            HStack(spacing: 12) {
                 NavigationLink {
                     FavoritesView()
                 } label: {
@@ -359,20 +371,25 @@ struct ProfileView: View {
                 Button {
                     NotificationCenter.default.post(name: .switchToBookingsTab, object: nil)
                 } label: {
-                    QuickActionTile(
-                        icon: "ticket.fill",
-                        iconColor: .blue,
-                        title: "Randevularım",
-                        subtitle: bookingsSubtitle,
-                        badge: viewModel.bookingStats.upcoming
-                    )
+                    MatchesTile(stats: viewModel.bookingStats)
                 }
                 .buttonStyle(.plain)
-
-                FollowingTile(user: authService.currentUser)
-
-                MatchesTile(stats: viewModel.bookingStats)
             }
+
+            // Randevularım tek başına tam genişlikte, ortalı
+            Button {
+                NotificationCenter.default.post(name: .switchToBookingsTab, object: nil)
+            } label: {
+                QuickActionTile(
+                    icon: "ticket.fill",
+                    iconColor: .blue,
+                    title: "Randevularım",
+                    subtitle: bookingsSubtitle,
+                    badge: viewModel.bookingStats.upcoming,
+                    centered: true
+                )
+            }
+            .buttonStyle(.plain)
         }
     }
 
@@ -419,7 +436,7 @@ struct ProfileView: View {
                     value: viewModel.memberSinceText
                 )
             }
-            .background(Color(.systemBackground))
+            .background(Color.appCardBackground)
             .cornerRadius(16)
             .shadow(color: .black.opacity(0.04), radius: 6, x: 0, y: 2)
         }
@@ -434,7 +451,7 @@ struct ProfileView: View {
     // MARK: - Version Footer
     private var versionFooter: some View {
         VStack(spacing: 4) {
-            Text("HaliSaha")
+            Text(AppConstants.appName)
                 .font(.caption)
                 .fontWeight(.medium)
                 .foregroundColor(.secondary)
@@ -479,46 +496,51 @@ struct QuickActionTile: View {
     let title: String
     let subtitle: String
     var badge: Int = 0
+    var centered: Bool = false
 
     var body: some View {
+        if centered {
+            centeredLayout
+        } else {
+            leadingLayout
+        }
+    }
+
+    private var iconView: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 10)
+                .fill(iconColor.opacity(0.15))
+                .frame(width: 44, height: 44)
+
+            Image(systemName: icon)
+                .font(.system(size: 18))
+                .foregroundColor(iconColor)
+        }
+        .overlay(alignment: .topTrailing) {
+            if badge > 0 {
+                Text("\(badge)")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(.white)
+                    .frame(minWidth: 18, minHeight: 18)
+                    .padding(.horizontal, 4)
+                    .background(Capsule().fill(Color.red))
+                    .overlay(Capsule().stroke(Color.appCardBackground, lineWidth: 2))
+                    .offset(x: 6, y: -6)
+            }
+        }
+    }
+
+    private var leadingLayout: some View {
         HStack(spacing: 12) {
-            // Icon (badge overlay ile)
-            ZStack {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(iconColor.opacity(0.15))
-                    .frame(width: 44, height: 44)
+            iconView
 
-                Image(systemName: icon)
-                    .font(.system(size: 18))
-                    .foregroundColor(iconColor)
-            }
-            .overlay(alignment: .topTrailing) {
-                if badge > 0 {
-                    Text("\(badge)")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(.white)
-                        .frame(minWidth: 18, minHeight: 18)
-                        .padding(.horizontal, 4)
-                        .background(
-                            Capsule()
-                                .fill(Color.red)
-                        )
-                        .overlay(
-                            Capsule()
-                                .stroke(Color(.systemBackground), lineWidth: 2)
-                        )
-                        .offset(x: 6, y: -6)
-                }
-            }
-
-            // Metinler
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundColor(.primary)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.85)
+                    .minimumScaleFactor(0.7)
 
                 Text(subtitle)
                     .font(.caption)
@@ -531,54 +553,33 @@ struct QuickActionTile: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity)
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(14)
         .shadow(color: .black.opacity(0.04), radius: 6, x: 0, y: 2)
     }
-}
 
-// MARK: - Following Tile
-private struct FollowingTile: View {
-    let user: User?
+    private var centeredLayout: some View {
+        HStack(spacing: 16) {
+            Spacer(minLength: 0)
 
-    private var subtitle: String {
-        let followers = user?.followers.count ?? 0
-        let following = user?.following.count ?? 0
-        return "\(followers) takipçi • \(following) takip"
-    }
-
-    var body: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color.purple.opacity(0.15))
-                    .frame(width: 44, height: 44)
-
-                Image(systemName: "person.2.fill")
-                    .font(.system(size: 18))
-                    .foregroundColor(.purple)
-            }
+            iconView
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Arkadaşlar")
+                Text(title)
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundColor(.primary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
 
                 Text(subtitle)
                     .font(.caption)
                     .foregroundColor(.secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
             }
 
             Spacer(minLength: 0)
         }
-        .padding(12)
+        .padding(.vertical, 14)
         .frame(maxWidth: .infinity)
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(14)
         .shadow(color: .black.opacity(0.04), radius: 6, x: 0, y: 2)
     }
@@ -619,7 +620,7 @@ private struct MatchesTile: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity)
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(14)
         .shadow(color: .black.opacity(0.04), radius: 6, x: 0, y: 2)
     }

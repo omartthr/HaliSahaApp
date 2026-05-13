@@ -26,6 +26,9 @@ struct BookingFlowView: View {
     @State private var paymentError: String?
     @State private var createdBooking: Booking?
 
+    // Bildirim izni prompt'u (ilk rezervasyon sonrası)
+    @State private var showNotificationPrompt = false
+
     private let bookingService = BookingService.shared
     private let authService = AuthService.shared
 
@@ -56,7 +59,7 @@ struct BookingFlowView: View {
                     bottomBar
                 }
             }
-            .background(Color(.systemGroupedBackground))
+            .background(Color.appBackground)
             .navigationTitle(currentStep.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -182,7 +185,7 @@ struct BookingFlowView: View {
                 }
             }
             .padding()
-            .background(Color(.systemBackground))
+            .background(Color.appCardBackground)
             .cornerRadius(16)
 
             // Price Breakdown
@@ -207,7 +210,7 @@ struct BookingFlowView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .padding()
-                .background(Color(.systemBackground))
+                .background(Color.appCardBackground)
                 .cornerRadius(12)
             }
 
@@ -307,7 +310,7 @@ struct BookingFlowView: View {
                     }
                 }
                 .padding()
-                .background(Color(.systemBackground))
+                .background(Color.appCardBackground)
                 .cornerRadius(16)
             }
 
@@ -369,6 +372,11 @@ struct BookingFlowView: View {
                 TicketCardView(booking: booking)
             }
 
+            // Bildirim izni call-to-action (sadece ilk kez)
+            if showNotificationPrompt {
+                notificationPermissionCard
+            }
+
             // Actions
             VStack(spacing: 12) {
                 PrimaryButton(title: "Randevularıma Git", icon: "ticket.fill") {
@@ -381,6 +389,79 @@ struct BookingFlowView: View {
                     dismiss()
                 }
             }
+        }
+        .task {
+            await maybeShowPermissionPrompt()
+        }
+    }
+
+    // MARK: - Notification Permission Card
+    private var notificationPermissionCard: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(Color(hex: "2E7D32").opacity(0.15))
+                    .frame(width: 44, height: 44)
+                Image(systemName: "bell.badge.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(Color(hex: "2E7D32"))
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Maçı kaçırmamak için")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+
+                Text("Maçtan 24 ve 2 saat önce hatırlatma gönderelim")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer()
+
+            Button {
+                Task { await handlePermissionTap() }
+            } label: {
+                Text("İzin Ver")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Capsule().fill(Color(hex: "2E7D32")))
+            }
+        }
+        .padding(14)
+        .background(Color(hex: "2E7D32").opacity(0.08))
+        .cornerRadius(14)
+        .overlay {
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color(hex: "2E7D32").opacity(0.25), lineWidth: 1)
+        }
+        .transition(.opacity.combined(with: .move(edge: .top)))
+    }
+
+    // MARK: - Notification Permission Helpers
+    @MainActor
+    private func maybeShowPermissionPrompt() async {
+        // Daha önce sorulduysa veya kullanıcı kapalı toggle'ı varsa atla
+        guard !NotificationService.shared.hasAskedPermission else { return }
+        let status = await NotificationService.shared.authorizationStatus()
+        guard status == .notDetermined else { return }
+
+        // Kısa gecikme — kullanıcı önce bilet kartını görsün
+        try? await Task.sleep(nanoseconds: 600_000_000)
+        withAnimation { showNotificationPrompt = true }
+    }
+
+    @MainActor
+    private func handlePermissionTap() async {
+        let granted = await NotificationService.shared.requestPermission()
+        withAnimation { showNotificationPrompt = false }
+
+        // İzin verildiyse henüz schedule edilmediyse bu rezervasyon için reminder kur
+        if granted, let booking = createdBooking {
+            await NotificationService.shared.scheduleReminders(for: booking)
         }
     }
 
@@ -418,7 +499,7 @@ struct BookingFlowView: View {
                 }
             }
             .padding()
-            .background(Color(.systemBackground))
+            .background(Color.appCardBackground)
         }
     }
 
@@ -733,7 +814,7 @@ struct PaymentMethodRow: View {
                     .foregroundColor(isSelected ? Color(hex: "2E7D32") : .gray)
             }
             .padding()
-            .background(isSelected ? Color(hex: "2E7D32").opacity(0.1) : Color(.systemBackground))
+            .background(isSelected ? Color(hex: "2E7D32").opacity(0.1) : Color.appCardBackground)
             .cornerRadius(12)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
@@ -822,7 +903,7 @@ struct TicketCardView: View {
             }
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.1), radius: 10)
     }

@@ -66,7 +66,7 @@ struct AdminQRScannerView: View {
             }
         } message: {
             Text(
-                "QR kod tarayabilmek için Ayarlar > HaliSaha bölümünden kamera erişimi vermeniz gerekiyor."
+                "QR kod tarayabilmek için Ayarlar > \(AppConstants.appName) bölümünden kamera erişimi vermeniz gerekiyor."
             )
         }
         .sheet(isPresented: $viewModel.showResultSheet) {
@@ -398,7 +398,7 @@ private struct ScanResultSheet: View {
             }
             .padding()
         }
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(16)
         .overlay {
             RoundedRectangle(cornerRadius: 16)

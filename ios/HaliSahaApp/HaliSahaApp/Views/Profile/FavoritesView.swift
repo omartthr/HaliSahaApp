@@ -33,7 +33,7 @@ struct FavoritesView: View {
                 contentList
             }
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color.appBackground)
         .navigationTitle("Favorilerim")
         .navigationBarTitleDisplayMode(.inline)
         .task {
@@ -176,7 +176,7 @@ struct FavoriteFacilityCard: View {
             Spacer(minLength: 0)
         }
         .padding(12)
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(14)
         .shadow(color: .black.opacity(0.04), radius: 6, x: 0, y: 2)
     }
@@ -197,7 +197,7 @@ private struct TagPill: View {
         .foregroundColor(.secondary)
         .padding(.horizontal, 6)
         .padding(.vertical, 3)
-        .background(Color(.systemGray6))
+        .background(Color.appElevatedBackground)
         .clipShape(Capsule())
     }
 }
@@ -223,7 +223,19 @@ final class FavoritesViewModel: ObservableObject {
 
         isLoading = true
         do {
-            facilities = try await profileService.fetchFavoriteFacilities(ids: user.favoriteFields)
+            let fetched = try await profileService.fetchFavoriteFacilities(ids: user.favoriteFields)
+            facilities = fetched
+
+            // Firestore'da artık bulunmayan (silinmiş) saha ID'lerini temizle
+            let fetchedIds = Set(fetched.compactMap { $0.id })
+            let staleIds = user.favoriteFields.filter { !fetchedIds.contains($0) }
+            for staleId in staleIds {
+                try? await facilityService.removeFromFavorites(facilityId: staleId)
+            }
+            if !staleIds.isEmpty, var updatedUser = authService.currentUser {
+                updatedUser.favoriteFields.removeAll { staleIds.contains($0) }
+                authService.currentUser = updatedUser
+            }
         } catch {
             facilities = []
             errorMessage = error.localizedDescription

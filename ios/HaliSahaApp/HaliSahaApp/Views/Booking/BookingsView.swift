@@ -15,6 +15,7 @@ struct BookingsView: View {
     // MARK: - Properties
     @StateObject private var viewModel = BookingsViewModel()
     @State private var selectedFilter: BookingFilter = .upcoming
+    @State private var bookingToReview: Booking?
 
     // MARK: - Body
     var body: some View {
@@ -31,13 +32,18 @@ struct BookingsView: View {
                 bookingsList
             }
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color.appBackground)
         .navigationTitle("Randevularım")
         .task {
             await viewModel.loadBookings()
         }
         .refreshable {
             await viewModel.loadBookings()
+        }
+        .sheet(item: $bookingToReview) { booking in
+            WriteReviewView(booking: booking) {
+                Task { await viewModel.loadBookings() }
+            }
         }
     }
 
@@ -67,7 +73,7 @@ struct BookingsView: View {
             }
         }
         .padding(.top, 8)
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
     }
 
     // MARK: - Loading View
@@ -101,20 +107,80 @@ struct BookingsView: View {
         ScrollView {
             LazyVStack(spacing: 12) {
                 ForEach(viewModel.filteredBookings) { booking in
-                    NavigationLink {
-                        BookingDetailView(booking: booking) {
-                            Task {
-                                await viewModel.loadBookings()
+                    VStack(spacing: 8) {
+                        NavigationLink {
+                            BookingDetailView(booking: booking) {
+                                Task {
+                                    await viewModel.loadBookings()
+                                }
                             }
+                        } label: {
+                            BookingCard(booking: booking)
                         }
-                    } label: {
-                        BookingCard(booking: booking)
+                        .buttonStyle(.plain)
+
+                        // Geçmiş rezervasyonlar için aksiyon barı
+                        if viewModel.canReview(booking) {
+                            ReviewCTABar {
+                                bookingToReview = booking
+                            }
+                        } else if viewModel.isReviewed(booking) {
+                            ReviewedBadge()
+                        }
                     }
-                    .buttonStyle(.plain)
                 }
             }
             .padding()
         }
+    }
+}
+
+// MARK: - Review CTA Bar (Geçmiş randevu için "Değerlendir" butonu)
+private struct ReviewCTABar: View {
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 10) {
+                Image(systemName: "star.bubble.fill")
+                    .font(.subheadline)
+                Text("Bu rezervasyonu değerlendir")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+            }
+            .foregroundColor(Color(hex: "2E7D32"))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(hex: "2E7D32").opacity(0.10))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color(hex: "2E7D32").opacity(0.3), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Reviewed Badge (Yorumlanmış randevu rozeti)
+private struct ReviewedBadge: View {
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "checkmark.seal.fill")
+                .font(.caption)
+            Text("Bu rezervasyonu değerlendirdin")
+                .font(.caption)
+                .fontWeight(.medium)
+            Spacer()
+        }
+        .foregroundColor(.secondary)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
     }
 }
 
@@ -127,8 +193,12 @@ final class BookingsViewModel: ObservableObject {
     @Published var selectedFilter: BookingFilter = .upcoming
     @Published var isLoading = false
 
+    /// Yorum yapılmış rezervasyonların ID seti (geçmiş tab CTA'sı için).
+    @Published var reviewedBookingIds: Set<String> = []
+
     // MARK: - Private Properties
     private let bookingService = BookingService.shared
+    private let reviewService = ReviewService.shared
 
     // MARK: - Computed Properties
     var filteredBookings: [Booking] {
@@ -142,27 +212,48 @@ final class BookingsViewModel: ObservableObject {
         }
     }
 
+    /// Bir rezervasyon değerlendirilmeye uygun mu?
+    /// (Geçmişe kaldı + iptal/noShow değil + zaten yorumlanmamış)
+    func canReview(_ booking: Booking) -> Bool {
+        guard let id = booking.id else { return false }
+        guard booking.isPast else { return false }
+        guard booking.status == .confirmed || booking.status == .completed else { return false }
+        return !reviewedBookingIds.contains(id)
+    }
+
+    /// Bir rezervasyon zaten yorumlanmış mı?
+    func isReviewed(_ booking: Booking) -> Bool {
+        guard let id = booking.id else { return false }
+        return reviewedBookingIds.contains(id)
+    }
+
     // MARK: - Load Bookings
     func loadBookings() async {
         isLoading = true
 
+        async let bookingsTask: () = loadBookingList()
+        async let reviewsTask: () = loadReviewedIds()
+        _ = await (bookingsTask, reviewsTask)
+
+        isLoading = false
+    }
+
+    private func loadBookingList() async {
         do {
             bookings = try await bookingService.fetchUserBookings()
-            print("📋 Loaded \(bookings.count) bookings from Firestore")
-            for booking in bookings {
-                print(
-                    "📌 Booking: \(booking.facilityName) - Status: \(booking.status.rawValue) - isPast: \(booking.isPast)"
-                )
-            }
-            print(
-                "📊 Filtered for 'Yaklaşan': \(filteredBookings.count) bookings (status==confirmed && !isPast)"
-            )
         } catch {
             print("❌ Error loading bookings: \(error)")
             bookings = []
         }
+    }
 
-        isLoading = false
+    private func loadReviewedIds() async {
+        do {
+            let reviews = try await reviewService.fetchReviewsByCurrentUser()
+            reviewedBookingIds = Set(reviews.map(\.bookingId).filter { !$0.isEmpty })
+        } catch {
+            // Yorum listesi yüklenmesi başarısız → CTA'lar yine de gözükür
+        }
     }
 }
 
@@ -275,7 +366,7 @@ struct BookingCard: View {
             }
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.05), radius: 8)
     }
@@ -349,7 +440,7 @@ struct BookingDetailView: View {
             }
             .padding()
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color.appBackground)
         .navigationTitle("Randevu Detayı")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(isPresented: $showCreateMatchPost) {
@@ -464,7 +555,7 @@ struct BookingDetailView: View {
             }
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(20)
     }
 
@@ -484,7 +575,7 @@ struct BookingDetailView: View {
                     valueColor: .orange)
             }
             .padding()
-            .background(Color(.systemBackground))
+            .background(Color.appCardBackground)
             .cornerRadius(12)
         }
     }
@@ -523,7 +614,7 @@ struct BookingDetailView: View {
                 .padding(.top, 4)
             }
             .padding()
-            .background(Color(.systemBackground))
+            .background(Color.appCardBackground)
             .cornerRadius(12)
         }
     }
@@ -616,7 +707,7 @@ struct CreateMatchPostView: View {
             }
             .padding()
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color.appBackground)
         .navigationTitle("Maç İlanı")
         .navigationBarTitleDisplayMode(.inline)
         .alert("İlan Oluşturuldu", isPresented: $viewModel.showSuccess) {
@@ -681,7 +772,7 @@ struct CreateMatchPostView: View {
             }
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(18)
         .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
     }
@@ -727,7 +818,7 @@ struct CreateMatchPostView: View {
             }
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(18)
         .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
     }
@@ -796,7 +887,7 @@ struct CreateMatchPostView: View {
             }
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(18)
         .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
     }
@@ -823,7 +914,7 @@ struct CreateMatchPostView: View {
                 }
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(18)
         .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
     }
@@ -1154,7 +1245,7 @@ struct QRCodeView: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
-                    .background(Color(.systemGroupedBackground))
+                    .background(Color.appBackground)
 
                     // Kesik şerit
                     TicketSeparator()
@@ -1173,7 +1264,7 @@ struct QRCodeView: View {
                     }
                     .padding(.vertical, 16)
                 }
-                .background(Color(.systemBackground))
+                .background(Color.appCardBackground)
                 .cornerRadius(24)
                 .shadow(color: .black.opacity(0.3), radius: 16, x: 0, y: 8)
                 .padding(.horizontal, 24)

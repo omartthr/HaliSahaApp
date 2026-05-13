@@ -32,7 +32,7 @@ struct FacilityListView: View {
                 listView
             }
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color.appBackground)
         .navigationTitle("Tüm Sahalar")
         .navigationBarTitleDisplayMode(.large)
         .sheet(isPresented: $showFilters) {
@@ -65,7 +65,7 @@ struct FacilityListView: View {
                 }
             }
             .padding(12)
-            .background(Color(.systemBackground))
+            .background(Color.appCardBackground)
             .cornerRadius(10)
             
             // Filter Button
@@ -77,7 +77,7 @@ struct FacilityListView: View {
                         .font(.body)
                         .foregroundColor(.primary)
                         .padding(12)
-                        .background(Color(.systemBackground))
+                        .background(Color.appCardBackground)
                         .cornerRadius(10)
                     
                     if viewModel.filters.hasActiveFilters {

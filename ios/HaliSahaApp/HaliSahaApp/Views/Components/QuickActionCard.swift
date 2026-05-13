@@ -54,7 +54,7 @@ struct QuickActionCard: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(16)
-            .background(Color(.systemBackground))
+            .background(Color.appCardBackground)
             .cornerRadius(16)
             .shadow(color: .black.opacity(0.04), radius: 6, x: 0, y: 2)
         }
@@ -105,7 +105,7 @@ struct StatsCard: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.04), radius: 6, x: 0, y: 2)
     }
@@ -364,7 +364,7 @@ struct BadgeView: View {
         }
     }
     .padding()
-    .background(Color(.systemGroupedBackground))
+    .background(Color.appBackground)
 }
 
 #Preview("Other Components") {

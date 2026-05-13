@@ -1,0 +1,68 @@
+rules_version = '2';
+
+// HaliSahaApp - Firebase Storage Security Rules
+// Console > Storage > Rules sekmesine yapıştırılabilir veya
+// firebase deploy --only storage komutuyla yayına alınabilir.
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ---------- Helper functions ----------
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userType() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.userType;
+    }
+
+    function isSuperAdmin() {
+      return isSignedIn() && userType() == 'superAdmin';
+    }
+
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    function isUnderSizeLimit() {
+      return request.resource.size < 8 * 1024 * 1024; // 8 MB
+    }
+
+    // ---------- admin_documents/{adminId}/... ----------
+    // Hassas belgeler. Sadece sahip + superAdmin erişebilir.
+    match /admin_documents/{adminId}/{allPaths=**} {
+      allow read: if isSignedIn() && (request.auth.uid == adminId || isSuperAdmin());
+      allow write: if isSignedIn()
+                   && request.auth.uid == adminId
+                   && isImage()
+                   && isUnderSizeLimit();
+      allow delete: if isSignedIn() && (request.auth.uid == adminId || isSuperAdmin());
+    }
+
+    // ---------- facilities/{facilityId}/... ----------
+    match /facilities/{facilityId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isSignedIn() && isImage() && isUnderSizeLimit();
+    }
+
+    // ---------- pitches/{facilityId}/{pitchId}/... ----------
+    match /pitches/{facilityId}/{pitchId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isSignedIn() && isImage() && isUnderSizeLimit();
+    }
+
+    // ---------- users/{userId}/... ----------
+    match /users/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isSignedIn()
+                   && request.auth.uid == userId
+                   && isImage()
+                   && isUnderSizeLimit();
+    }
+
+    // Diğer her şey: superAdmin
+    match /{allPaths=**} {
+      allow read, write: if isSuperAdmin();
+    }
+  }
+}

@@ -95,7 +95,7 @@ struct FacilityCard: View {
             }
         }
         .padding(12)
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 2)
     }
@@ -110,7 +110,7 @@ struct FacilityCard: View {
                 }
                 .padding(.horizontal, 6)
                 .padding(.vertical, 3)
-                .background(Color(.systemGray6))
+                .background(Color.appElevatedBackground)
                 .cornerRadius(4)
             }
             
@@ -120,7 +120,7 @@ struct FacilityCard: View {
                     .foregroundColor(.secondary)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 3)
-                    .background(Color(.systemGray6))
+                    .background(Color.appElevatedBackground)
                     .cornerRadius(4)
             }
         }
@@ -206,7 +206,7 @@ struct FeaturedFacilityCard: View {
             .padding(.vertical, 10)
         }
         .frame(width: 260)
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(20)
         .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 4)
     }
@@ -248,7 +248,7 @@ struct CompactFacilityCard: View {
             }
         }
         .padding(10)
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(14)
         .shadow(color: .black.opacity(0.05), radius: 6, x: 0, y: 2)
     }
@@ -372,7 +372,7 @@ struct MatchPostCard: View {
             }
         }
         .padding(16)
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 2)
     }
@@ -390,7 +390,7 @@ struct MatchPostCard: View {
         FacilityCard(facility: Facility.mockFacility)
     }
     .padding()
-    .background(Color(.systemGroupedBackground))
+    .background(Color.appBackground)
 }
 
 #Preview("Featured Card") {
@@ -401,11 +401,11 @@ struct MatchPostCard: View {
         }
         .padding()
     }
-    .background(Color(.systemGroupedBackground))
+    .background(Color.appBackground)
 }
 
 #Preview("Match Post Card") {
     MatchPostCard(matchPost: MatchPost.mockPost)
         .padding()
-        .background(Color(.systemGroupedBackground))
+        .background(Color.appBackground)
 }
