@@ -47,8 +47,11 @@ struct PrimaryButton: View {
                     Text(title)
                         .font(size.font)
                         .fontWeight(.semibold)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                 }
             }
+            .padding(.horizontal, size.horizontalPadding)
             .frame(maxWidth: fullWidth ? .infinity : nil)
             .frame(height: size.height)
             .foregroundColor(style.foregroundColor)
@@ -79,7 +82,7 @@ extension PrimaryButton {
         var backgroundColor: Color {
             switch self {
             case .primary: return Color(hex: "2E7D32")
-            case .secondary: return Color(.systemBackground)
+            case .secondary: return Color.appCardBackground
             case .outline: return .clear
             case .destructive: return .red
             case .ghost: return .clear
@@ -159,6 +162,14 @@ extension PrimaryButton {
             case .large: return 12
             }
         }
+        
+        var horizontalPadding: CGFloat {
+            switch self {
+            case .small: return 16
+            case .medium: return 20
+            case .large: return 24
+            }
+        }
     }
 }
 
@@ -215,8 +226,11 @@ struct SocialSignInButton: View {
                     Text(provider.title)
                         .font(.body)
                         .fontWeight(.semibold)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                 }
             }
+            .padding(.horizontal, 16)
             .frame(maxWidth: .infinity)
             .frame(height: 52)
             .foregroundColor(provider.foregroundColor)
@@ -238,7 +252,7 @@ struct IconButton: View {
     
     let icon: String
     var size: CGFloat = 44
-    var backgroundColor: Color = Color(.systemGray6)
+    var backgroundColor: Color = Color.appElevatedBackground
     var foregroundColor: Color = .primary
     let action: () -> Void
     

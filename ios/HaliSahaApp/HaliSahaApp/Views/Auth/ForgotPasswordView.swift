@@ -32,7 +32,7 @@ struct ForgotPasswordView: View {
             .padding(.horizontal, 24)
             .padding(.vertical, 48)
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color.appBackground)
         .navigationTitle("Şifremi Unuttum")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
@@ -106,7 +106,7 @@ struct ForgotPasswordView: View {
                 }
             }
             .padding(24)
-            .background(Color(.systemBackground))
+            .background(Color.appCardBackground)
             .cornerRadius(20)
             .shadow(color: .black.opacity(0.05), radius: 10)
             
@@ -169,7 +169,7 @@ struct ForgotPasswordView: View {
                 )
             }
             .padding(24)
-            .background(Color(.systemBackground))
+            .background(Color.appCardBackground)
             .cornerRadius(20)
             .shadow(color: .black.opacity(0.05), radius: 10)
             

@@ -10,23 +10,27 @@
 import SwiftUI
 import FirebaseCore
 import GoogleSignIn
+import UserNotifications
 
 // MARK: - App Delegate
-class AppDelegate: NSObject, UIApplicationDelegate {
-    
+class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         // Firebase'i yapılandır
         FirebaseApp.configure()
-        
+
+        // Local notification delegate'i bağla (foreground gösterim + tap)
+        UNUserNotificationCenter.current().delegate = self
+
         // UI Appearance ayarları
         configureAppearance()
-        
+
         return true
     }
-    
+
     // MARK: - Google Sign In URL Handling
     func application(
         _ app: UIApplication,
@@ -34,6 +38,30 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         options: [UIApplication.OpenURLOptionsKey: Any] = [:]
     ) -> Bool {
         return GIDSignIn.sharedInstance.handle(url)
+    }
+
+    // MARK: - Notification Delegate
+    /// Uygulama açıkken gelen bildirimi banner + ses + badge ile göster
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification
+    ) async -> UNNotificationPresentationOptions {
+        return [.banner, .list, .sound, .badge]
+    }
+
+    /// Kullanıcı bildirime dokunduğunda ilgili sekmeye yönlendir
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse
+    ) async {
+        let userInfo = response.notification.request.content.userInfo
+
+        // Maç hatırlatması veya rezervasyon bildirimleri → Randevularım sekmesi
+        if userInfo["bookingId"] is String {
+            await MainActor.run {
+                NotificationCenter.default.post(name: .switchToBookingsTab, object: nil)
+            }
+        }
     }
     
     private func configureAppearance() {
@@ -117,7 +145,7 @@ extension HaliSahaApp {
     /// Uygulama başlatılırken gerekli kontrolleri yapar
     static func performStartupChecks() {
         #if DEBUG
-        print("🚀 HaliSaha Debug Mode")
+        print("🚀 \(AppConstants.appName) Debug Mode")
         print("📦 Version: \(Bundle.main.appVersion) (\(Bundle.main.buildNumber))")
         #endif
     }

@@ -2,7 +2,13 @@
 //  AdminTabView.swift
 //  HaliSahaApp
 //
-//  Admin için özel Tab Bar navigasyonu
+//  Admin için özel Tab Bar navigasyonu.
+//  Onay durumuna göre routing yapar:
+//   - profil yok / belge yok          → AdminDocumentUploadView
+//   - belgeler yüklendi (pending)     → PendingApprovalView
+//   - reddedildi                      → RejectedView
+//   - onaylandı                       → ApprovedAdminTabView (asıl tab bar)
+//   - askıya alındı                   → SuspendedView
 //
 //  Created by Mehmet Mert Mazıcı on 24.01.2026.
 //
@@ -16,7 +22,7 @@ enum AdminTabItem: Int, CaseIterable {
     case facilities = 2
     case reports = 3
     case settings = 4
-    
+
     var title: String {
         switch self {
         case .dashboard: return "Panel"
@@ -26,7 +32,7 @@ enum AdminTabItem: Int, CaseIterable {
         case .settings: return "Ayarlar"
         }
     }
-    
+
     var icon: String {
         switch self {
         case .dashboard: return "square.grid.2x2.fill"
@@ -36,7 +42,7 @@ enum AdminTabItem: Int, CaseIterable {
         case .settings: return "gearshape.fill"
         }
     }
-    
+
     var unselectedIcon: String {
         switch self {
         case .dashboard: return "square.grid.2x2"
@@ -48,16 +54,70 @@ enum AdminTabItem: Int, CaseIterable {
     }
 }
 
-// MARK: - Admin Tab View
+// MARK: - Admin Tab View (Routing wrapper)
 struct AdminTabView: View {
-    
+
+    @StateObject private var adminService = AdminService.shared
+    @State private var hasStartedListener = false
+
+    var body: some View {
+        SwiftUI.Group {
+            if let profile = adminService.myAdminProfile {
+                routedContent(for: profile)
+            } else {
+                // Listener henüz değer döndürmedi (ilk yükleme veya yeni kayıt).
+                // Yeni kayıtta profil hemen oluşur, listener kısa sürede yetişir.
+                ProgressView("Hesap bilgileri yükleniyor...")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color.appBackground.ignoresSafeArea())
+            }
+        }
+        .onAppear {
+            if !hasStartedListener {
+                adminService.startMyAdminProfileListener()
+                hasStartedListener = true
+            }
+        }
+        .onDisappear {
+            // ContentView başka bir kullanıcıya geçerse listener'ı durdur
+            adminService.stopMyAdminProfileListener()
+            hasStartedListener = false
+        }
+    }
+
+    @ViewBuilder
+    private func routedContent(for profile: AdminProfile) -> some View {
+        switch profile.approvalStatus {
+        case .approved:
+            ApprovedAdminTabView()
+
+        case .pending:
+            // Belgeler henüz yüklenmediyse upload, yüklendiyse bekleme
+            if profile.documents.isComplete {
+                PendingApprovalView(profile: profile)
+            } else {
+                AdminDocumentUploadView()
+            }
+
+        case .rejected:
+            RejectedView(profile: profile)
+
+        case .suspended:
+            SuspendedView(profile: profile)
+        }
+    }
+}
+
+// MARK: - Approved Admin Tab View (asıl tab bar)
+struct ApprovedAdminTabView: View {
+
     // MARK: - Properties
     @State private var selectedTab: AdminTabItem = .dashboard
     @StateObject private var adminService = AdminService.shared
-    
+
     // Badge counts
-    @State private var pendingBookings: Int = 3
-    
+    @State private var pendingBookings: Int = 0
+
     // MARK: - Body
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -72,7 +132,7 @@ struct AdminTabView: View {
                     systemImage: selectedTab == .dashboard ? AdminTabItem.dashboard.icon : AdminTabItem.dashboard.unselectedIcon
                 )
             }
-            
+
             // MARK: - Tab 2: Bookings
             NavigationStack {
                 AdminBookingsView()
@@ -85,7 +145,7 @@ struct AdminTabView: View {
                 )
             }
             .badge(pendingBookings > 0 ? pendingBookings : 0)
-            
+
             // MARK: - Tab 3: Facilities
             NavigationStack {
                 AdminFacilitiesView()
@@ -97,7 +157,7 @@ struct AdminTabView: View {
                     systemImage: selectedTab == .facilities ? AdminTabItem.facilities.icon : AdminTabItem.facilities.unselectedIcon
                 )
             }
-            
+
             // MARK: - Tab 4: Reports
             NavigationStack {
                 AdminReportsView()
@@ -109,7 +169,7 @@ struct AdminTabView: View {
                     systemImage: selectedTab == .reports ? AdminTabItem.reports.icon : AdminTabItem.reports.unselectedIcon
                 )
             }
-            
+
             // MARK: - Tab 5: Settings
             NavigationStack {
                 AdminSettingsView()
@@ -127,16 +187,23 @@ struct AdminTabView: View {
             // Haptic feedback
             let impact = UIImpactFeedbackGenerator(style: .light)
             impact.impactOccurred()
+
+            Task {
+                await loadPendingCount()
+            }
         }
         .task {
             await loadPendingCount()
         }
     }
-    
+
     // MARK: - Load Pending Count
     private func loadPendingCount() async {
-        // Mock data için
-        pendingBookings = 3
+        do {
+            pendingBookings = try await adminService.fetchDashboardStats().pendingBookings
+        } catch {
+            pendingBookings = 0
+        }
     }
 }
 
