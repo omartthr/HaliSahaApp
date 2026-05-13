@@ -20,14 +20,12 @@ L.Marker.prototype.options.icon = DefaultIcon;
 interface Field {
   id: string;
   name: string;
-  location: {
-    lat: number;
-    lng: number;
-  };
+  latitude: number;
+  longitude: number;
   address: string;
   phone: string;
-  rating: number;
-  features: string[];
+  averageRating: number;
+  features?: string[];
 }
 
 const FieldMap = ({ onSelectField }: { onSelectField: (field: Field) => void }) => {
@@ -35,7 +33,7 @@ const FieldMap = ({ onSelectField }: { onSelectField: (field: Field) => void }) 
   const [center, setCenter] = useState<[number, number]>([41.0082, 28.9784]); // Default to Istanbul
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "football_fields"), (snapshot) => {
+    const unsubscribe = onSnapshot(collection(db, "facilities"), (snapshot) => {
       const fieldList = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -62,7 +60,7 @@ const FieldMap = ({ onSelectField }: { onSelectField: (field: Field) => void }) 
         {fields.map((field) => (
           <Marker 
             key={field.id} 
-            position={[field.location.lat, field.location.lng]}
+            position={[field.latitude, field.longitude]}
             eventHandlers={{
               click: () => onSelectField(field),
             }}
@@ -72,7 +70,7 @@ const FieldMap = ({ onSelectField }: { onSelectField: (field: Field) => void }) 
                 <h3 className="font-bold text-lg text-emerald-700">{field.name}</h3>
                 <div className="flex items-center gap-1 text-yellow-500 my-1">
                   <Star size={16} fill="currentColor" />
-                  <span className="text-sm font-semibold">{field.rating || "Puanlanmamış"}</span>
+                  <span className="text-sm font-semibold">{field.averageRating || "Puanlanmamış"}</span>
                 </div>
                 <p className="text-sm text-gray-600 mb-2">{field.address}</p>
                 <button 

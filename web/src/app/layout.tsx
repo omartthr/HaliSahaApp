@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/frontend/context/AuthContext";
 import { Toaster } from "react-hot-toast";
 import { cn } from "@/lib/utils";
+import Chatbot from "@/frontend/components/common/Chatbot";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
@@ -14,7 +15,7 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Halı Saha Randevu | Kolayca Randevu Al",
+  title: "ALO Halısaha | Kolayca Randevu Al",
   description: "En yakın halı sahayı bul, boş saatleri gör ve hemen randevunu al.",
 };
 
@@ -29,6 +30,7 @@ export default function RootLayout({
         <AuthProvider>
           {children}
           <Toaster position="top-right" />
+          <Chatbot />
         </AuthProvider>
       </body>
     </html>

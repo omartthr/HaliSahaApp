@@ -67,7 +67,7 @@ const LoginPage = () => {
       >
         <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
           <span style={{ fontSize: 18, fontWeight: 900, color: "#111827" }}>
-            Halı<span style={{ color: "#2E7D32" }}>SahaApp</span>
+            ALO <span style={{ color: "#2E7D32" }}>Halısaha</span>
           </span>
         </Link>
 

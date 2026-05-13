@@ -159,14 +159,14 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     if (!user) return;
-    const unsubFields = onSnapshot(collection(db, "football_fields"), (snap) => {
+    const unsubFields = onSnapshot(collection(db, "facilities"), (snap) => {
       const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Facility, "id">) }));
       const owned = list.filter((f) => f.ownerId === user.uid);
       if (owned.length > 0) { setFacilities(owned); setIsFallbackFacilityMode(false); }
       else { setFacilities(list.slice(0, 1)); setIsFallbackFacilityMode(true); }
       setLoading(false);
     });
-    const unsubRes = onSnapshot(collection(db, "reservations"), (snap) => {
+    const unsubRes = onSnapshot(collection(db, "bookings"), (snap) => {
       setAllReservations(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Reservation, "id">) })));
       setLoading(false);
     });
@@ -175,7 +175,7 @@ const AdminDashboard = () => {
 
   const handleStatusUpdate = async (resId: string, newStatus: ReservationStatus) => {
     try {
-      await updateDoc(doc(db, "reservations", resId), { status: newStatus, updatedAt: serverTimestamp() });
+      await updateDoc(doc(db, "bookings", resId), { status: newStatus, updatedAt: serverTimestamp() });
       toast.success("Durum güncellendi.");
     } catch (err) { toast.error("Hata: " + err); }
   };
@@ -197,10 +197,10 @@ const AdminDashboard = () => {
     };
     try {
       if (editingFacilityId) {
-        await updateDoc(doc(db, "football_fields", editingFacilityId), payload);
+        await updateDoc(doc(db, "facilities", editingFacilityId), payload);
         toast.success("Tesis güncellendi.");
       } else {
-        await addDoc(collection(db, "football_fields"), { ...payload, createdAt: serverTimestamp() });
+        await addDoc(collection(db, "facilities"), { ...payload, createdAt: serverTimestamp() });
         toast.success("Yeni tesis eklendi.");
       }
       resetFacilityForm();
@@ -219,7 +219,7 @@ const AdminDashboard = () => {
   const handleDeleteFacility = async (id: string) => {
     if (!window.confirm("Bu tesisi silmek istediğine emin misin?")) return;
     try {
-      await deleteDoc(doc(db, "football_fields", id));
+      await deleteDoc(doc(db, "facilities", id));
       toast.success("Tesis silindi.");
       if (editingFacilityId === id) resetFacilityForm();
     } catch (err) { toast.error("Tesis silinemedi: " + err); }

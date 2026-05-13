@@ -3,8 +3,12 @@
 import React, { useState, useEffect } from "react";
 import Navbar from "@/frontend/components/common/Navbar";
 import Link from "next/link";
-import { MapPin, Phone, Star, Heart, Share2, ChevronLeft, ChevronRight, Check, Car, Droplets, Utensils, Lightbulb, Wifi, Wind, ArrowRight, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { format } from "date-fns";
+import { MapPin, Phone, Star, Heart, Share2, ChevronLeft, ChevronRight, Check, Car, Droplets, Utensils, Lightbulb, Wifi, Wind, ArrowRight, X, AlertCircle, CreditCard } from "lucide-react";
 import { getFieldAverageRating, getFieldReviews, rateField, hasRatedField } from "@/backend/services/ratingService";
+import { getField } from "@/backend/services/fieldService";
+import { createBooking } from "@/backend/services/bookingService";
 import { useAuth } from "@/frontend/context/AuthContext";
 import { toast } from "react-hot-toast";
 
@@ -48,8 +52,14 @@ const timeSlots = Array.from({ length: 14 }, (_, i) => ({
   price: 8 + i >= 18 ? 450 : 350,
 }));
 
-export default function FieldDetailPage({ params }: { params: { fieldId: string } }) {
+export default function FieldDetailPage({ params }: { params: Promise<{ fieldId: string }> }) {
+  const resolvedParams = React.use(params);
+  const fieldId = resolvedParams.fieldId;
   const { user } = useAuth();
+  const router = useRouter();
+  const [realField, setRealField] = useState<any>(null);
+  const currentField = realField || mockField;
+  
   const [selectedPitch, setSelectedPitch] = useState(mockField.pitches[0]);
   const [selectedDate, setSelectedDate] = useState(today);
   const [selectedSlots, setSelectedSlots] = useState<number[]>([]);
@@ -59,13 +69,45 @@ export default function FieldDetailPage({ params }: { params: { fieldId: string 
   const [reviews, setReviews] = useState<any[]>([]);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [reviewForm, setReviewForm] = useState({ rating: 0, comment: "" });
+  
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleBooking = async () => {
+    if (!user) {
+      toast.error("Randevu için giriş yapmalısınız.");
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      for (const slotHour of selectedSlots) {
+        const slotLabel = timeSlots.find(s => s.hour === slotHour)?.label;
+        await createBooking({
+          fieldId,
+          fieldName: currentField.name,
+          userId: user.uid,
+          userName: user.displayName || "Kullanıcı",
+          date: format(selectedDate, "yyyy-MM-dd"),
+          timeSlot: slotLabel || "",
+        });
+      }
+      toast.success("Randevu talebi başarıyla oluşturuldu!");
+      router.push("/profile");
+    } catch (error) {
+      toast.error("Randevu oluşturulurken bir hata oluştu.");
+    } finally {
+      setIsSubmitting(false);
+      setShowBookingModal(false);
+    }
+  };
 
   const dates = getDates();
 
   useEffect(() => {
-    getFieldAverageRating(params.fieldId).then(setFieldRating);
-    getFieldReviews(params.fieldId).then(setReviews);
-  }, [params.fieldId]);
+    getField(fieldId).then(setRealField);
+    getFieldAverageRating(fieldId).then(setFieldRating);
+    getFieldReviews(fieldId).then(setReviews);
+  }, [fieldId]);
 
   const toggleSlot = (hour: number) => {
     const slot = timeSlots.find(s => s.hour === hour);
@@ -161,27 +203,27 @@ export default function FieldDetailPage({ params }: { params: { fieldId: string 
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
             <div>
               <p style={{ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: "#2E7D32", fontWeight: 700, marginBottom: 4 }}>SAHA DETAYI</p>
-              <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111827", marginBottom: 8 }}>{mockField.name}</h1>
+              <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111827", marginBottom: 8 }}>{currentField.name}</h1>
             </div>
             <div style={{ background: "#F59E0B", color: "white", borderRadius: 12, padding: "8px 12px", display: "flex", alignItems: "center", gap: 6, boxShadow: "0 4px 12px rgba(245,158,11,0.2)" }}>
               <Star size={16} fill="white" />
-              <span style={{ fontWeight: 800, fontSize: 16 }}>{mockField.rating}</span>
+              <span style={{ fontWeight: 800, fontSize: 16 }}>{fieldRating > 0 ? fieldRating.toFixed(1) : (currentField.rating || "Yen")}</span>
             </div>
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 20 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#6b7280", fontSize: 14 }}>
               <MapPin size={16} style={{ color: "#2E7D32" }} />
-              <span>{mockField.address}</span>
+              <span>{currentField.address}</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#6b7280", fontSize: 14 }}>
               <Phone size={16} style={{ color: "#2E7D32" }} />
-              <a href={`tel:${mockField.phone}`} style={{ color: "#2E7D32", fontWeight: 700, textDecoration: "none" }}>{mockField.phone}</a>
+              <a href={`tel:${currentField.phone}`} style={{ color: "#2E7D32", fontWeight: 700, textDecoration: "none" }}>{currentField.phone}</a>
             </div>
           </div>
 
           <p style={{ fontSize: 15, color: "#4b5563", lineHeight: 1.6, display: showFullDesc ? "block" : "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-            {mockField.description}
+            {currentField.description}
           </p>
           <button onClick={() => setShowFullDesc(!showFullDesc)} style={{ background: "none", border: "none", color: "#2E7D32", fontSize: 14, fontWeight: 700, cursor: "pointer", marginTop: 8, padding: 0 }}>
             {showFullDesc ? "Daha az" : "Devamını oku"}
@@ -189,8 +231,8 @@ export default function FieldDetailPage({ params }: { params: { fieldId: string 
 
           {/* Tags */}
           <div style={{ display: "flex", gap: 8, marginTop: 20, flexWrap: "wrap" }}>
-            <span className="pill pill-primary" style={{ padding: "6px 14px" }}>{mockField.isIndoor ? "🏠 Kapalı Alan" : "☀️ Açık Alan"}</span>
-            {mockField.hasParking && <span className="pill pill-outline" style={{ padding: "6px 14px", background: "white" }}>🚗 Otopark</span>}
+            <span className="pill pill-primary" style={{ padding: "6px 14px" }}>{(currentField.amenities?.isIndoor ?? currentField.isIndoor) ? "🏠 Kapalı Alan" : "☀️ Açık Alan"}</span>
+            {(currentField.amenities?.hasParking ?? currentField.hasParking) && <span className="pill pill-outline" style={{ padding: "6px 14px", background: "white" }}>🚗 Otopark</span>}
           </div>
         </div>
 
@@ -201,7 +243,7 @@ export default function FieldDetailPage({ params }: { params: { fieldId: string 
             <div className="auth-dynamo-glass match-dynamo-card" style={{ padding: 24, borderRadius: 24 }}>
               <h2 style={{ fontSize: 18, fontWeight: 700, color: "#111827", marginBottom: 16 }}>Sahalar</h2>
               <div style={{ display: "grid", gap: 10 }}>
-                {mockField.pitches.map(pitch => {
+                {(currentField.pitches || mockField.pitches).map((pitch: any) => {
                   const isSelected = selectedPitch.id === pitch.id;
                   return (
                     <button key={pitch.id} onClick={() => setSelectedPitch(pitch)}
@@ -231,9 +273,9 @@ export default function FieldDetailPage({ params }: { params: { fieldId: string 
             <div className="auth-dynamo-glass match-dynamo-card" style={{ padding: 24, borderRadius: 24 }}>
               <h2 style={{ fontSize: 18, fontWeight: 700, color: "#111827", marginBottom: 16 }}>Özellikler</h2>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-                {mockField.features.map(f => (
+                {(currentField.features || mockField.features).map((f: any) => (
                   <div key={f.name} style={{ background: "rgba(255,255,255,0.5)", border: "1px solid rgba(0,0,0,0.04)", borderRadius: 16, padding: "16px 8px", textAlign: "center" }}>
-                    <div style={{ fontSize: 24, marginBottom: 6 }}>{f.icon}</div>
+                    <div style={{ fontSize: 24, marginBottom: 6 }}>{f.icon || "⚽"}</div>
                     <div style={{ fontSize: 12, color: "#4b5563", fontWeight: 700 }}>{f.name}</div>
                   </div>
                 ))}
@@ -365,16 +407,23 @@ export default function FieldDetailPage({ params }: { params: { fieldId: string 
             <p style={{ fontSize: 14, color: "#94a3b8", fontWeight: 600 }}>Henüz saat seçilmedi</p>
           )}
         </div>
-        <Link
+        <button
           className={`match-booking-button ${canBook ? "is-active" : "is-disabled"}`}
-          href={canBook ? `/booking/${params.fieldId}` : "#"}
+          onClick={() => {
+            if (!user) {
+              toast.error("Rezervasyon için giriş yapmalısınız.");
+              return;
+            }
+            setShowBookingModal(true);
+          }}
+          disabled={!canBook}
           style={{
-            textDecoration: "none",
-            pointerEvents: canBook ? "auto" : "none",
+            border: "none",
+            cursor: canBook ? "pointer" : "not-allowed",
           }}
         >
           Rezervasyon Yap <ArrowRight size={18} />
-        </Link>
+        </button>
       </div>
 
       {showReviewForm && (
@@ -431,6 +480,62 @@ export default function FieldDetailPage({ params }: { params: { fieldId: string 
                 Gönder
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showBookingModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 60, padding: 16 }}>
+          <div style={{ background: "#fff", borderRadius: 24, padding: 32, maxWidth: 450, width: "100%", maxHeight: "90vh", overflow: "auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+              <h2 style={{ fontSize: 22, fontWeight: 900, color: "#111827" }}>Rezervasyon Özeti</h2>
+              <button onClick={() => setShowBookingModal(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 24 }}>
+                <X size={24} />
+              </button>
+            </div>
+
+            <div style={{ background: "#E8F5E9", borderRadius: 12, padding: "14px 16px", display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 24 }}>
+              <AlertCircle size={18} style={{ color: "#2E7D32", flexShrink: 0, marginTop: 1 }} />
+              <p style={{ fontSize: 13, color: "#2E7D32", lineHeight: 1.5, fontWeight: 500 }}>
+                Randevu talebiniz saha sahibi tarafından onaylandıktan sonra kaporanız alınacaktır.
+              </p>
+            </div>
+
+            <div style={{ borderTop: "1px solid #f0f0f0", borderBottom: "1px solid #f0f0f0", padding: "16px 0", marginBottom: 24, display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15 }}>
+                <span style={{ color: "#6b7280" }}>Saha</span>
+                <span style={{ fontWeight: 700, color: "#111827" }}>{currentField.name}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15 }}>
+                <span style={{ color: "#6b7280" }}>Tarih</span>
+                <span style={{ fontWeight: 700, color: "#111827" }}>{format(selectedDate, "dd.MM.yyyy")}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15 }}>
+                <span style={{ color: "#6b7280" }}>Saatler</span>
+                <span style={{ fontWeight: 700, color: "#2E7D32" }}>
+                  {selectedSlots.map(h => `${h}:00`).join(", ")}
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 32 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15 }}>
+                <span style={{ color: "#6b7280" }}>Saha Ücreti</span>
+                <span style={{ fontWeight: 800, color: "#111827" }}>₺{totalPrice}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16 }}>
+                <span style={{ color: "#6b7280", fontWeight: 600 }}>Kapora (%20)</span>
+                <span style={{ fontWeight: 900, color: "#2E7D32", fontSize: 18 }}>₺{Math.round(totalPrice * 0.2)}</span>
+              </div>
+            </div>
+
+            <button
+              onClick={handleBooking}
+              disabled={isSubmitting}
+              style={{ width: "100%", background: "#2E7D32", color: "white", padding: "16px", borderRadius: 16, border: "none", fontWeight: 800, fontSize: 16, cursor: isSubmitting ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all 0.2s", opacity: isSubmitting ? 0.7 : 1 }}
+            >
+              {isSubmitting ? "İşleniyor..." : (<><CreditCard size={20} /> Talebi Gönder & Kapora Öde</>)}
+            </button>
           </div>
         </div>
       )}

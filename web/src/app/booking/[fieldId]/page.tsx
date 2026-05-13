@@ -105,15 +105,71 @@ const BookingPage = () => {
     <div className="page-wrapper">
       <Navbar />
 
-      <div className="content-container" style={{ paddingTop: 24, paddingBottom: 40 }}>
-        {/* Back */}
-        <button onClick={() => router.back()} style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", color: "#6b7280", fontWeight: 600, marginBottom: 20, fontSize: 15 }}>
-          <ChevronLeft size={20} /> Geri
-        </button>
+        {/* Hero Section */}
+      <div
+        className="match-hero"
+        style={{
+          height: 280,
+          background: "linear-gradient(180deg, #114B32 0%, #1A754E 100%)",
+          position: "relative",
+          zIndex: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <div style={{ position: "absolute", top: 16, left: 16 }}>
+          <button
+            onClick={() => router.back()}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              background: "rgba(0,0,0,0.3)",
+              backdropFilter: "blur(8px)",
+              color: "white",
+              border: "none",
+              cursor: "pointer",
+            }}
+          >
+            <ChevronLeft size={20} />
+          </button>
+        </div>
 
+        <div style={{ position: "absolute", bottom: -118, left: 0, width: "100%", lineHeight: 0, zIndex: 0, pointerEvents: "none" }}>
+          <svg
+            data-name="Layer 1"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 1200 120"
+            preserveAspectRatio="none"
+            style={{ display: "block", width: "calc(100% + 1.3px)", height: 120, overflow: "visible" }}
+          >
+            <defs>
+              <filter id="booking-wave-soft-shadow" x="-8%" y="-8%" width="116%" height="180%">
+                <feGaussianBlur stdDeviation="7" />
+              </filter>
+            </defs>
+            <path
+              d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z"
+              fill="rgba(0,0,0,0.22)"
+              transform="translate(0, 14)"
+              filter="url(#booking-wave-soft-shadow)"
+            />
+            <path
+              d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z"
+              fill="#1A754E"
+            />
+          </svg>
+        </div>
+      </div>
+
+      <div className="content-container match-main-content" style={{ position: "relative", zIndex: 2, marginTop: -220, paddingTop: 24, paddingBottom: 100 }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 20 }}>
-          {/* Field Summary Card (sticky on desktop) */}
-          <div className="card" style={{ padding: 24 }}>
+          {/* Field Summary Card */}
+          <div className="auth-dynamo-glass match-dynamo-card" style={{ padding: 24, borderRadius: 24 }}>
             <h1 style={{ fontSize: 20, fontWeight: 800, color: "#111827", marginBottom: 8 }}>{field.name}</h1>
             <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#9ca3af", fontSize: 13, marginBottom: 20 }}>
               <MapPin size={14} style={{ color: "#2E7D32" }} />
@@ -154,7 +210,7 @@ const BookingPage = () => {
           </div>
 
           {/* Date Selection */}
-          <div className="card" style={{ padding: 24 }}>
+          <div className="auth-dynamo-glass match-dynamo-card" style={{ padding: 24, borderRadius: 24 }}>
             <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
               <Calendar size={18} style={{ color: "#2E7D32" }} /> Tarih Seçin
             </h2>
@@ -175,7 +231,7 @@ const BookingPage = () => {
           </div>
 
           {/* Time Slot Grid */}
-          <div className="card" style={{ padding: 24 }}>
+          <div className="auth-dynamo-glass match-dynamo-card" style={{ padding: 24, borderRadius: 24 }}>
             <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
               <Clock size={18} style={{ color: "#2E7D32" }} /> Saat Seçin
             </h2>
@@ -185,7 +241,7 @@ const BookingPage = () => {
                 const isSelected = selectedSlot === slot;
                 return (
                   <button key={slot} disabled={isOccupied} onClick={() => setSelectedSlot(slot)}
-                    style={{ padding: "12px 8px", borderRadius: 10, border: `2px solid ${isSelected ? "#2E7D32" : isOccupied ? "#e5e7eb" : "#e5e7eb"}`, cursor: isOccupied ? "not-allowed" : "pointer", background: isSelected ? "#2E7D32" : isOccupied ? "#f5f5f5" : "white", color: isSelected ? "white" : isOccupied ? "#d1d5db" : "#374151", fontWeight: 700, fontSize: 13, textDecoration: isOccupied ? "line-through" : "none", transition: "all 0.15s" }}>
+                    style={{ padding: "12px 8px", borderRadius: 12, border: `2px solid ${isSelected ? "#2E7D32" : isOccupied ? "rgba(0,0,0,0.05)" : "transparent"}`, cursor: isOccupied ? "not-allowed" : "pointer", background: isSelected ? "#2E7D32" : isOccupied ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.7)", color: isSelected ? "white" : isOccupied ? "#9ca3af" : "#374151", fontWeight: 700, fontSize: 13, textDecoration: isOccupied ? "line-through" : "none", transition: "all 0.15s", boxShadow: isSelected ? "0 4px 12px rgba(46,125,50,0.2)" : "0 2px 8px rgba(0,0,0,0.02)" }}>
                     {slot}
                   </button>
                 );

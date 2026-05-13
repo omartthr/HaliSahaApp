@@ -259,6 +259,21 @@ service cloud.firestore {
                             && (resource.data.reviewerId == request.auth.uid || isSuperAdmin());
     }
 
+    // ---------- playerRatings/{ratingId} ----------
+    // Oyuncuların birbirlerini değerlendirdiği puanlar.
+    match /playerRatings/{ratingId} {
+      allow read: if isSignedIn();
+      
+      allow create: if isSignedIn()
+                    && request.resource.data.raterId == request.auth.uid
+                    && request.resource.data.rating is number
+                    && request.resource.data.rating >= 1
+                    && request.resource.data.rating <= 5;
+
+      allow update, delete: if isSignedIn()
+                            && (resource.data.raterId == request.auth.uid || isSuperAdmin());
+    }
+
     // ---------- match_posts/{postId} ----------
     // Oyuncuların açtığı maç ilanları. Listeleme herkese açık (signed-in).
     match /match_posts/{postId} {

@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navbar from "@/frontend/components/common/Navbar";
 import Link from "next/link";
 import { Search, MapPin, Calendar, Users, ArrowRight, Star, Shield, Clock, ChevronRight, User } from "lucide-react";
 import MapSection from "@/frontend/components/map/MapSection";
 import Aurora from "@/frontend/components/ui/Aurora/Aurora";
 import { useAuth } from "@/frontend/context/AuthContext";
+import { getFieldsRealtime, FieldRecord } from "@/backend/services/fieldService";
+import { useScrollReveal } from "@/frontend/hooks/useScrollReveal";
 
 const featuredFields = [
   { id: "1", name: "Kadıköy Merkez Halı Saha", address: "Zühtüpaşa, Kadıköy / İstanbul", rating: 4.8, reviews: 124, features: ["🚿", "🅿️", "🍔", "💡"], color: "from-emerald-700 to-teal-600" },
@@ -38,12 +40,21 @@ const nearbyFields = [
 export default function Home() {
   const [fieldSearch, setFieldSearch] = useState("");
   const { user } = useAuth();
+  const [realFields, setRealFields] = useState<FieldRecord[]>([]);
+  useScrollReveal();
 
-  const filteredFields = nearbyFields.filter((field) => {
+  useEffect(() => {
+    const unsub = getFieldsRealtime((fields) => {
+      setRealFields(fields);
+    });
+    return () => unsub();
+  }, []);
+
+  const filteredFields = realFields.filter((field) => {
     const normalizedQuery = fieldSearch.trim().toLocaleLowerCase("tr-TR");
     if (!normalizedQuery) return true;
 
-    return [field.name, field.district, field.address]
+    return [field.name, field.address]
       .join(" ")
       .toLocaleLowerCase("tr-TR")
       .includes(normalizedQuery);
@@ -131,20 +142,20 @@ export default function Home() {
       <section className="home-quick-actions" style={{
         display: "flex", justifyContent: "center", gap: "1.5rem",
         padding: "0 5%",
-        marginTop: -30, // Kartları Hero içine hafifçe itiyor
+        marginTop: -30,
         position: "relative", zIndex: 10,
         flexWrap: "wrap",
       }}>
-        {quickActions.map((qa) => {
+        {quickActions.map((qa, idx) => {
           const bgColors: Record<string, string> = {
-            "#2E7D32": "#e8f5e9", // icon-green
-            "#1565C0": "#e3f2fd", // icon-blue
-            "#E65100": "#fff3e0", // icon-orange
-            "#6A1B9A": "#f3e5f5"  // icon-purple
+            "#2E7D32": "#e8f5e9",
+            "#1565C0": "#e3f2fd",
+            "#E65100": "#fff3e0",
+            "#6A1B9A": "#f3e5f5"
           };
-
+          const delayClass = `reveal-delay-${idx + 1}` as string;
           return (
-            <Link key={qa.title} href={qa.href} className="interactive-glass-card">
+            <Link key={qa.title} href={qa.href} className={`interactive-glass-card reveal ${delayClass}`}>
               <div className="card-icon-box" style={{
                 width: 54, height: 54, borderRadius: "50%",
                 display: "flex", alignItems: "center", justifyContent: "center",
@@ -161,7 +172,7 @@ export default function Home() {
       </section>
 
       {/* Map + Location Cards */}
-      <section className="relative z-10 home-map-section" style={{ padding: "2rem 5% 3rem 5%" }}>
+      <section className="relative z-10 home-map-section reveal" style={{ padding: "2rem 5% 3rem 5%" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
           <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "#111827", display: "flex", alignItems: "center", gap: 8 }}>
             <MapPin size={22} style={{ color: "#2E7D32" }} /> Yakındaki Sahalar
@@ -199,16 +210,19 @@ export default function Home() {
                   Aramana uygun saha bulunamadi.
                 </div>
               ) : filteredFields.map((saha, i) => (
-                <a
-                  key={i}
-                  href="#"
-                  className="location-card">
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#2E7D32", letterSpacing: "0.08em", textTransform: "uppercase" }}>{saha.district}</span>
-                  <span style={{ fontSize: "1.05rem", fontWeight: 700, color: "#111827" }}>{saha.name}</span>
-                  <span style={{ fontSize: "0.85rem", color: "#6b7280", display: "flex", alignItems: "center", gap: 4 }}>
-                    <MapPin size={12} /> {saha.address}
+                <Link
+                  key={saha.id || i}
+                  href={`/fields/${saha.id}`}
+                  className={`location-card reveal reveal-delay-${Math.min(i + 1, 6)}`}
+                  style={{ textDecoration: "none" }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#2E7D32", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                    {typeof saha.address === 'string' ? saha.address.split(',')[0] : "İlçe"}
                   </span>
-                </a>
+                  <span style={{ fontSize: "1.05rem", fontWeight: 700, color: "#111827" }}>{saha.name as string}</span>
+                  <span style={{ fontSize: "0.85rem", color: "#6b7280", display: "flex", alignItems: "center", gap: 4 }}>
+                    <MapPin size={12} /> {saha.address as string}
+                  </span>
+                </Link>
               ))}
             </div>
           </div>
@@ -228,9 +242,16 @@ export default function Home() {
             </Link>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {featuredFields.slice(0, 2).map((field) => (
+            {[...realFields]
+              .sort((a, b) => ((b.averageRating as number) || 0) - ((a.averageRating as number) || 0))
+              .slice(0, 2)
+              .map((field, fi) => {
+              const rating = (field.averageRating as number) || 0;
+              const reviews = (field.totalReviews as number) || 0;
+              const name = (field.name as string) || "İsimsiz Saha";
+              return (
               <div key={field.id}
-                className="match-glass-card"
+                className={`match-glass-card reveal reveal-delay-${fi + 1}`}
                 style={{
                   background: "rgba(255, 255, 255, 0.88)",
                   borderRadius: "24px",
@@ -245,34 +266,34 @@ export default function Home() {
                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#E8F5E9", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "#2E7D32", fontSize: 16 }}>
-                      {field.name[0]}
+                      {name[0]}
                     </div>
                     <div>
                       <p style={{ fontWeight: 600, fontSize: 13, color: "#374151" }}>Önerilen Saha</p>
-                      <p style={{ fontSize: 12, color: "#9ca3af" }}>{field.reviews} değerlendirme</p>
+                      <p style={{ fontSize: 12, color: "#9ca3af" }}>{reviews} değerlendirme</p>
                     </div>
                   </div>
                   <span style={{ background: "#2E7D32", color: "white", borderRadius: 20, padding: "4px 12px", fontSize: 12, fontWeight: 700 }}>
-                    ⭐ {field.rating}
+                    ⭐ {rating.toFixed(1)}
                   </span>
                 </div>
-                <p style={{ fontWeight: 700, fontSize: 15, color: "#111827", marginBottom: 8 }}>{field.name}</p>
+                <p style={{ fontWeight: 700, fontSize: 15, color: "#111827", marginBottom: 8 }}>{name}</p>
                 <div style={{ display: "flex", gap: 16, color: "#9ca3af", fontSize: 12, marginBottom: 12 }}>
-                  <span>📍 {field.address}</span>
-                  <span>📝 {field.reviews} yorum</span>
+                  <span>📍 {field.address as string}</span>
+                  <span>📝 {reviews} yorum</span>
                 </div>
                 {/* Progress bar */}
                 <div style={{ marginBottom: 6 }}>
                   <div style={{ background: "#f0f0f0", borderRadius: 4, height: 6 }}>
-                    <div style={{ background: "#2E7D32", height: 6, borderRadius: 4, width: `${(field.rating / 5) * 100}%` }} />
+                    <div style={{ background: "#2E7D32", height: 6, borderRadius: 4, width: `${(rating / 5) * 100}%` }} />
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: 12 }}>
-                    <span style={{ color: "#9ca3af" }}>Puan: {field.rating}/5</span>
-                    <span style={{ color: "#2E7D32", fontWeight: 700 }}>{field.reviews} yorum</span>
+                    <span style={{ color: "#9ca3af" }}>Puan: {rating.toFixed(1)}/5</span>
+                    <span style={{ color: "#2E7D32", fontWeight: 700 }}>{reviews} yorum</span>
                   </div>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
-                  <span style={{ fontSize: 12, color: "#9ca3af" }}>{field.features.join(" ")}</span>
+                  <span style={{ fontSize: 12, color: "#9ca3af" }}></span>
                   <Link href={`/fields/${field.id}`}
                     className="katil-btn"
                     style={{ background: "#E8F5E9", color: "#2E7D32", borderRadius: 8, padding: "6px 16px", fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
@@ -280,7 +301,7 @@ export default function Home() {
                   </Link>
                 </div>
               </div>
-            ))}
+            )})}
           </div>
         </div>
       </div>
@@ -304,7 +325,7 @@ export default function Home() {
                 { icon: Shield, color: "#2E7D32", bg: "#e8f5e9", title: "Güvenli Ödeme", desc: "256-bit SSL şifreli, güvenli altyapı." },
                 { icon: Clock, color: "#1565C0", bg: "#e3f2fd", title: "7/24 Destek", desc: "Her zaman yanınızdayız, anında çözüm." },
                 { icon: Star, color: "#E65100", bg: "#fff3e0", title: "Doğrulanmış Sahalar", desc: "Tüm sahalar yerinde ziyaret edilerek onaylandı." },
-              ].map(item => {
+              ].map((item, ti) => {
                 const Icon = item.icon;
                 return (
                   <div key={item.title} style={{
@@ -319,7 +340,7 @@ export default function Home() {
                     transition: "all 0.5s cubic-bezier(0.16,1,0.3,1)",
                     cursor: "default",
                   }}
-                    className="hover:-translate-y-1 hover:shadow-xl transition-all duration-300"
+                    className={`hover:-translate-y-1 hover:shadow-xl transition-all duration-300 reveal reveal-delay-${ti + 1}`}
                   >
                     <div style={{
                       width: 54, height: 54, borderRadius: "50%",
@@ -342,7 +363,7 @@ export default function Home() {
         {!user && (
           <div className="relative py-16 px-4" style={{ zIndex: 1 }}>
             <div className="content-container text-center relative" style={{ display: "flex", justifyContent: "center" }}>
-              <div className="home-cta-card" style={{
+              <div className="home-cta-card reveal" style={{
                 background: "rgba(255, 255, 255, 0.8)",
                 marginBottom: "48px",
                 backdropFilter: "blur(20px)",
@@ -386,7 +407,7 @@ export default function Home() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-10">
               <div>
                 <p className="text-2xl font-black tracking-tight" style={{ color: "#ffffff" }}>
-                  Halı<span style={{ color: "#2E7D32" }}>SahaApp</span>
+                  ALO <span style={{ color: "#2E7D32" }}>Halısaha</span>
                 </p>
                 <p style={{ fontSize: 13, color: "rgba(255,255,255,0.78)", marginTop: 4 }}>Türkiye&apos;nin halı saha rezervasyon platformu.</p>
               </div>
@@ -400,7 +421,7 @@ export default function Home() {
               </div>
             </div>
             <div style={{ borderTop: "1px solid rgba(255,255,255,0.12)", paddingTop: "24px", textAlign: "center", color: "rgba(255,255,255,0.68)", fontSize: 13 }}>
-              © 2026 HalıSahaApp. Tüm hakları saklıdır.
+              © 2026 ALO Halısaha. Tüm hakları saklıdır.
             </div>
           </div>
         </footer>

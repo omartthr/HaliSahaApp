@@ -37,7 +37,7 @@ const SeedPage = () => {
 
     try {
       for (const field of fields) {
-        await addDoc(collection(db, "football_fields"), field);
+        await addDoc(collection(db, "facilities"), field);
       }
       toast.success("Veriler başarıyla eklendi!");
     } catch (error) {

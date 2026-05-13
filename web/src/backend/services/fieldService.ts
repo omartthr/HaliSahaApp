@@ -1,4 +1,4 @@
-// Backend Service: Saha (Field) işlemleri — Firestore koleksiyonu: football_fields
+// Backend Service: Saha (Field) işlemleri — Firestore koleksiyonu: facilities
 
 import {
   collection,
@@ -20,7 +20,7 @@ export type FieldRecord = {
   [key: string]: unknown;
 };
 
-const COLLECTION = "football_fields";
+const COLLECTION = "facilities";
 
 /** Tüm sahaları çek */
 export function getFieldsRealtime(callback: (fields: FieldRecord[]) => void) {
@@ -65,7 +65,7 @@ export async function deleteField(fieldId: string) {
 
 /** Saha için ortalama puanı hesapla */
 export async function getFieldAverageRating(fieldId: string): Promise<number> {
-  const q = query(collection(db, "fieldReviews"), where("fieldId", "==", fieldId));
+  const q = query(collection(db, "reviews"), where("fieldId", "==", fieldId));
   const snap = await getDocs(q);
 
   if (snap.empty) return 0;

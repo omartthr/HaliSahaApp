@@ -1,4 +1,4 @@
-// Backend Service: Rezervasyon işlemleri — Firestore koleksiyonu: reservations
+// Backend Service: Rezervasyon işlemleri — Firestore koleksiyonu: bookings
 
 import {
   collection,
@@ -18,7 +18,7 @@ export type BookingRecord = {
   [key: string]: unknown;
 };
 
-const COLLECTION = "reservations";
+const COLLECTION = "bookings";
 
 /** Yeni rezervasyon oluştur */
 export async function createBooking(data: {
@@ -37,12 +37,14 @@ export async function createBooking(data: {
   });
 }
 
-/** Kullanıcının rezervasyonlarını realtime dinle */
 export function getUserBookingsRealtime(userId: string, callback: (bookings: BookingRecord[]) => void) {
   const q = query(collection(db, COLLECTION), where("userId", "==", userId));
   return onSnapshot(q, (snap) => {
     const bookings = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     callback(bookings);
+  }, (error) => {
+    console.warn("Error fetching user bookings (permission ignored for now):", error);
+    callback([]);
   });
 }
 
@@ -62,6 +64,10 @@ export function getFieldBookedSlotsRealtime(
       .map((d) => (d.data() as { timeSlot?: string }).timeSlot)
       .filter((slot): slot is string => Boolean(slot));
     callback(slots);
+  }, (error) => {
+    console.error("Error fetching booked slots:", error);
+    // Return empty array on error (e.g. permission denied)
+    callback([]);
   });
 }
 

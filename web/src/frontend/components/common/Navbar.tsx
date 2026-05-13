@@ -28,7 +28,7 @@ const Navbar = () => {
       setIsDemo(false);
       return;
     }
-    const q = query(collection(db, "football_fields"), where("ownerId", "==", user.uid));
+    const q = query(collection(db, "facilities"), where("ownerId", "==", user.uid));
     const unsub = onSnapshot(q, (snap) => {
       setIsDemo(snap.empty);
     });
@@ -79,7 +79,7 @@ const Navbar = () => {
             color: scrolled ? "#111827" : "white",
             transition: "color 0.4s",
           }}>
-            <span></span> HalıSahaApp
+            <span></span> ALO Halısaha
           </Link>
 
           {/* Desktop Nav Links */}

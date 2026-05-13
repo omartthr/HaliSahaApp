@@ -46,7 +46,12 @@ const ProfilePage = () => {
 
   useEffect(() => {
     if (!user) return;
-    getUserAverageRating(user.uid).then(setUserRating);
+    getUserAverageRating(user.uid)
+      .then(setUserRating)
+      .catch((err) => {
+        console.warn("Failed to fetch rating (permission ignored for now):", err);
+        setUserRating(0);
+      });
   }, [user]);
 
 

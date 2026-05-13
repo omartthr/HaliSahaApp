@@ -114,7 +114,7 @@ export async function rateField(
 
   const docId = `${reservationId}_${userId}`;
   await setDoc(
-    doc(collection(db, "fieldReviews"), docId),
+    doc(collection(db, "reviews"), docId),
     {
       fieldId,
       userId,
@@ -132,13 +132,13 @@ export async function hasRatedField(
   userId: string
 ): Promise<boolean> {
   const docId = `${reservationId}_${userId}`;
-  const snap = await getDoc(doc(collection(db, "fieldReviews"), docId));
+  const snap = await getDoc(doc(collection(db, "reviews"), docId));
   return snap.exists();
 }
 
 export async function getFieldReviews(fieldId: string): Promise<any[]> {
   const q = query(
-    collection(db, "fieldReviews"),
+    collection(db, "reviews"),
     where("fieldId", "==", fieldId)
   );
   const snap = await getDocs(q);
@@ -150,7 +150,7 @@ export async function getFieldReviews(fieldId: string): Promise<any[]> {
 
 export async function getFieldAverageRating(fieldId: string): Promise<number> {
   const q = query(
-    collection(db, "fieldReviews"),
+    collection(db, "reviews"),
     where("fieldId", "==", fieldId)
   );
   const snap = await getDocs(q);
@@ -165,7 +165,7 @@ export async function getFieldAverageRating(fieldId: string): Promise<number> {
 
 export async function getUserFieldReviews(userId: string): Promise<any[]> {
   const q = query(
-    collection(db, "fieldReviews"),
+    collection(db, "reviews"),
     where("userId", "==", userId)
   );
   const snap = await getDocs(q);

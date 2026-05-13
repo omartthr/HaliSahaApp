@@ -5,7 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ============================================
-   HaliSahaApp - Global Design System
+   ALO Halısaha - Global Design System
    Primary: #2E7D32 (iOS app rengi)
    ============================================ */
 
@@ -1149,5 +1149,102 @@ body {
   .groups-main-content,
   .match-main-content {
     margin-top: -150px !important;
+  }
+}
+
+/* ============================================
+   SCROLL REVEAL ANIMATION SYSTEM
+   .reveal → başlangıç durumu (gizli)
+   .reveal.visible → animasyon tetiklenir
+   ============================================ */
+
+@keyframes revealFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(36px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes revealFadeLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-32px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes revealFadeRight {
+  from {
+    opacity: 0;
+    transform: translateX(32px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes revealFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Başlangıç: her .reveal elementi görünmez */
+.reveal {
+  opacity: 0;
+  transform: translateY(36px);
+  transition: none;
+}
+
+/* IntersectionObserver .visible ekler → animasyon çalışır */
+.reveal.visible {
+  animation: revealFadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.reveal.visible.reveal-left {
+  animation: revealFadeLeft 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.reveal.reveal-left {
+  transform: translateX(-32px);
+}
+
+.reveal.visible.reveal-right {
+  animation: revealFadeRight 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.reveal.reveal-right {
+  transform: translateX(32px);
+}
+
+.reveal.visible.reveal-fade {
+  animation: revealFadeIn 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.reveal.reveal-fade {
+  transform: none;
+}
+
+/* Stagger gecikmeleri (sıralı kartlar için) */
+.reveal-delay-1 { animation-delay: 0.05s !important; }
+.reveal-delay-2 { animation-delay: 0.12s !important; }
+.reveal-delay-3 { animation-delay: 0.19s !important; }
+.reveal-delay-4 { animation-delay: 0.26s !important; }
+.reveal-delay-5 { animation-delay: 0.33s !important; }
+.reveal-delay-6 { animation-delay: 0.40s !important; }
+
+/* Reduced motion: animasyonu kapat */
+@media (prefers-reduced-motion: reduce) {
+  .reveal, .reveal.visible {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
   }
 }

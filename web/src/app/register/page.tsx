@@ -33,7 +33,7 @@ const RegisterPage = () => {
         username: userForm.username,
         email: userForm.email,
         position: userForm.position,
-        role: "user",
+        userType: "player",
         createdAt: new Date().toISOString(),
       });
       toast.success("Hesap başarıyla oluşturuldu!");
@@ -53,13 +53,20 @@ const RegisterPage = () => {
     setLoading(true);
     try {
       const user = await registerAuthUser(adminForm.email, adminForm.password);
+      await createUserProfile(user.uid, {
+        firstName: adminForm.businessName,
+        lastName: "Admin",
+        email: adminForm.email,
+        userType: "admin",
+        createdAt: new Date().toISOString(),
+      });
+      
       await createAdminProfile(user.uid, {
         businessName: adminForm.businessName,
         taxNumber: adminForm.taxNumber,
         phone: adminForm.phone,
         email: adminForm.email,
-        role: "admin",
-        status: "pending",
+        approvalStatus: "pending",
         createdAt: new Date().toISOString(),
       });
       toast.success("Kayıt talebiniz alındı! Yönetici onayı bekleniyor.");
@@ -87,7 +94,7 @@ const RegisterPage = () => {
 
   return (
     <div className="home-aurora-section" style={{ height: "100vh", background: "#f5f5f7", display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
-      <div className="aurora-bg-layer" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", zIndex: 0, opacity: 1, transform: "scaleY(-1)", pointerEvents: "none" }}>
+      <div className="aurora-bg-layer" style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", zIndex: 0, opacity: 1, transform: "scaleY(-1)", pointerEvents: "none" }}>
         <Aurora
           colorStops={["#114B32", "#2E7D32", "#4CAF50"]}
           amplitude={2.2}
@@ -118,7 +125,7 @@ const RegisterPage = () => {
       >
         <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
           <span style={{ fontSize: 18, fontWeight: 900, color: "#111827" }}>
-            Halı<span style={{ color: "#2E7D32" }}>SahaApp</span>
+            ALO <span style={{ color: "#2E7D32" }}>Halısaha</span>
           </span>
         </Link>
 
@@ -132,21 +139,21 @@ const RegisterPage = () => {
         </div>
       </div>
 
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "6px 16px 10px", position: "relative", zIndex: 10 }}>
-        <div className="auth-card auth-dynamo-glass auth-register-wide">
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px", position: "relative", zIndex: 10 }}>
+        <div className="auth-card auth-dynamo-glass auth-register-wide" style={{ margin: "auto", maxWidth: 800, width: "100%", padding: "24px 32px" }}>
           {/* Header */}
-          <div style={{ textAlign: "center", marginBottom: tab === "admin" ? 10 : 16 }}>
-            <div style={{ width: tab === "admin" ? 56 : 64, height: tab === "admin" ? 56 : 64, background: "#E8F5E9", borderRadius: 20, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px", fontSize: tab === "admin" ? 24 : 28 }}>
+          <div style={{ textAlign: "center", marginBottom: 12 }}>
+            <div style={{ width: tab === "admin" ? 48 : 52, height: tab === "admin" ? 48 : 52, background: "#E8F5E9", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 8px", fontSize: tab === "admin" ? 22 : 26 }}>
               {tab === "user" ? "🏆" : "🏟️"}
             </div>
-            <h1 style={{ fontSize: 26, fontWeight: 900, color: "#111827", marginBottom: 6 }}>Hesap Oluştur</h1>
-            <p style={{ color: "#9ca3af", fontSize: 15, lineHeight: 1.25 }}>
+            <h1 style={{ fontSize: 24, fontWeight: 900, color: "#111827", marginBottom: 4 }}>Hesap Oluştur</h1>
+            <p style={{ color: "#9ca3af", fontSize: 14, lineHeight: 1.25 }}>
               {tab === "user" ? "Ücretsiz üye ol, hemen randevu al!" : "İşletmenizi kaydedin, sahanızı yönetin."}
             </p>
           </div>
 
           {/* Tab Switcher */}
-          <div style={{ display: "flex", background: "#f0f4f8", borderRadius: 14, padding: 4, marginBottom: 16, gap: 4 }}>
+          <div style={{ display: "flex", background: "#f0f4f8", borderRadius: 14, padding: 4, marginBottom: 12, gap: 4 }}>
             <button
               type="button"
               onClick={() => setTab("user")}
@@ -176,7 +183,7 @@ const RegisterPage = () => {
           </div>
 
           {/* Perks */}
-          <div style={{ display: "flex", gap: 10, marginBottom: tab === "admin" ? 10 : 16, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 10, marginBottom: 12, flexWrap: "wrap", justifyContent: "center" }}>
             {perks.map(p => (
               <div key={p} style={{ display: "flex", alignItems: "center", gap: 6, background: "#E8F5E9", borderRadius: 20, padding: "5px 12px" }}>
                 <Check size={13} style={{ color: "#2E7D32" }} />
@@ -187,40 +194,48 @@ const RegisterPage = () => {
 
           {/* ───── NORMAL KULLANICI FORMU ───── */}
           {tab === "user" && (
-            <form onSubmit={handleUserRegister} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <div className="auth-register-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <form onSubmit={handleUserRegister} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
                 <div>
-                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 5 }}>İsim</label>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 4 }}>İsim</label>
                   <div style={{ position: "relative" }}>
                     <User size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
                     <input name="firstName" required value={userForm.firstName} onChange={handleUserChange}
-                      className="input-field" style={{ paddingLeft: 36, fontSize: 14 }} placeholder="Ahmet" />
+                      className="input-field" style={{ paddingLeft: 36, fontSize: 14, height: 42 }} placeholder="Ahmet" />
                   </div>
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 5 }}>Soyisim</label>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Soyisim</label>
                   <div style={{ position: "relative" }}>
                     <User size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
                     <input name="lastName" required value={userForm.lastName} onChange={handleUserChange}
-                      className="input-field" style={{ paddingLeft: 36, fontSize: 14 }} placeholder="Yılmaz" />
+                      className="input-field" style={{ paddingLeft: 36, fontSize: 14, height: 42 }} placeholder="Yılmaz" />
+                  </div>
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Kullanıcı Adı</label>
+                  <div style={{ position: "relative" }}>
+                    <AtSign size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
+                    <input name="username" required value={userForm.username} onChange={handleUserChange}
+                      className="input-field" style={{ paddingLeft: 36, height: 42 }} placeholder="ahmet_123" />
                   </div>
                 </div>
               </div>
 
-              <div className="auth-register-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 12 }}>
                 <div>
-                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 5 }}>Kullanıcı Adı</label>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 4 }}>E-posta</label>
                   <div style={{ position: "relative" }}>
-                    <AtSign size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
-                    <input name="username" required value={userForm.username} onChange={handleUserChange}
-                      className="input-field" style={{ paddingLeft: 36 }} placeholder="ahmet_123" />
+                    <Mail size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
+                    <input name="email" type="email" required value={userForm.email} onChange={handleUserChange}
+                      className="input-field" style={{ paddingLeft: 36, height: 42 }} placeholder="ahmet@example.com" />
                   </div>
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 5 }}>Mevki</label>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Mevki</label>
                   <select name="position" required value={userForm.position} onChange={handleUserChange}
-                    className="input-field" style={{ paddingLeft: 12, fontSize: 14 }}>
-                    <option value="">Mevki seçin...</option>
+                    className="input-field" style={{ paddingLeft: 12, fontSize: 14, height: 42 }}>
+                    <option value="">Seçiniz...</option>
                     <option value="Kaleci">🧤 Kaleci</option>
                     <option value="Defans">🛡️ Defans</option>
                     <option value="Orta Saha">⚽ Orta Saha</option>
@@ -229,36 +244,27 @@ const RegisterPage = () => {
                 </div>
               </div>
 
-              <div>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 5 }}>E-posta</label>
-                <div style={{ position: "relative" }}>
-                  <Mail size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
-                  <input name="email" type="email" required value={userForm.email} onChange={handleUserChange}
-                    className="input-field" style={{ paddingLeft: 36 }} placeholder="ahmet@example.com" />
-                </div>
-              </div>
-
-              <div className="auth-register-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
-                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 5 }}>Şifre</label>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Şifre</label>
                   <div style={{ position: "relative" }}>
                     <Lock size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
                     <input name="password" type="password" required value={userForm.password} onChange={handleUserChange}
-                      className="input-field" style={{ paddingLeft: 36, fontSize: 14 }} placeholder="••••••" />
+                      className="input-field" style={{ paddingLeft: 36, fontSize: 14, height: 42 }} placeholder="••••••" />
                   </div>
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 5 }}>Tekrar</label>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Tekrar</label>
                   <div style={{ position: "relative" }}>
                     <Lock size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
                     <input name="confirmPassword" type="password" required value={userForm.confirmPassword} onChange={handleUserChange}
-                      className="input-field" style={{ paddingLeft: 36, fontSize: 14 }} placeholder="••••••" />
+                      className="input-field" style={{ paddingLeft: 36, fontSize: 14, height: 42 }} placeholder="••••••" />
                   </div>
                 </div>
               </div>
 
               <button type="submit" disabled={loading} className="btn-primary"
-                style={{ marginTop: 8, padding: "14px", fontSize: 16, borderRadius: 14, opacity: loading ? 0.7 : 1, width: "100%" }}>
+                style={{ marginTop: 4, padding: "12px", fontSize: 16, borderRadius: 14, opacity: loading ? 0.7 : 1, width: "100%" }}>
                 {loading ? "Kayıt Yapılıyor..." : (<>Üye Ol <ArrowRight size={18} /></>)}
               </button>
             </form>
@@ -266,58 +272,57 @@ const RegisterPage = () => {
 
           {/* ───── ADMİN / İŞLETME FORMU ───── */}
           {tab === "admin" && (
-            <form onSubmit={handleAdminRegister} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <div>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 5 }}>İşletme Adı</label>
-                <div style={{ position: "relative" }}>
-                  <Building2 size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
-                  <input name="businessName" required value={adminForm.businessName} onChange={handleAdminChange}
-                    className="input-field" style={{ paddingLeft: 36, fontSize: 14 }} placeholder="Örnek Halı Saha" />
-                </div>
-              </div>
-
-              <div className="auth-register-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <form onSubmit={handleAdminRegister} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr", gap: 12 }}>
                 <div>
-                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 5 }}>Vergi No / Belge</label>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 4 }}>İşletme Adı</label>
+                  <div style={{ position: "relative" }}>
+                    <Building2 size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
+                    <input name="businessName" required value={adminForm.businessName} onChange={handleAdminChange}
+                      className="input-field" style={{ paddingLeft: 36, fontSize: 14, height: 42 }} placeholder="Örnek Halı Saha" />
+                  </div>
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Vergi No / Belge</label>
                   <div style={{ position: "relative" }}>
                     <FileText size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
                     <input name="taxNumber" required value={adminForm.taxNumber} onChange={handleAdminChange}
-                      className="input-field" style={{ paddingLeft: 36, fontSize: 14 }} placeholder="1234567890" />
+                      className="input-field" style={{ paddingLeft: 36, fontSize: 14, height: 42 }} placeholder="1234567890" />
                   </div>
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 5 }}>Telefon</label>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Telefon</label>
                   <div style={{ position: "relative" }}>
                     <Phone size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
                     <input name="phone" required value={adminForm.phone} onChange={handleAdminChange}
-                      className="input-field" style={{ paddingLeft: 36, fontSize: 14 }} placeholder="05xx ..." />
+                      className="input-field" style={{ paddingLeft: 36, fontSize: 14, height: 42 }} placeholder="05xx ..." />
                   </div>
                 </div>
               </div>
 
-              <div className="auth-register-grid-3" style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr", gap: 10 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr", gap: 12 }}>
                 <div>
-                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 5 }}>İşletme E-posta</label>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 4 }}>İşletme E-posta</label>
                   <div style={{ position: "relative" }}>
                     <Mail size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
                     <input name="email" type="email" required value={adminForm.email} onChange={handleAdminChange}
-                      className="input-field" style={{ paddingLeft: 36 }} placeholder="isletme@example.com" />
+                      className="input-field" style={{ paddingLeft: 36, height: 42 }} placeholder="isletme@example.com" />
                   </div>
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 5 }}>Şifre</label>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Şifre</label>
                   <div style={{ position: "relative" }}>
                     <Lock size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
                     <input name="password" type="password" required value={adminForm.password} onChange={handleAdminChange}
-                      className="input-field" style={{ paddingLeft: 36, fontSize: 14 }} placeholder="••••••" />
+                      className="input-field" style={{ paddingLeft: 36, fontSize: 14, height: 42 }} placeholder="••••••" />
                   </div>
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 5 }}>Tekrar</label>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Tekrar</label>
                   <div style={{ position: "relative" }}>
                     <Lock size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
                     <input name="confirmPassword" type="password" required value={adminForm.confirmPassword} onChange={handleAdminChange}
-                      className="input-field" style={{ paddingLeft: 36, fontSize: 14 }} placeholder="••••••" />
+                      className="input-field" style={{ paddingLeft: 36, fontSize: 14, height: 42 }} placeholder="••••••" />
                   </div>
                 </div>
               </div>
@@ -327,13 +332,13 @@ const RegisterPage = () => {
               </div>
 
               <button type="submit" disabled={loading} className="btn-primary"
-                style={{ marginTop: 2, padding: "12px", fontSize: 16, borderRadius: 14, opacity: loading ? 0.7 : 1, width: "100%" }}>
+                style={{ marginTop: 4, padding: "12px", fontSize: 16, borderRadius: 14, opacity: loading ? 0.7 : 1, width: "100%" }}>
                 {loading ? "Kayıt Yapılıyor..." : (<>Başvuru Gönder <ArrowRight size={18} /></>)}
               </button>
             </form>
           )}
 
-          <div style={{ marginTop: tab === "admin" ? 10 : 20, textAlign: "center" }}>
+          <div style={{ marginTop: tab === "admin" ? 10 : 16, textAlign: "center" }}>
             <p style={{ fontSize: 14, color: "#6b7280" }}>
               Zaten hesabınız var mı?{" "}
               <Link href="/login" style={{ color: "#2E7D32", fontWeight: 700, textDecoration: "none" }}>Giriş Yap</Link>
