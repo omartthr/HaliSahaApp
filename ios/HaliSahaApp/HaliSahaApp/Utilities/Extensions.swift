@@ -10,6 +10,7 @@
 
 import Foundation
 import SwiftUI
+import UIKit
 
 // MARK: - Date Extensions
 extension Date {
@@ -212,6 +213,22 @@ extension Int {
     }
 }
 
+// MARK: - Color Extensions
+extension Color {
+
+    /// Main grouped screen background.
+    static let appBackground = Color(.systemGroupedBackground)
+
+    /// Primary card/list surface. In dark mode this stays visibly above appBackground.
+    static let appCardBackground = Color(.secondarySystemGroupedBackground)
+
+    /// Nested controls, chips, and input fields placed inside cards.
+    static let appElevatedBackground = Color(.tertiarySystemGroupedBackground)
+
+    /// Subtle borders/dividers that remain visible in both appearances.
+    static let appSeparator = Color(.separator)
+}
+
 // MARK: - View Extensions
 extension View {
     
@@ -254,7 +271,16 @@ extension View {
     
     /// Klavyeyi gizle
     func hideKeyboard() {
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        UIApplication.dismissKeyboard()
+    }
+}
+
+// MARK: - UIApplication Extensions
+extension UIApplication {
+    
+    /// Aktif input alanından odağı alıp klavyeyi kapatır.
+    static func dismissKeyboard() {
+        shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
 

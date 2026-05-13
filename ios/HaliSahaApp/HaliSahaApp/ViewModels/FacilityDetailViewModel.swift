@@ -33,6 +33,7 @@ final class FacilityDetailViewModel: ObservableObject {
     // MARK: - Private Properties
     private let facilityService = FacilityService.shared
     private let bookingService = BookingService.shared
+    private let reviewService = ReviewService.shared
     private let authService = AuthService.shared
 
     // MARK: - Computed Properties
@@ -82,9 +83,35 @@ final class FacilityDetailViewModel: ObservableObject {
 
         await loadPitches()
         await loadTimeSlots()
+        await loadReviews()
         checkFavoriteStatus()
 
         isLoading = false
+    }
+
+    // MARK: - Load Reviews
+    func loadReviews() async {
+        guard let facilityId = facility.id else {
+            reviews = []
+            return
+        }
+        do {
+            reviews = try await reviewService.fetchReviews(forFacility: facilityId)
+        } catch {
+            // Sessiz hata — boş liste kalır
+            reviews = []
+        }
+    }
+
+    /// Gerçek yorumlardan hesaplanmış 1-5 yıldız dağılımı.
+    /// Hiç yorum yoksa boş döner; çağıran taraf fallback gösterir.
+    var ratingDistribution: ReviewDistribution {
+        ReviewDistribution(reviews: reviews)
+    }
+
+    /// Detay sayfasında özet altında gösterilen son 2 yorum.
+    var latestReviews: [Review] {
+        Array(reviews.prefix(2))
     }
 
     // MARK: - Load Pitches

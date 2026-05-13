@@ -58,24 +58,17 @@ actor ImageCacheService {
     }
     
     // MARK: - Cache Key (DÜZELTİLDİ - SHA256 hash kullanıyor)
-    private func cacheKey(for url: String) -> String {
-        // SHA256 hash kullan - benzersiz ve sabit uzunlukta
-        let data = Data(url.utf8)
-        
-        // iOS 13+ için CryptoKit yerine basit hash
-        var hash: UInt64 = 5381
-        for byte in data {
-            hash = ((hash << 5) &+ hash) &+ UInt64(byte)
+    private func cacheKey(for url: String, size: CGSize? = nil) -> String {
+        let sizeSuffix: String
+        if let size {
+            let width = Int(ceil(size.width))
+            let height = Int(ceil(size.height))
+            sizeSuffix = "_\(width)x\(height)"
+        } else {
+            sizeSuffix = "_original"
         }
-        
-        // İkinci hash (daha az çakışma için)
-        var hash2: UInt64 = 0
-        for byte in data {
-            hash2 = hash2 &* 31 &+ UInt64(byte)
-        }
-        
-        // İki hash'i birleştir
-        return "\(hash)_\(hash2)"
+
+        return "\(cacheKeyPrefix(for: url))\(sizeSuffix)"
     }
     
     // MARK: - Get Image (Ana metod - DÜZELTİLDİ)
@@ -85,7 +78,7 @@ actor ImageCacheService {
             throw ImageCacheError.invalidURL
         }
         
-        let key = cacheKey(for: url)
+        let key = cacheKey(for: url, size: size)
         
         // Force refresh ise cache'i atla
         if !forceRefresh {
@@ -109,7 +102,7 @@ actor ImageCacheService {
         }
         
         // 3. Zaten indiriliyor mu kontrol et (DÜZELTİLDİ - proper task coalescing)
-        if let existingTask = activeTasks[url] {
+        if let existingTask = activeTasks[key] {
             // Mevcut task'ı bekle
             return try await existingTask.value
         }
@@ -118,40 +111,43 @@ actor ImageCacheService {
         let task = Task<UIImage, Error> {
             defer {
                 // Task tamamlandığında temizle (actor context içinde)
-                Task { await self.removeActiveTask(for: url) }
+                Task { self.removeActiveTask(for: key) }
             }
             
             let image = try await self.downloadImage(from: url)
             
             // Resize if needed
             let finalImage: UIImage
-            if let targetSize = size, image.size.width > targetSize.width * 2 {
-                finalImage = image.resized(to: targetSize) ?? image
+            if let targetSize = size, image.shouldDownsample(toCover: targetSize) {
+                finalImage = image.resizedToCover(targetSize) ?? image
             } else {
                 finalImage = image
             }
             
             // Cache'e kaydet
-            await self.saveToCache(image: finalImage, key: key)
+            self.saveToCache(image: finalImage, key: key)
             
             return finalImage
         }
         
         // Task'ı kaydet
-        activeTasks[url] = task
+        activeTasks[key] = task
         
         return try await task.value
     }
     
     // MARK: - Remove Active Task (YENİ)
-    private func removeActiveTask(for url: String) {
-        activeTasks[url] = nil
+    private func removeActiveTask(for key: String) {
+        activeTasks[key] = nil
     }
     
     // MARK: - Cancel Task (YENİ - dışarıdan iptal için)
     func cancelDownload(for url: String) {
-        activeTasks[url]?.cancel()
-        activeTasks[url] = nil
+        let matchingKeys = activeTasks.keys.filter { $0.hasPrefix(cacheKeyPrefix(for: url)) }
+        for key in matchingKeys {
+            activeTasks[key]?.cancel()
+            activeTasks[key] = nil
+        }
     }
     
     // MARK: - Download Image (Retry mekanizması ile)
@@ -299,11 +295,16 @@ actor ImageCacheService {
     
     // MARK: - Remove Specific URL from Cache (YENİ)
     func removeFromCache(url: String) {
-        let key = cacheKey(for: url)
-        memoryCache.removeObject(forKey: key as NSString)
-        
-        let fileURL = cacheDirectory.appendingPathComponent(key)
-        try? fileManager.removeItem(at: fileURL)
+        let prefix = cacheKeyPrefix(for: url)
+
+        // NSCache prefix silmeyi desteklemediği için URL'e ait tüm varyantlar için memory cache temizlenir.
+        memoryCache.removeAllObjects()
+
+        if let files = try? fileManager.contentsOfDirectory(at: cacheDirectory, includingPropertiesForKeys: nil) {
+            for fileURL in files where fileURL.lastPathComponent.hasPrefix(prefix) {
+                try? fileManager.removeItem(at: fileURL)
+            }
+        }
     }
     
     // MARK: - Preload Images (TEK VERSİYON - DÜZELTİLDİ)
@@ -314,7 +315,7 @@ actor ImageCacheService {
         
         // Önce cache'te olmayanları bul
         let uncachedURLs = validURLs.filter { url in
-            let key = cacheKey(for: url)
+            let key = cacheKey(for: url, size: nil)
             return memoryCache.object(forKey: key as NSString) == nil && loadFromDisk(key: key) == nil
         }
         
@@ -328,8 +329,24 @@ actor ImageCacheService {
     
     // MARK: - Check if Cached
     func isCached(url: String) -> Bool {
-        let key = cacheKey(for: url)
+        let key = cacheKey(for: url, size: nil)
         return memoryCache.object(forKey: key as NSString) != nil || loadFromDisk(key: key) != nil
+    }
+
+    private func cacheKeyPrefix(for url: String) -> String {
+        let data = Data(url.utf8)
+
+        var hash: UInt64 = 5381
+        for byte in data {
+            hash = ((hash << 5) &+ hash) &+ UInt64(byte)
+        }
+
+        var hash2: UInt64 = 0
+        for byte in data {
+            hash2 = hash2 &* 31 &+ UInt64(byte)
+        }
+
+        return "\(hash)_\(hash2)"
     }
 }
 
@@ -359,13 +376,22 @@ enum ImageCacheError: LocalizedError {
 
 // MARK: - UIImage Extension
 extension UIImage {
-    func resized(to targetSize: CGSize) -> UIImage? {
+    func shouldDownsample(toCover targetSize: CGSize) -> Bool {
+        guard targetSize.width > 0 && targetSize.height > 0 else { return false }
+        return size.width > targetSize.width * 1.5 || size.height > targetSize.height * 1.5
+    }
+
+    func resizedToCover(_ targetSize: CGSize) -> UIImage? {
+        guard targetSize.width > 0 && targetSize.height > 0 else { return self }
+
         let widthRatio = targetSize.width / size.width
         let heightRatio = targetSize.height / size.height
-        let ratio = min(widthRatio, heightRatio)
-        
+        let ratio = min(max(widthRatio, heightRatio), 1)
+
+        guard ratio < 1 else { return self }
+
         let newSize = CGSize(width: size.width * ratio, height: size.height * ratio)
-        
+
         // Modern API kullan
         let renderer = UIGraphicsImageRenderer(size: newSize)
         return renderer.image { _ in

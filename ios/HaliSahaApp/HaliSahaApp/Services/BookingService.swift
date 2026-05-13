@@ -22,6 +22,7 @@ final class BookingService: ObservableObject {
 
     // MARK: - Private Properties
     private let firebaseService = FirebaseService.shared
+    private let pendingHoldDuration: TimeInterval = 15 * 60
 
     // Cache
     private var timeSlotsCache: [String: [TimeSlot]] = [:]  // key: "facilityId_pitchId_date"
@@ -91,6 +92,42 @@ final class BookingService: ObservableObject {
         }
     }
 
+    // MARK: - Fetch Booking by Ticket Number (QR doğrulama için)
+    @MainActor
+    func fetchBookingByTicketNumber(_ ticketNumber: String) async throws -> Booking {
+        let trimmed = ticketNumber.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { throw BookingError.notFound }
+
+        let query = firebaseService.bookingsCollection
+            .whereField("ticketNumber", isEqualTo: trimmed)
+            .limit(to: 1)
+
+        let bookings: [Booking] = try await firebaseService.fetchDocuments(query: query)
+        guard let booking = bookings.first else {
+            throw BookingError.notFound
+        }
+        return booking
+    }
+
+    // MARK: - QR İçeriğini Parse Et
+    /// QR içinde JSON varsa `ticketNumber` alanını çeker; düz metin ise olduğu gibi döner.
+    static func parseTicketNumber(fromScannedCode code: String) -> String? {
+        let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        // JSON dene
+        if let data = trimmed.data(using: .utf8),
+            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let ticket = json["ticketNumber"] as? String,
+            !ticket.isEmpty
+        {
+            return ticket
+        }
+
+        // Düz bilet numarası (HS-YYYY-XXXXXX gibi)
+        return trimmed
+    }
+
     // MARK: - Create Booking
     @MainActor
     func createBooking(
@@ -146,6 +183,7 @@ final class BookingService: ObservableObject {
             date: date,
             startHour: startHour,
             endHour: endHour,
+            duration: duration,
             totalPrice: totalPrice,
             depositAmount: depositAmount,
             remainingAmount: remainingAmount,
@@ -182,18 +220,20 @@ final class BookingService: ObservableObject {
         let startOfDay = Calendar.current.startOfDay(for: date)
         let endOfDay = Calendar.current.date(byAdding: .day, value: 1, to: startOfDay)!
 
-        // Aynı saha, tarih ve saat aralığında onaylı rezervasyon var mı?
+        // Aynı saha, tarih ve saat aralığında aktif rezervasyon var mı?
         let query = firebaseService.bookingsCollection
             .whereField(FirestoreField.pitchId, isEqualTo: pitchId)
             .whereField(FirestoreField.date, isGreaterThanOrEqualTo: Timestamp(date: startOfDay))
             .whereField(FirestoreField.date, isLessThan: Timestamp(date: endOfDay))
-            .whereField(FirestoreField.status, isEqualTo: BookingStatus.confirmed.rawValue)
 
         let existingBookings: [Booking] = try await firebaseService.fetchDocuments(query: query)
 
         // Çakışma kontrolü
         for booking in existingBookings {
-            if startHour < booking.endHour && endHour > booking.startHour {
+            if blocksTimeSlot(booking)
+                && startHour < booking.endHour
+                && endHour > booking.startHour
+            {
                 return false
             }
         }
@@ -232,7 +272,6 @@ final class BookingService: ObservableObject {
             .whereField(FirestoreField.pitchId, isEqualTo: pitchId)
             .whereField(FirestoreField.date, isGreaterThanOrEqualTo: Timestamp(date: startOfDay))
             .whereField(FirestoreField.date, isLessThan: Timestamp(date: endOfDay))
-            .whereField(FirestoreField.status, isEqualTo: BookingStatus.confirmed.rawValue)
 
         let existingBookings: [Booking] = try await firebaseService.fetchDocuments(query: query)
 
@@ -258,7 +297,7 @@ final class BookingService: ObservableObject {
 
         for hour in openHourInt..<closeHourInt {
             let isBooked = existingBookings.contains { booking in
-                hour >= booking.startHour && hour < booking.endHour
+                blocksTimeSlot(booking) && hour >= booking.startHour && hour < booking.endHour
             }
 
             // Geçmiş saatleri kontrol et
@@ -278,7 +317,9 @@ final class BookingService: ObservableObject {
                 hour: hour,
                 isAvailable: !isBooked && !isPast,
                 bookingId: isBooked
-                    ? existingBookings.first { $0.startHour <= hour && $0.endHour > hour }?.id
+                    ? existingBookings.first {
+                        blocksTimeSlot($0) && $0.startHour <= hour && $0.endHour > hour
+                    }?.id
                     : nil,
                 price: price
             )
@@ -326,6 +367,7 @@ final class BookingService: ObservableObject {
                 FirestoreField.status: BookingStatus.cancelled.rawValue,
                 "paymentStatus": paymentStatus.rawValue,
                 "cancellationReason": reason ?? "",
+                "cancelledAt": Timestamp(date: Date()),
                 FirestoreField.updatedAt: Timestamp(date: Date()),
             ]
         )
@@ -333,6 +375,72 @@ final class BookingService: ObservableObject {
         // Cache'i temizle
         clearTimeSlotCache(
             facilityId: booking.facilityId, pitchId: booking.pitchId, date: booking.date)
+
+        // Yan etkiler: yerel hatırlatmaları sil + admin'e bildirim
+        await triggerCancellationSideEffects(booking: booking)
+    }
+
+    // MARK: - Side Effects (Notifications & Reminders)
+
+    /// Ödeme başarısı sonrası: uygunsa kullanıcının cihazında local reminder kur, admin'e bildirim yaz.
+    @MainActor
+    private func triggerNewBookingSideEffects(booking: Booking, status: BookingStatus) async {
+        var updatedBooking = booking
+        updatedBooking.status = status
+        updatedBooking.paymentStatus = .depositPaid
+
+        // 1) Local reminder (24/2 saat öncesi) — sadece onaylı rezervasyonlarda bu cihazda
+        if status == .confirmed {
+            await NotificationService.shared.scheduleReminders(for: updatedBooking)
+        }
+
+        // 2) Admin'e bildirim
+        guard let ownerId = await fetchFacilityOwnerId(facilityId: booking.facilityId)
+        else { return }
+
+        await AppNotificationService.shared.notify(
+            AppNotification.newBookingForAdmin(adminId: ownerId, booking: updatedBooking)
+        )
+    }
+
+    /// Kullanıcı iptal etti: yerel hatırlatmaları sil + admin'e bildirim.
+    @MainActor
+    private func triggerCancellationSideEffects(booking: Booking) async {
+        // 1) Local reminder iptali
+        if let id = booking.id {
+            NotificationService.shared.cancelReminders(forBookingId: id)
+        }
+
+        // 2) Admin'e bildirim
+        guard let ownerId = await fetchFacilityOwnerId(facilityId: booking.facilityId)
+        else { return }
+
+        await AppNotificationService.shared.notify(
+            AppNotification.bookingCancelledByUser(adminId: ownerId, booking: booking)
+        )
+    }
+
+    /// Tesisin sahibinin (admin) userId'sini getirir. Hata durumunda nil.
+    @MainActor
+    private func fetchFacilityOwnerId(facilityId: String) async -> String? {
+        do {
+            let facility = try await FacilityService.shared.fetchFacility(id: facilityId)
+            return facility.ownerId
+        } catch {
+            return nil
+        }
+    }
+
+    @MainActor
+    private func shouldAutoConfirmBooking(facilityId: String) async -> Bool {
+        // Müşteri admins/{uid}'i okuyamaz; ayar facility üzerinde mirror'lanır.
+        // Facility dokümanı zaten herkese açık.
+        do {
+            let facility = try await FacilityService.shared.fetchFacility(id: facilityId)
+            return facility.effectiveAutoConfirmBookings
+        } catch {
+            return true
+        }
     }
 
     // MARK: - Process Payment (Simulation)
@@ -346,28 +454,41 @@ final class BookingService: ObservableObject {
         // %95 başarı oranı simülasyonu
         let isSuccessful = Double.random(in: 0...1) > 0.05
 
-        if isSuccessful {
-            // Rezervasyon durumunu güncelle
-            guard let bookingId = booking.id else {
-                throw BookingError.unknown("Rezervasyon ID bulunamadı")
-            }
+        guard let bookingId = booking.id else {
+            throw BookingError.unknown("Rezervasyon ID bulunamadı")
+        }
 
+        if isSuccessful {
+            let shouldAutoConfirm = await shouldAutoConfirmBooking(facilityId: booking.facilityId)
+            let newStatus: BookingStatus = shouldAutoConfirm ? .confirmed : .pending
+
+            // Rezervasyon durumunu güncelle
             try await firebaseService.updateDocument(
                 in: firebaseService.bookingsCollection,
                 documentId: bookingId,
                 fields: [
-                    FirestoreField.status: BookingStatus.confirmed.rawValue,
+                    FirestoreField.status: newStatus.rawValue,
                     "paymentStatus": PaymentStatus.depositPaid.rawValue,
                     FirestoreField.updatedAt: Timestamp(date: Date()),
                 ]
             )
 
+            // Yan etkiler: yerel hatırlatmaları kur + admin'e bildirim
+            await triggerNewBookingSideEffects(booking: booking, status: newStatus)
+
             return PaymentResult(
                 success: true,
                 transactionId: UUID().uuidString,
-                message: "Ödeme başarıyla tamamlandı"
+                message: shouldAutoConfirm
+                    ? "Ödeme başarıyla tamamlandı"
+                    : "Ödeme alındı. Rezervasyon işletme onayı bekliyor."
             )
         } else {
+            try await markPaymentFailed(
+                booking: booking,
+                reason: "Ödeme işlemi başarısız oldu."
+            )
+
             return PaymentResult(
                 success: false,
                 transactionId: nil,
@@ -379,7 +500,7 @@ final class BookingService: ObservableObject {
     // MARK: - Generate QR Code Data
     private func generateQRCodeData(for booking: Booking) -> String {
         let data: [String: Any] = [
-            "ticketNumber": booking.ticketNumber ?? "",
+            "ticketNumber": booking.ticketNumber,
             "date": booking.date.ISO8601Format(),
             "startHour": booking.startHour,
             "endHour": booking.endHour,
@@ -393,7 +514,45 @@ final class BookingService: ObservableObject {
             return jsonString
         }
 
-        return booking.ticketNumber ?? UUID().uuidString
+        return booking.ticketNumber
+    }
+
+    // MARK: - Mark Payment Failed
+    @MainActor
+    func markPaymentFailed(booking: Booking, reason: String) async throws {
+        guard let bookingId = booking.id else {
+            throw BookingError.unknown("Rezervasyon ID bulunamadı")
+        }
+
+        try await firebaseService.updateDocument(
+            in: firebaseService.bookingsCollection,
+            documentId: bookingId,
+            fields: [
+                FirestoreField.status: BookingStatus.cancelled.rawValue,
+                "paymentStatus": PaymentStatus.failed.rawValue,
+                "cancellationReason": reason,
+                "cancelledAt": Timestamp(date: Date()),
+                FirestoreField.updatedAt: Timestamp(date: Date()),
+            ]
+        )
+
+        clearTimeSlotCache(
+            facilityId: booking.facilityId,
+            pitchId: booking.pitchId,
+            date: booking.date
+        )
+    }
+
+    // MARK: - Slot Blocking
+    private func blocksTimeSlot(_ booking: Booking) -> Bool {
+        switch booking.status {
+        case .confirmed:
+            return true
+        case .pending:
+            return Date().timeIntervalSince(booking.createdAt) < pendingHoldDuration
+        case .completed, .cancelled, .noShow:
+            return false
+        }
     }
 
     // MARK: - Clear Cache

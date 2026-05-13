@@ -560,13 +560,12 @@ final class EditFacilityViewModel: ObservableObject {
         loadingMessage = "Tesis siliniyor..."
         
         do {
-            // 1. Fotoğrafları sil
+            // Önce Firestore tarafında aktif rezervasyon/yetki kontrolleri çalışsın.
+            try await adminService.deleteFacility(facilityId: facilityId)
+
+            // Tesis başarıyla kaldırıldıktan sonra depodaki görselleri temizle.
             loadingMessage = "Fotoğraflar siliniyor..."
             try await storageService.deleteFacilityImages(facilityId: facilityId)
-            
-            // 2. Firebase'den tesisi ve ilişkili verileri sil
-            loadingMessage = "Tesis kaldırılıyor..."
-            try await adminService.deleteFacility(facilityId: facilityId)
             
             saveSuccess = true
         } catch {

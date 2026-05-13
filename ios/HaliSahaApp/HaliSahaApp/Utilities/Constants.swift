@@ -15,9 +15,17 @@ import SwiftUI
 struct AppConstants {
     
     // MARK: - App Info
-    static let appName = "HaliSaha"
+    static let appName = "ALO Halısaha"
     static let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
     static let buildNumber = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+    static let supportEmail = "mehmetmertmazici@gmail.com"
+    
+    // MARK: - Public Links
+    struct Links {
+        static let termsOfUse = URL(string: "https://tree-bottle-a85.notion.site/ALO-Hal-saha-Kullan-m-Ko-ullar-358c4029a7aa81b695bcf624d3318da3")!
+        static let privacyPolicy = URL(string: "https://tree-bottle-a85.notion.site/ALO-Hal-saha-Gizlilik-Politikas-358c4029a7aa81b69c26f7144c6c4639")!
+        static let helpCenter = URL(string: "https://tree-bottle-a85.notion.site/ALO-Hal-saha-Yard-m-Merkezi-358c4029a7aa812c92b1e2dd9bae801a")!
+    }
     
     // MARK: - Pagination
     static let defaultPageSize = 20
@@ -102,9 +110,11 @@ struct AppColors {
     static let accent = Color("AccentColor")            // Vurgu rengi
     
     // MARK: - Background Colors
-    static let background = Color("BackgroundColor")
-    static let secondaryBackground = Color("SecondaryBackgroundColor")
-    static let cardBackground = Color("CardBackgroundColor")
+    static let background = Color.appBackground
+    static let secondaryBackground = Color.appCardBackground
+    static let cardBackground = Color.appCardBackground
+    static let elevatedBackground = Color.appElevatedBackground
+    static let separator = Color.appSeparator
     
     // MARK: - Text Colors
     static let textPrimary = Color("TextPrimaryColor")
@@ -232,8 +242,8 @@ struct AppStrings {
 
 // MARK: - Storage Constants
 struct StorageConstants {
-    static let maxImageSize: Int64 = 5 * 1024 * 1024 // 5MB
-    static let compressionQuality: CGFloat = 0.7
+    static let maxImageSize: Int64 = 8 * 1024 * 1024 // 8MB
+    static let compressionQuality: CGFloat = 0.85
     static let maxFacilityImages = 5
     static let maxPitchImages = 3
 }
@@ -244,7 +254,7 @@ struct ImageCacheConstants {
     static let maxDiskCacheMB = 500
     static let cacheExpirationDays = 7
     static let thumbnailSize = CGSize(width: 200, height: 200)
-    static let mediumSize = CGSize(width: 600, height: 600)
+    static let mediumSize = CGSize(width: 1200, height: 1200)
     static let maxConcurrentDownloads = 5
     static let maxPreloadCount = 20
 }
