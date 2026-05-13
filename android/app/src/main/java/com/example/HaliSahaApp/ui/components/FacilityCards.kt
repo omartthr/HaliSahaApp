@@ -20,10 +20,14 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.HaliSahaApp.data.models.Facility
 import com.example.HaliSahaApp.utils.AppColors
 import com.example.HaliSahaApp.utils.AppIcons
@@ -52,7 +56,7 @@ fun FacilityCard(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Image
-            FacilityImage(isIndoor = facility.amenities.isIndoor)
+            FacilityImage(isIndoor = facility.amenities.isIndoor, imageUrl = facility.images.firstOrNull())
 
             // Info
             Column(
@@ -149,7 +153,8 @@ fun FacilityCard(
 
 // MARK: - Facility Image Component
 @Composable
-fun FacilityImage(isIndoor: Boolean) {
+fun FacilityImage(isIndoor: Boolean, imageUrl: String? = null) {
+    val context = LocalContext.current
     Box(
         modifier = Modifier
             .size(100.dp)
@@ -157,12 +162,24 @@ fun FacilityImage(isIndoor: Boolean) {
             .background(AppColors.Primary.copy(alpha = 0.1f)),
         contentAlignment = Alignment.Center
     ) {
-        Icon(
-            imageVector = AppIcons.Indoor, // sportscourt yerine
-            contentDescription = null,
-            tint = AppColors.Primary.copy(alpha = 0.5f),
-            modifier = Modifier.size(30.dp)
-        )
+        if (!imageUrl.isNullOrEmpty()) {
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(imageUrl)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Icon(
+                imageVector = AppIcons.Indoor,
+                contentDescription = null,
+                tint = AppColors.Primary.copy(alpha = 0.5f),
+                modifier = Modifier.size(30.dp)
+            )
+        }
 
         if (isIndoor) {
             Box(
@@ -236,23 +253,48 @@ fun FeaturedFacilityCard(
         Column {
             // Image Area
             Box(modifier = Modifier.height(140.dp)) {
-                // Background Gradient Placeholder
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.linearGradient(
-                                colors = listOf(Color(0xFF2E7D32), Color(0xFF1B5E20))
-                            )
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.SportsSoccer,
-                        contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.3f),
-                        modifier = Modifier.size(50.dp)
+                val imageUrl = facility.images.firstOrNull()
+                val context = LocalContext.current
+
+                if (!imageUrl.isNullOrEmpty()) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(imageUrl)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = facility.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
                     )
+                    // Altta karartma - overlay ikonları okunabilir kılar
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.3f))
+                                )
+                            )
+                    )
+                } else {
+                    // Placeholder gradient
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.linearGradient(
+                                    colors = listOf(Color(0xFF2E7D32), Color(0xFF1B5E20))
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.SportsSoccer,
+                            contentDescription = null,
+                            tint = Color.White.copy(alpha = 0.3f),
+                            modifier = Modifier.size(50.dp)
+                        )
+                    }
                 }
 
                 // Favorite Button

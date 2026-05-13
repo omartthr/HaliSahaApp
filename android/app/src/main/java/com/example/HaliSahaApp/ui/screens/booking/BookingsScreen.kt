@@ -73,8 +73,11 @@ fun BookingsScreen(
                         message = "Seçilen kategoride randevunuz yok.",
                         buttonTitle = if (uiState.selectedFilter == BookingFilter.UPCOMING) "Saha Bul" else null,
                         onButtonClick = {
-                            // Ana sayfaya yönlendir (Tab 0)
-                            // navController.navigate(BottomTab.HOME.route)
+                            // Home (Keşfet) tab'ına yönlendir
+                            navController.navigate("home") {
+                                launchSingleTop = true
+                                restoreState = true
+                            }
                         }
                     )
                 } else {
