@@ -102,7 +102,7 @@ export default function Home() {
             <Link href="#map" className="brand-btn-glass solid-light">
               <MapPin size={18} /> Haritada Ara
             </Link>
-            
+
             {!user && (
               <Link href="/register" className="brand-btn-glass ghost-light">
                 <User size={18} /> Hemen Üye Ol
@@ -161,129 +161,129 @@ export default function Home() {
       </section>
 
       {/* Map + Location Cards */}
-        <section className="relative z-10 home-map-section" style={{ padding: "2rem 5% 3rem 5%" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
-            <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "#111827", display: "flex", alignItems: "center", gap: 8 }}>
-              <MapPin size={22} style={{ color: "#2E7D32" }} /> Yakındaki Sahalar
-            </h2>
+      <section className="relative z-10 home-map-section" style={{ padding: "2rem 5% 3rem 5%" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
+          <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "#111827", display: "flex", alignItems: "center", gap: 8 }}>
+            <MapPin size={22} style={{ color: "#2E7D32" }} /> Yakındaki Sahalar
+          </h2>
+        </div>
+
+        {/* Split layout */}
+        <div className="home-map-split" style={{ display: "flex", gap: "1.5rem", alignItems: "stretch" }}>
+
+          {/* LEFT: Map */}
+          <div className="home-map-box" style={{ flex: "0 0 58%", borderRadius: 20, overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.10)", minHeight: 520 }}>
+            <div id="map" style={{ height: "100%", minHeight: 520 }}>
+              <MapSection />
+            </div>
           </div>
 
-          {/* Split layout */}
-          <div className="home-map-split" style={{ display: "flex", gap: "1.5rem", alignItems: "stretch" }}>
-
-            {/* LEFT: Map */}
-            <div className="home-map-box" style={{ flex: "0 0 58%", borderRadius: 20, overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.10)", minHeight: 520 }}>
-              <div id="map" style={{ height: "100%", minHeight: 520 }}>
-                <MapSection />
-              </div>
+          {/* RIGHT: Location Cards — outer wrapper scrolls, inner wrapper keeps comfortable spacing */}
+          <div className="home-list-box" style={{ flex: 1, overflowY: "auto", overflowX: "hidden", maxHeight: 520, borderRadius: 8 }}>
+            <div style={{ position: "sticky", top: 0, zIndex: 2, padding: "0 6px 12px 2px", background: "linear-gradient(180deg, rgba(246,248,246,0.98) 0%, rgba(246,248,246,0.88) 100%)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 10, borderRadius: 20, padding: "0.95rem 1rem", background: "rgba(255,255,255,0.88)", border: "1px solid rgba(17,75,50,0.12)", boxShadow: "0 10px 30px rgba(0,0,0,0.05)" }}>
+                <Search size={18} style={{ color: "#2E7D32", flexShrink: 0 }} />
+                <input
+                  type="search"
+                  value={fieldSearch}
+                  onChange={(event) => setFieldSearch(event.target.value)}
+                  placeholder="Saha ara"
+                  aria-label="Saha ara"
+                  style={{ width: "100%", border: "none", outline: "none", background: "transparent", color: "#111827", fontSize: "0.98rem", fontWeight: 500 }}
+                />
+              </label>
             </div>
-
-            {/* RIGHT: Location Cards — outer wrapper scrolls, inner wrapper keeps comfortable spacing */}
-            <div className="home-list-box" style={{ flex: 1, overflowY: "auto", overflowX: "hidden", maxHeight: 520, borderRadius: 8 }}>
-              <div style={{ position: "sticky", top: 0, zIndex: 2, padding: "0 6px 12px 2px", background: "linear-gradient(180deg, rgba(246,248,246,0.98) 0%, rgba(246,248,246,0.88) 100%)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 10, borderRadius: 20, padding: "0.95rem 1rem", background: "rgba(255,255,255,0.88)", border: "1px solid rgba(17,75,50,0.12)", boxShadow: "0 10px 30px rgba(0,0,0,0.05)" }}>
-                  <Search size={18} style={{ color: "#2E7D32", flexShrink: 0 }} />
-                  <input
-                    type="search"
-                    value={fieldSearch}
-                    onChange={(event) => setFieldSearch(event.target.value)}
-                    placeholder="Saha ara"
-                    aria-label="Saha ara"
-                    style={{ width: "100%", border: "none", outline: "none", background: "transparent", color: "#111827", fontSize: "0.98rem", fontWeight: 500 }}
-                  />
-                </label>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "1rem", padding: "6px 6px 6px 2px" }}>
-                {filteredFields.length === 0 ? (
-                  <div style={{ borderRadius: 24, padding: "1.5rem", background: "rgba(255,255,255,0.82)", border: "1px solid rgba(255,255,255,0.95)", boxShadow: "0 10px 30px rgba(0,0,0,0.05)", color: "#6b7280" }}>
-                    Aramana uygun saha bulunamadi.
-                  </div>
-                ) : filteredFields.map((saha, i) => (
-                  <a
-                    key={i}
-                    href="#"
-                    className="location-card">
-                    <span style={{ fontSize: 11, fontWeight: 700, color: "#2E7D32", letterSpacing: "0.08em", textTransform: "uppercase" }}>{saha.district}</span>
-                    <span style={{ fontSize: "1.05rem", fontWeight: 700, color: "#111827" }}>{saha.name}</span>
-                    <span style={{ fontSize: "0.85rem", color: "#6b7280", display: "flex", alignItems: "center", gap: 4 }}>
-                      <MapPin size={12} /> {saha.address}
-                    </span>
-                  </a>
-                ))}
-              </div>
-            </div>
-
-          </div>
-        </section>
-
-        {/* --- Öne Çıkan Sahalar --- */}
-        <div className="relative z-10" style={{ padding: "48px 0 24px 0" }}>
-          <div className="content-container">
-            <div className="section-header">
-              <h2 className="section-title">
-                <Star size={18} style={{ color: "#F59E0B" }} /> Öne Çıkan Sahalar
-              </h2>
-              <Link href="#map" style={{ fontSize: "14px", fontWeight: 600, color: "#2E7D32", textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
-                Tümü <ChevronRight size={15} />
-              </Link>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {featuredFields.slice(0, 2).map((field) => (
-                <div key={field.id}
-                  className="match-glass-card"
-                  style={{
-                    background: "rgba(255, 255, 255, 0.88)",
-                    borderRadius: "24px",
-                    padding: "24px",
-                    boxShadow: "0 10px 40px rgba(0,0,0,0.06)",
-                    border: "1px solid rgba(255,255,255,1)",
-                    backdropFilter: "blur(20px)",
-                    WebkitBackdropFilter: "blur(20px)",
-                    width: "100%",
-                    transition: "all 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
-                  }}>
-                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#E8F5E9", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "#2E7D32", fontSize: 16 }}>
-                        {field.name[0]}
-                      </div>
-                      <div>
-                        <p style={{ fontWeight: 600, fontSize: 13, color: "#374151" }}>Önerilen Saha</p>
-                        <p style={{ fontSize: 12, color: "#9ca3af" }}>{field.reviews} değerlendirme</p>
-                      </div>
-                    </div>
-                    <span style={{ background: "#2E7D32", color: "white", borderRadius: 20, padding: "4px 12px", fontSize: 12, fontWeight: 700 }}>
-                      ⭐ {field.rating}
-                    </span>
-                  </div>
-                  <p style={{ fontWeight: 700, fontSize: 15, color: "#111827", marginBottom: 8 }}>{field.name}</p>
-                  <div style={{ display: "flex", gap: 16, color: "#9ca3af", fontSize: 12, marginBottom: 12 }}>
-                    <span>📍 {field.address}</span>
-                    <span>📝 {field.reviews} yorum</span>
-                  </div>
-                  {/* Progress bar */}
-                  <div style={{ marginBottom: 6 }}>
-                    <div style={{ background: "#f0f0f0", borderRadius: 4, height: 6 }}>
-                      <div style={{ background: "#2E7D32", height: 6, borderRadius: 4, width: `${(field.rating / 5) * 100}%` }} />
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: 12 }}>
-                      <span style={{ color: "#9ca3af" }}>Puan: {field.rating}/5</span>
-                      <span style={{ color: "#2E7D32", fontWeight: 700 }}>{field.reviews} yorum</span>
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
-                    <span style={{ fontSize: 12, color: "#9ca3af" }}>{field.features.join(" ")}</span>
-                    <Link href={`/fields/${field.id}`}
-                      className="katil-btn"
-                      style={{ background: "#E8F5E9", color: "#2E7D32", borderRadius: 8, padding: "6px 16px", fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
-                      İncele
-                    </Link>
-                  </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "1rem", padding: "6px 6px 6px 2px" }}>
+              {filteredFields.length === 0 ? (
+                <div style={{ borderRadius: 24, padding: "1.5rem", background: "rgba(255,255,255,0.82)", border: "1px solid rgba(255,255,255,0.95)", boxShadow: "0 10px 30px rgba(0,0,0,0.05)", color: "#6b7280" }}>
+                  Aramana uygun saha bulunamadi.
                 </div>
+              ) : filteredFields.map((saha, i) => (
+                <a
+                  key={i}
+                  href="#"
+                  className="location-card">
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#2E7D32", letterSpacing: "0.08em", textTransform: "uppercase" }}>{saha.district}</span>
+                  <span style={{ fontSize: "1.05rem", fontWeight: 700, color: "#111827" }}>{saha.name}</span>
+                  <span style={{ fontSize: "0.85rem", color: "#6b7280", display: "flex", alignItems: "center", gap: 4 }}>
+                    <MapPin size={12} /> {saha.address}
+                  </span>
+                </a>
               ))}
             </div>
           </div>
+
         </div>
+      </section>
+
+      {/* --- Öne Çıkan Sahalar --- */}
+      <div className="relative z-10" style={{ padding: "48px 0 24px 0" }}>
+        <div className="content-container">
+          <div className="section-header">
+            <h2 className="section-title">
+              <Star size={18} style={{ color: "#F59E0B" }} /> Öne Çıkan Sahalar
+            </h2>
+            <Link href="#map" style={{ fontSize: "14px", fontWeight: 600, color: "#2E7D32", textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
+              Tümü <ChevronRight size={15} />
+            </Link>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {featuredFields.slice(0, 2).map((field) => (
+              <div key={field.id}
+                className="match-glass-card"
+                style={{
+                  background: "rgba(255, 255, 255, 0.88)",
+                  borderRadius: "24px",
+                  padding: "24px",
+                  boxShadow: "0 10px 40px rgba(0,0,0,0.06)",
+                  border: "1px solid rgba(255,255,255,1)",
+                  backdropFilter: "blur(20px)",
+                  WebkitBackdropFilter: "blur(20px)",
+                  width: "100%",
+                  transition: "all 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
+                }}>
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#E8F5E9", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "#2E7D32", fontSize: 16 }}>
+                      {field.name[0]}
+                    </div>
+                    <div>
+                      <p style={{ fontWeight: 600, fontSize: 13, color: "#374151" }}>Önerilen Saha</p>
+                      <p style={{ fontSize: 12, color: "#9ca3af" }}>{field.reviews} değerlendirme</p>
+                    </div>
+                  </div>
+                  <span style={{ background: "#2E7D32", color: "white", borderRadius: 20, padding: "4px 12px", fontSize: 12, fontWeight: 700 }}>
+                    ⭐ {field.rating}
+                  </span>
+                </div>
+                <p style={{ fontWeight: 700, fontSize: 15, color: "#111827", marginBottom: 8 }}>{field.name}</p>
+                <div style={{ display: "flex", gap: 16, color: "#9ca3af", fontSize: 12, marginBottom: 12 }}>
+                  <span>📍 {field.address}</span>
+                  <span>📝 {field.reviews} yorum</span>
+                </div>
+                {/* Progress bar */}
+                <div style={{ marginBottom: 6 }}>
+                  <div style={{ background: "#f0f0f0", borderRadius: 4, height: 6 }}>
+                    <div style={{ background: "#2E7D32", height: 6, borderRadius: 4, width: `${(field.rating / 5) * 100}%` }} />
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: 12 }}>
+                    <span style={{ color: "#9ca3af" }}>Puan: {field.rating}/5</span>
+                    <span style={{ color: "#2E7D32", fontWeight: 700 }}>{field.reviews} yorum</span>
+                  </div>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
+                  <span style={{ fontSize: 12, color: "#9ca3af" }}>{field.features.join(" ")}</span>
+                  <Link href={`/fields/${field.id}`}
+                    className="katil-btn"
+                    style={{ background: "#E8F5E9", color: "#2E7D32", borderRadius: 8, padding: "6px 16px", fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
+                    İncele
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* Aurora Background Wrapping from Trust Row to Footer */}
       <section className="home-aurora-section home-bottom-aurora relative overflow-hidden" style={{ marginTop: "-880px", paddingTop: "880px" }}>
@@ -391,7 +391,7 @@ export default function Home() {
                 <p style={{ fontSize: 13, color: "rgba(255,255,255,0.78)", marginTop: 4 }}>Türkiye&apos;nin halı saha rezervasyon platformu.</p>
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "24px" }}>
-                {[ ["Ana Sayfa", "/"], ["Sahalar", "#map"], ["Gruplar", "/groups"]].map(([label, href]) => (
+                {[["Ana Sayfa", "/"], ["Sahalar", "#map"], ["Gruplar", "/groups"]].map(([label, href]) => (
                   <Link key={label} href={href} style={{ color: "rgba(255,255,255,0.82)", fontSize: 14, textDecoration: "none" }}
                     className="hover:text-white transition-colors">
                     {label}

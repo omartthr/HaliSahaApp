@@ -85,14 +85,39 @@ export default function FieldDetailPage({ params }: { params: { fieldId: string 
     <div className="page-wrapper">
       <Navbar />
 
-      {/* Hero Image */}
-      <div style={{ height: 280, background: "linear-gradient(135deg, #2E7D32 0%, #1B5E20 60%, #004D40 100%)", position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ fontSize: 80, opacity: 0.2 }}>⚽</span>
+      {/* Hero Section — Maç Kur sayfasındaki gibi dinamik Aurora + Wave */}
+      <div
+        className="match-hero"
+        style={{
+          height: 280,
+          background: "linear-gradient(180deg, #114B32 0%, #1A754E 100%)",
+          position: "relative",
+          zIndex: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
         <div style={{ position: "absolute", top: 16, left: 16 }}>
-          <Link href="/" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 40, height: 40, borderRadius: "50%", background: "rgba(0,0,0,0.3)", backdropFilter: "blur(8px)", color: "white", textDecoration: "none" }}>
+          <Link
+            href="/"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              background: "rgba(0,0,0,0.3)",
+              backdropFilter: "blur(8px)",
+              color: "white",
+              textDecoration: "none",
+            }}
+          >
             <ChevronLeft size={20} />
           </Link>
         </div>
+
         <div style={{ position: "absolute", top: 16, right: 16, display: "flex", gap: 8 }}>
           <button onClick={() => setIsFavorite(!isFavorite)}
             style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 40, height: 40, borderRadius: "50%", background: "rgba(0,0,0,0.3)", backdropFilter: "blur(8px)", border: "none", cursor: "pointer" }}>
@@ -102,155 +127,208 @@ export default function FieldDetailPage({ params }: { params: { fieldId: string 
             <Share2 size={18} style={{ color: "white" }} />
           </button>
         </div>
-        {/* Rating badge */}
-        <div style={{ position: "absolute", bottom: 16, left: 16, background: "rgba(0,0,0,0.4)", backdropFilter: "blur(8px)", borderRadius: 20, padding: "6px 12px", display: "flex", alignItems: "center", gap: 6 }}>
-          <Star size={14} style={{ color: "#FCD34D", fill: "#FCD34D" }} />
-          <span style={{ color: "white", fontWeight: 700, fontSize: 14 }}>{mockField.rating}</span>
-          <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 12 }}>({mockField.reviewCount} değerlendirme)</span>
+
+        <div style={{ position: "absolute", bottom: -118, left: 0, width: "100%", lineHeight: 0, zIndex: 0, pointerEvents: "none" }}>
+          <svg
+            data-name="Layer 1"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 1200 120"
+            preserveAspectRatio="none"
+            style={{ display: "block", width: "calc(100% + 1.3px)", height: 120, overflow: "visible" }}
+          >
+            <defs>
+              <filter id="field-wave-soft-shadow" x="-8%" y="-8%" width="116%" height="180%">
+                <feGaussianBlur stdDeviation="7" />
+              </filter>
+            </defs>
+            <path
+              d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z"
+              fill="rgba(0,0,0,0.22)"
+              transform="translate(0, 14)"
+              filter="url(#field-wave-soft-shadow)"
+            />
+            <path
+              d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z"
+              fill="#1A754E"
+            />
+          </svg>
         </div>
       </div>
 
-      <div className="content-container" style={{ paddingTop: 24, paddingBottom: 100 }}>
-        {/* Header Info */}
-        <div className="card" style={{ padding: 24, marginBottom: 16 }}>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: "#111827", marginBottom: 10 }}>{mockField.name}</h1>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#9ca3af", fontSize: 14, marginBottom: 8 }}>
-            <MapPin size={16} style={{ color: "#2E7D32" }} />
-            <span>{mockField.address}</span>
+      <div className="content-container match-main-content" style={{ position: "relative", zIndex: 2, marginTop: -220, paddingTop: 24, paddingBottom: 100 }}>
+        {/* Header Info — Maç Kur kartı stilinde */}
+        <div className="auth-dynamo-glass match-dynamo-card" style={{ padding: 24, marginBottom: 16, borderRadius: 24 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+            <div>
+              <p style={{ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: "#2E7D32", fontWeight: 700, marginBottom: 4 }}>SAHA DETAYI</p>
+              <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111827", marginBottom: 8 }}>{mockField.name}</h1>
+            </div>
+            <div style={{ background: "#F59E0B", color: "white", borderRadius: 12, padding: "8px 12px", display: "flex", alignItems: "center", gap: 6, boxShadow: "0 4px 12px rgba(245,158,11,0.2)" }}>
+              <Star size={16} fill="white" />
+              <span style={{ fontWeight: 800, fontSize: 16 }}>{mockField.rating}</span>
+            </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#9ca3af", fontSize: 14, marginBottom: 16 }}>
-            <Phone size={16} style={{ color: "#2E7D32" }} />
-            <a href={`tel:${mockField.phone}`} style={{ color: "#2E7D32", fontWeight: 600, textDecoration: "none" }}>{mockField.phone}</a>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#6b7280", fontSize: 14 }}>
+              <MapPin size={16} style={{ color: "#2E7D32" }} />
+              <span>{mockField.address}</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#6b7280", fontSize: 14 }}>
+              <Phone size={16} style={{ color: "#2E7D32" }} />
+              <a href={`tel:${mockField.phone}`} style={{ color: "#2E7D32", fontWeight: 700, textDecoration: "none" }}>{mockField.phone}</a>
+            </div>
           </div>
-          <p style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.7, display: showFullDesc ? "block" : "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+
+          <p style={{ fontSize: 15, color: "#4b5563", lineHeight: 1.6, display: showFullDesc ? "block" : "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
             {mockField.description}
           </p>
-          <button onClick={() => setShowFullDesc(!showFullDesc)} style={{ background: "none", border: "none", color: "#2E7D32", fontSize: 13, fontWeight: 600, cursor: "pointer", marginTop: 6, padding: 0 }}>
+          <button onClick={() => setShowFullDesc(!showFullDesc)} style={{ background: "none", border: "none", color: "#2E7D32", fontSize: 14, fontWeight: 700, cursor: "pointer", marginTop: 8, padding: 0 }}>
             {showFullDesc ? "Daha az" : "Devamını oku"}
           </button>
 
           {/* Tags */}
-          <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
-            <span className="pill pill-primary">{mockField.isIndoor ? "🏠 Kapalı Alan" : "☀️ Açık Alan"}</span>
-            {mockField.hasParking && <span className="pill pill-outline">🚗 Otopark</span>}
+          <div style={{ display: "flex", gap: 8, marginTop: 20, flexWrap: "wrap" }}>
+            <span className="pill pill-primary" style={{ padding: "6px 14px" }}>{mockField.isIndoor ? "🏠 Kapalı Alan" : "☀️ Açık Alan"}</span>
+            {mockField.hasParking && <span className="pill pill-outline" style={{ padding: "6px 14px", background: "white" }}>🚗 Otopark</span>}
           </div>
         </div>
 
-        {/* Pitch Selection */}
-        <div className="card" style={{ padding: 24, marginBottom: 16 }}>
-          <h2 style={{ fontSize: 17, fontWeight: 700, color: "#111827", marginBottom: 14 }}>Sahalar</h2>
-          <div className="scroll-x">
-            {mockField.pitches.map(pitch => (
-              <button key={pitch.id} onClick={() => setSelectedPitch(pitch)}
-                style={{ flexShrink: 0, padding: "14px 18px", borderRadius: 12, border: `2px solid ${selectedPitch.id === pitch.id ? "#2E7D32" : "#f0f0f0"}`, background: selectedPitch.id === pitch.id ? "#E8F5E9" : "white", cursor: "pointer", textAlign: "left", minWidth: 140, transition: "all 0.2s" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                  <span style={{ fontWeight: 700, fontSize: 14, color: "#111827" }}>{pitch.name}</span>
-                  {selectedPitch.id === pitch.id && <Check size={16} style={{ color: "#2E7D32" }} />}
-                </div>
-                <p style={{ fontSize: 13, color: "#9ca3af" }}>{pitch.size}</p>
-                <p style={{ fontSize: 14, fontWeight: 700, color: "#2E7D32", marginTop: 6 }}>₺{pitch.price}/saat</p>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Date Selection */}
-        <div className="card" style={{ padding: 24, marginBottom: 16 }}>
-          <h2 style={{ fontSize: 17, fontWeight: 700, color: "#111827", marginBottom: 14 }}>Tarih Seçin</h2>
-          <div className="scroll-x">
-            {dates.map((date, i) => {
-              const isSelected = date.toDateString() === selectedDate.toDateString();
-              return (
-                <button key={i} onClick={() => setSelectedDate(date)}
-                  style={{ flexShrink: 0, width: 52, height: 64, borderRadius: 12, border: "none", cursor: "pointer", background: isSelected ? "#2E7D32" : "#f3f4f6", color: isSelected ? "white" : "#374151", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2, transition: "all 0.15s" }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, opacity: isSelected ? 1 : 0.6 }}>{dayNames[date.getDay()]}</span>
-                  <span style={{ fontSize: 18, fontWeight: 800 }}>{date.getDate()}</span>
-                </button>
-              );
-            })}
-          </div>
-          <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 10 }}>
-            {selectedDate.getDate()} {monthNames[selectedDate.getMonth()]} {selectedDate.getFullYear()}
-          </p>
-        </div>
-
-        {/* Time Slots */}
-        <div className="card" style={{ padding: 24, marginBottom: 16 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-            <h2 style={{ fontSize: 17, fontWeight: 700, color: "#111827" }}>Saat Seçin</h2>
-            {selectedSlots.length > 0 && (
-              <span style={{ fontSize: 14, fontWeight: 700, color: "#2E7D32" }}>
-                {selectedSlots[0]}:00 - {selectedSlots[selectedSlots.length - 1] + 1}:00
-              </span>
-            )}
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
-            {timeSlots.map(slot => {
-              const isSelected = selectedSlots.includes(slot.hour);
-              const cls = `time-slot ${!slot.available ? "booked" : isSelected ? "selected" : "available"}`;
-              return (
-                <button key={slot.hour} className={cls} onClick={() => toggleSlot(slot.hour)}>
-                  <div style={{ fontWeight: 700 }}>{slot.label}</div>
-                  <div style={{ fontSize: 11, opacity: 0.7 }}>₺{slot.price}</div>
-                </button>
-              );
-            })}
-          </div>
-          {/* Legend */}
-          <div style={{ display: "flex", gap: 20, marginTop: 14 }}>
-            {[{ color: "#2E7D32", label: "Seçili" }, { color: "#f3f4f6", label: "Müsait" }, { color: "#d1d5db", label: "Dolu" }].map(l => (
-              <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#9ca3af" }}>
-                <div style={{ width: 10, height: 10, borderRadius: "50%", background: l.color }} />
-                {l.label}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 16 }}>
+          {/* Left Column */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {/* Pitch Selection */}
+            <div className="auth-dynamo-glass match-dynamo-card" style={{ padding: 24, borderRadius: 24 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 700, color: "#111827", marginBottom: 16 }}>Sahalar</h2>
+              <div style={{ display: "grid", gap: 10 }}>
+                {mockField.pitches.map(pitch => {
+                  const isSelected = selectedPitch.id === pitch.id;
+                  return (
+                    <button key={pitch.id} onClick={() => setSelectedPitch(pitch)}
+                      style={{ 
+                        width: "100%", 
+                        padding: "16px", 
+                        borderRadius: 16, 
+                        border: `2px solid ${isSelected ? "#2E7D32" : "rgba(15,23,42,0.08)"}`, 
+                        background: isSelected ? "rgba(232,245,233,0.85)" : "rgba(255,255,255,0.5)", 
+                        cursor: "pointer", 
+                        textAlign: "left", 
+                        transition: "all 0.2s" 
+                      }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                        <span style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>{pitch.name}</span>
+                        {isSelected && <Check size={18} style={{ color: "#2E7D32" }} />}
+                      </div>
+                      <p style={{ fontSize: 13, color: "#9ca3af" }}>{pitch.size}</p>
+                      <p style={{ fontSize: 20, fontWeight: 800, color: "#2E7D32", marginTop: 8 }}>₺{pitch.price}<span style={{ fontSize: 13, fontWeight: 600 }}>/saat</span></p>
+                    </button>
+                  );
+                })}
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
 
-        {/* Amenities */}
-        <div className="card" style={{ padding: 24, marginBottom: 16 }}>
-          <h2 style={{ fontSize: 17, fontWeight: 700, color: "#111827", marginBottom: 14 }}>Özellikler</h2>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-            {mockField.features.map(f => (
-              <div key={f.name} style={{ background: "#f3f4f6", borderRadius: 10, padding: "14px 8px", textAlign: "center" }}>
-                <div style={{ fontSize: 22, marginBottom: 4 }}>{f.icon}</div>
-                <div style={{ fontSize: 12, color: "#6b7280", fontWeight: 500 }}>{f.name}</div>
+            {/* Amenities */}
+            <div className="auth-dynamo-glass match-dynamo-card" style={{ padding: 24, borderRadius: 24 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 700, color: "#111827", marginBottom: 16 }}>Özellikler</h2>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+                {mockField.features.map(f => (
+                  <div key={f.name} style={{ background: "rgba(255,255,255,0.5)", border: "1px solid rgba(0,0,0,0.04)", borderRadius: 16, padding: "16px 8px", textAlign: "center" }}>
+                    <div style={{ fontSize: 24, marginBottom: 6 }}>{f.icon}</div>
+                    <div style={{ fontSize: 12, color: "#4b5563", fontWeight: 700 }}>{f.name}</div>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
+          </div>
+
+          {/* Right Column */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {/* Date Selection */}
+            <div className="auth-dynamo-glass match-dynamo-card" style={{ padding: 24, borderRadius: 24 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 700, color: "#111827", marginBottom: 16 }}>Tarih Seçin</h2>
+              <div className="scroll-x">
+                {dates.map((date, i) => {
+                  const isSelected = date.toDateString() === selectedDate.toDateString();
+                  return (
+                    <button key={i} onClick={() => setSelectedDate(date)}
+                      style={{ flexShrink: 0, width: 54, height: 68, borderRadius: 14, border: "none", cursor: "pointer", background: isSelected ? "#2E7D32" : "rgba(255,255,255,0.6)", color: isSelected ? "white" : "#374151", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2, transition: "all 0.15s", boxShadow: isSelected ? "0 8px 20px rgba(46,125,50,0.2)" : "none" }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, opacity: isSelected ? 1 : 0.6 }}>{dayNames[date.getDay()]}</span>
+                      <span style={{ fontSize: 20, fontWeight: 800 }}>{date.getDate()}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <p style={{ fontSize: 13, color: "#2E7D32", fontWeight: 700, marginTop: 12, background: "rgba(46,125,50,0.06)", padding: "8px 12px", borderRadius: 8, display: "inline-block" }}>
+                {selectedDate.getDate()} {monthNames[selectedDate.getMonth()]} {selectedDate.getFullYear()}
+              </p>
+            </div>
+
+            {/* Time Slots */}
+            <div className="auth-dynamo-glass match-dynamo-card" style={{ padding: 24, borderRadius: 24 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                <h2 style={{ fontSize: 18, fontWeight: 700, color: "#111827" }}>Saat Seçin</h2>
+                {selectedSlots.length > 0 && (
+                  <span style={{ fontSize: 14, fontWeight: 800, color: "#2E7D32", background: "rgba(46,125,50,0.1)", padding: "4px 10px", borderRadius: 8 }}>
+                    {selectedSlots[0]}:00 - {selectedSlots[selectedSlots.length - 1] + 1}:00
+                  </span>
+                )}
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+                {timeSlots.map(slot => {
+                  const isSelected = selectedSlots.includes(slot.hour);
+                  const cls = `time-slot ${!slot.available ? "booked" : isSelected ? "selected" : "available"}`;
+                  return (
+                    <button key={slot.hour} className={cls} onClick={() => toggleSlot(slot.hour)} style={{ height: 54, borderRadius: 12, fontSize: 14 }}>
+                      <div style={{ fontWeight: 800 }}>{slot.label}</div>
+                      <div style={{ fontSize: 11, opacity: 0.8 }}>₺{slot.price}</div>
+                    </button>
+                  );
+                })}
+              </div>
+              {/* Legend */}
+              <div style={{ display: "flex", gap: 16, marginTop: 16, padding: "12px", background: "rgba(0,0,0,0.02)", borderRadius: 12 }}>
+                {[{ color: "#2E7D32", label: "Seçili" }, { color: "rgba(255,255,255,0.6)", label: "Müsait" }, { color: "rgba(0,0,0,0.1)", label: "Dolu" }].map(l => (
+                  <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#6b7280", fontWeight: 600 }}>
+                    <div style={{ width: 10, height: 10, borderRadius: "50%", background: l.color }} />
+                    {l.label}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Reviews */}
-        <div className="card" style={{ padding: 24, marginBottom: 16 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <h2 style={{ fontSize: 17, fontWeight: 700, color: "#111827" }}>Değerlendirmeler</h2>
+        <div className="auth-dynamo-glass match-dynamo-card" style={{ padding: 24, marginTop: 16, borderRadius: 24 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: "#111827" }}>Değerlendirmeler</h2>
             {user && (
               <button
                 onClick={() => setShowReviewForm(true)}
-                style={{ fontSize: 13, color: "#2E7D32", fontWeight: 600, cursor: "pointer", background: "none", border: "none", padding: 0 }}>
+                style={{ fontSize: 14, color: "#2E7D32", fontWeight: 700, cursor: "pointer", background: "rgba(46,125,50,0.1)", border: "none", padding: "8px 16px", borderRadius: 10 }}>
                 Değerlendir →
               </button>
             )}
           </div>
-          <div style={{ display: "flex", gap: 24, alignItems: "center", background: "#f9f9f9", borderRadius: 12, padding: 16 }}>
+          <div style={{ display: "flex", gap: 24, alignItems: "center", background: "rgba(255,255,255,0.5)", borderRadius: 16, padding: 20, border: "1px solid rgba(0,0,0,0.03)" }}>
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 40, fontWeight: 900, color: "#111827" }}>{fieldRating.toFixed(1)}</div>
-              <div style={{ display: "flex", gap: 2, justifyContent: "center" }}>
+              <div style={{ fontSize: 44, fontWeight: 900, color: "#111827", lineHeight: 1 }}>{fieldRating.toFixed(1)}</div>
+              <div style={{ display: "flex", gap: 2, justifyContent: "center", margin: "8px 0" }}>
                 {[1, 2, 3, 4, 5].map(i => (
-                  <Star key={i} size={14} style={{ color: "#F59E0B", fill: i <= Math.round(fieldRating) ? "#F59E0B" : "transparent" }} />
+                  <Star key={i} size={16} style={{ color: "#F59E0B", fill: i <= Math.round(fieldRating) ? "#F59E0B" : "transparent" }} />
                 ))}
               </div>
-              <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 4 }}>{reviews.length} değerlendirme</div>
+              <div style={{ fontSize: 12, color: "#9ca3af", fontWeight: 600 }}>{reviews.length} değerlendirme</div>
             </div>
             <div style={{ flex: 1 }}>
               {[5, 4, 3, 2, 1].map(star => {
                 const count = reviews.filter(r => r.rating === star).length;
                 const pct = reviews.length > 0 ? (count / reviews.length) * 100 : 0;
                 return (
-                  <div key={star} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                    <span style={{ fontSize: 12, color: "#9ca3af", width: 12 }}>{star}</span>
-                    <div style={{ flex: 1, background: "#e5e7eb", borderRadius: 3, height: 6 }}>
-                      <div style={{ width: `${pct}%`, background: "#F59E0B", height: 6, borderRadius: 3 }} />
+                  <div key={star} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                    <span style={{ fontSize: 12, color: "#6b7280", width: 12, fontWeight: 700 }}>{star}</span>
+                    <div style={{ flex: 1, background: "rgba(0,0,0,0.05)", borderRadius: 4, height: 8 }}>
+                      <div style={{ width: `${pct}%`, background: "#F59E0B", height: 8, borderRadius: 4 }} />
                     </div>
                   </div>
                 );
@@ -259,15 +337,15 @@ export default function FieldDetailPage({ params }: { params: { fieldId: string 
           </div>
 
           {reviews.length > 0 && (
-            <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ marginTop: 20, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
               {reviews.slice(0, 3).map(review => (
-                <div key={review.id} style={{ padding: 12, background: "#f9f9f9", borderRadius: 10, borderLeft: "3px solid #2E7D32" }}>
-                  <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+                <div key={review.id} style={{ padding: 16, background: "rgba(255,255,255,0.6)", borderRadius: 16, border: "1px solid rgba(0,0,0,0.04)" }}>
+                  <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
                     {[1, 2, 3, 4, 5].map(i => (
-                      <Star key={i} size={12} style={{ color: "#FCD34D", fill: i <= review.rating ? "#FCD34D" : "transparent" }} />
+                      <Star key={i} size={14} style={{ color: "#F59E0B", fill: i <= review.rating ? "#F59E0B" : "transparent" }} />
                     ))}
                   </div>
-                  <p style={{ fontSize: 13, color: "#374151", lineHeight: 1.5 }}>{review.comment || "Yorum eklenmedi"}</p>
+                  <p style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.6 }}>{review.comment || "Yorum eklenmedi"}</p>
                 </div>
               ))}
             </div>
@@ -275,20 +353,26 @@ export default function FieldDetailPage({ params }: { params: { fieldId: string 
         </div>
       </div>
 
-      {/* Bottom Bar */}
-      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "white", borderTop: "1px solid #f0f0f0", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", zIndex: 50, boxShadow: "0 -4px 20px rgba(0,0,0,0.08)" }}>
-        <div>
+      {/* Bottom Bar — Maç Kur stilinde */}
+      <div className="match-booking-bar">
+        <div style={{ marginRight: "auto", display: "flex", flexDirection: "column", background: "rgba(255,255,255,0.8)", padding: "10px 20px", borderRadius: 16, backdropFilter: "blur(10px)", border: "1px solid white", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
           {canBook ? (
             <>
-              <p style={{ fontSize: 20, fontWeight: 900, color: "#111827" }}>₺{totalPrice}</p>
-              <p style={{ fontSize: 12, color: "#9ca3af" }}>{selectedSlots.length} saat</p>
+              <p style={{ fontSize: 24, fontWeight: 900, color: "#111827", lineHeight: 1 }}>₺{totalPrice}</p>
+              <p style={{ fontSize: 12, color: "#2E7D32", fontWeight: 700 }}>{selectedSlots.length} saat seçildi</p>
             </>
           ) : (
-            <p style={{ fontSize: 14, color: "#9ca3af" }}>Saat seçin</p>
+            <p style={{ fontSize: 14, color: "#94a3b8", fontWeight: 600 }}>Henüz saat seçilmedi</p>
           )}
         </div>
-        <Link href={canBook ? `/booking/${mockField.id}` : "#"}
-          style={{ background: canBook ? "#2E7D32" : "#e5e7eb", color: canBook ? "white" : "#9ca3af", padding: "14px 28px", borderRadius: "14px", fontWeight: 800, fontSize: 15, textDecoration: "none", display: "flex", alignItems: "center", gap: 8, boxShadow: canBook ? "0 4px 12px rgba(46,125,50,0.3)" : "none", pointerEvents: canBook ? "auto" : "none" }}>
+        <Link
+          className={`match-booking-button ${canBook ? "is-active" : "is-disabled"}`}
+          href={canBook ? `/booking/${params.fieldId}` : "#"}
+          style={{
+            textDecoration: "none",
+            pointerEvents: canBook ? "auto" : "none",
+          }}
+        >
           Rezervasyon Yap <ArrowRight size={18} />
         </Link>
       </div>
