@@ -5,9 +5,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.*
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.HaliSahaApp.data.models.UserType
 import com.example.HaliSahaApp.data.remote.AuthService
 import com.example.HaliSahaApp.ui.navigation.Screen
@@ -20,6 +22,10 @@ import com.example.HaliSahaApp.ui.screens.facility.FacilityDetailScreen
 import com.example.HaliSahaApp.ui.screens.facility.FacilityListScreen
 import com.example.HaliSahaApp.ui.screens.main.MainScreen
 import com.example.HaliSahaApp.ui.screens.splash.SplashScreen
+import com.example.HaliSahaApp.ui.screens.superadmin.SuperAdminScreen
+import com.example.HaliSahaApp.ui.screens.admin.onboarding.AdminOnboardingScreen
+import com.example.HaliSahaApp.ui.screens.reviews.ReviewsListScreen
+import com.example.HaliSahaApp.ui.screens.notifications.NotificationsListScreen
 import com.example.HaliSahaApp.ui.theme.HaliSahaAppTheme
 
 class MainActivity : ComponentActivity() {
@@ -51,11 +57,15 @@ fun HaliSahaRoot() {
                 // Giriş yapmışsa VEYA Misafir ise -> Ana Sayfaya git
                 val isGuest = currentUser?.userType == UserType.GUEST
                 val isAdmin = currentUser?.userType == UserType.ADMIN
+                val isSuperAdmin = currentUser?.userType == UserType.SUPER_ADMIN
 
                 if (isAuthenticated || isGuest) {
-                    // YÖNLENDİRME MANTIĞI:
-                    if (isAdmin) {
-                        navController.navigate(Screen.AdminMain.route) { // Admin ise Admin Paneline
+                    if (isSuperAdmin) {
+                        navController.navigate(Screen.SuperAdminMain.route) {
+                            popUpTo(Screen.Splash.route) { inclusive = true }
+                        }
+                    } else if (isAdmin) {
+                        navController.navigate(Screen.AdminOnboarding.route) { // Go to Onboarding/Verification first
                             popUpTo(Screen.Splash.route) { inclusive = true }
                         }
                     } else {
@@ -126,6 +136,60 @@ fun HaliSahaRoot() {
                     popUpTo(0) { inclusive = true }
                 }
             })
+        }
+        
+        composable(Screen.SuperAdminMain.route) {
+            SuperAdminScreen(onLogout = {
+                navController.navigate(Screen.Login.route) {
+                    popUpTo(0) { inclusive = true }
+                }
+            })
+        }
+        
+        composable(Screen.AdminOnboarding.route) {
+            AdminOnboardingScreen(
+                onApproved = {
+                    navController.navigate(Screen.AdminMain.route) {
+                        popUpTo(Screen.AdminOnboarding.route) { inclusive = true }
+                    }
+                },
+                onLogout = {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
+        }
+        
+        composable(
+            route = Screen.ReviewsList.route,
+            arguments = listOf(navArgument("facilityId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val facilityId = backStackEntry.arguments?.getString("facilityId")
+            if (facilityId != null) {
+                ReviewsListScreen(
+                    facilityId = facilityId,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+        }
+        
+        composable(Screen.NotificationsList.route) {
+            NotificationsListScreen(onBack = { navController.popBackStack() })
+        }
+        
+        composable(
+            route = Screen.WriteReview.route,
+            arguments = listOf(navArgument("bookingId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val bookingId = backStackEntry.arguments?.getString("bookingId")
+            if (bookingId != null) {
+                com.example.HaliSahaApp.ui.screens.reviews.WriteReviewScreen(
+                    bookingId = bookingId,
+                    onBack = { navController.popBackStack() },
+                    onSuccess = { navController.popBackStack() }
+                )
+            }
         }
     }
 }

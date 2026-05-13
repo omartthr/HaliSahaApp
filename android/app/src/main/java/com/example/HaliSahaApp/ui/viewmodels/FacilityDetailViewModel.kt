@@ -109,7 +109,11 @@ class FacilityDetailViewModel(
     // MARK: - Load Pitches
     private suspend fun loadPitches() {
         try {
-            val pitches = facilityService.fetchPitches(facilityId)
+            val pitches = try {
+                facilityService.fetchPitches(facilityId)
+            } catch (e: Exception) {
+                emptyList()
+            }
 
             // Eğer veritabanında pitch yoksa, UI boş kalmasın diye mock pitch ekleyelim
             val finalPitches = if (pitches.isEmpty()) {

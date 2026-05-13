@@ -71,7 +71,7 @@ fun FacilityDetailScreen(
     // TopBar Scroll davranışı için state
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
-    if (uiState.isLoading || uiState.facility == null) {
+    if (uiState.facility == null) {
         LoadingView()
         return
     }
@@ -179,6 +179,26 @@ fun FacilityDetailScreen(
             // 11. Location
             item { LocationSection(facility = facility) }
 
+            // 12. Divider
+            item { HorizontalDivider(thickness = 8.dp, color = Color.Gray.copy(alpha = 0.1f)) }
+
+            // 13. Reviews Button
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { navController.navigate("reviews/${facility.id}") }
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(AppIcons.Star, contentDescription = null, tint = AppColors.Warning)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Değerlendirmeleri Gör", fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
+                    Spacer(modifier = Modifier.weight(1f))
+                    Icon(AppIcons.ChevronRight, contentDescription = null, tint = AppColors.TextSecondary)
+                }
+            }
+
             item { Spacer(modifier = Modifier.height(20.dp)) }
         }
     }
@@ -206,9 +226,11 @@ fun FacilityDetailScreen(
                 viewModel = viewModel,
                 onDismiss = { viewModel.proceedToBooking() }, // Toggle gibi çalışır, false yapar
                 onBookingCompleted = {
-                    // Ana sayfaya veya randevulara yönlendir
-                    navController.popBackStack()
-                    // navController.navigate(BottomTab.BOOKINGS.route) // İstersen
+                    navController.navigate("bookings") {
+                        popUpTo(navController.graph.startDestinationId) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
                 }
             )
         }

@@ -40,6 +40,10 @@ fun BookingsScreen(
     val pullRefreshState = rememberPullToRefreshState()
     val scope = rememberCoroutineScope()
 
+    LaunchedEffect(Unit) {
+        viewModel.refresh()
+    }
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -75,6 +79,9 @@ fun BookingsScreen(
                         onButtonClick = {
                             // Home (Keşfet) tab'ına yönlendir
                             navController.navigate("home") {
+                                popUpTo(navController.graph.startDestinationId) {
+                                    saveState = true
+                                }
                                 launchSingleTop = true
                                 restoreState = true
                             }

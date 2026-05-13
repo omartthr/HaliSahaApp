@@ -11,8 +11,6 @@ import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ConfirmationNumber
 import androidx.compose.material.icons.filled.DateRange
@@ -25,6 +23,8 @@ import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Lightbulb
@@ -134,6 +134,7 @@ object AppColors {
     val Accent = Color(0xFFFF6F00)       // Turuncu
     val Background = Color(0xFFF5F5F5)   // Açık gri
     val Surface = Color.White
+    val CardBackground = Color.White
 
     // MARK: - Text Colors
     val TextPrimary = Color(0xFF212121)
@@ -192,6 +193,9 @@ object AppIcons {
     val Close = Icons.Filled.Close
     val Back = Icons.AutoMirrored.Filled.ArrowBack
     val Forward = Icons.AutoMirrored.Filled.ArrowForward
+    val ArrowLeft = Icons.AutoMirrored.Filled.ArrowBack
+    val ChevronRight = Icons.Filled.KeyboardArrowRight
+    val ChevronLeft = Icons.Filled.KeyboardArrowLeft
     val Down = Icons.Filled.KeyboardArrowDown
     val Up = Icons.Filled.KeyboardArrowUp
     val Check = Icons.Filled.Check
@@ -214,6 +218,8 @@ object AppIcons {
 
     // MARK: - Status Icons
     val Success = Icons.Filled.CheckCircle
+    val CheckCircle = Icons.Filled.CheckCircle
+    val Time = Icons.Filled.Schedule
     val Warning = Icons.Filled.Warning
     val Error = Icons.Filled.Error
     val Info = Icons.Filled.Info
@@ -254,7 +260,7 @@ object AppStrings {
     // MARK: - Tab Bar
     const val TAB_EXPLORE = "Keşfet"
     const val TAB_MAP = "Harita"
-    const val TAB_BOOKINGS = "Randevularım"
+    const val TAB_BOOKINGS = "Randevular"
     const val TAB_CHAT = "Sohbet"
     const val TAB_PROFILE = "Profil"
 

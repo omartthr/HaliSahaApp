@@ -34,6 +34,7 @@ object StorageService {
     private val facilityImagesRef: StorageReference get() = storage.reference.child("facilities")
     private val pitchImagesRef: StorageReference get() = storage.reference.child("pitches")
     private val userImagesRef: StorageReference get() = storage.reference.child("users")
+    private val adminVerificationsRef: StorageReference get() = storage.reference.child("admin_verifications")
 
     // MARK: - Upload Functions
 
@@ -72,6 +73,17 @@ object StorageService {
         return uploadImage(bitmap, ref)
     }
 
+    suspend fun uploadVerificationDocument(uri: Uri, documentType: String): String {
+        val userId = com.example.HaliSahaApp.data.remote.FirebaseService.currentUserId 
+            ?: throw FirebaseError.NotAuthenticated
+        val imageId = UUID.randomUUID().toString()
+        val ref = adminVerificationsRef.child(userId).child("${documentType}_$imageId.jpg")
+        
+        // Actually, uploadImage requires a Bitmap. I'll just upload the Uri directly 
+        // to avoid loading large images into memory unless necessary, or use putFile.
+        return performUploadUri(uri, ref)
+    }
+
     // MARK: - Core Upload & Optimization
 
     private suspend fun uploadImage(bitmap: Bitmap, ref: StorageReference): String {
@@ -99,6 +111,27 @@ object StorageService {
         val baos = ByteArrayOutputStream()
         resizedBitmap.compress(Bitmap.CompressFormat.JPEG, COMPRESSION_QUALITY, baos)
         return baos.toByteArray()
+    }
+
+    private suspend fun performUploadUri(uri: Uri, ref: StorageReference): String {
+        var lastException: Exception? = null
+
+        for (attempt in 1..MAX_RETRIES) {
+            try {
+                uploadMutex.withLock {
+                    ref.putFile(uri).await()
+                }
+                val downloadUrl = ref.downloadUrl.await()
+                return downloadUrl.toString()
+            } catch (e: Exception) {
+                lastException = e
+                if (attempt < MAX_RETRIES) {
+                    val delayTime = RETRY_DELAY_MS * (1 shl (attempt - 1)) // 1s, 2s, 4s
+                    delay(delayTime)
+                }
+            }
+        }
+        throw lastException ?: FirebaseError.Unknown("Yükleme işlemi $MAX_RETRIES deneme sonrası başarısız oldu.")
     }
 
     private suspend fun performUpload(data: ByteArray, ref: StorageReference): String {

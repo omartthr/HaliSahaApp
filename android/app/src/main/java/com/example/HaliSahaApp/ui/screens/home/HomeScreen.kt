@@ -63,7 +63,7 @@ fun HomeScreen(
     Scaffold(
         topBar = {
             HomeTopBar(
-                onNotificationClick = { showNotifications = true }
+                onNotificationClick = { navController.navigate(Screen.NotificationsList.route) }
             )
         },
         containerColor = AppColors.Background
@@ -129,21 +129,6 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.height(80.dp)) // Bottom Bar boşluğu
             }
-        }
-    }
-
-    // Notifications Bottom Sheet
-    if (showNotifications) {
-        ModalBottomSheet(
-            onDismissRequest = { showNotifications = false },
-            sheetState = sheetState,
-            containerColor = AppColors.Surface
-        ) {
-            NotificationsSheetView(onClose = {
-                scope.launch { sheetState.hide() }.invokeOnCompletion {
-                    if (!sheetState.isVisible) showNotifications = false
-                }
-            })
         }
     }
 }

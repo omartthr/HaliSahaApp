@@ -9,6 +9,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -37,7 +38,7 @@ enum class BottomTab(
 ) {
     HOME("home", "Keşfet", AppIcons.Home),
     MAP("map", "Harita", AppIcons.Map),
-    BOOKINGS("bookings", "Randevular", AppIcons.Bookings, isProtected = true),
+    BOOKINGS("bookings", "Randevularım", AppIcons.Bookings, isProtected = true),
     CHAT("chat", "Sohbet", AppIcons.Chat, isProtected = true),
     PROFILE("profile", "Profil", AppIcons.Profile, isProtected = true)
 }
@@ -82,7 +83,7 @@ fun MainScreen(onLogout: () -> Unit) {
                                 Icon(imageVector = tab.icon, contentDescription = tab.title)
                             }
                         },
-                        label = { Text(tab.title) },
+                        label = { Text(tab.title, maxLines = 1, fontSize = 9.sp, softWrap = false) },
                         selected = currentRoute == tab.route,
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = AppColors.Primary,
@@ -91,7 +92,7 @@ fun MainScreen(onLogout: () -> Unit) {
                             unselectedIconColor = AppColors.TextSecondary,
                             unselectedTextColor = AppColors.TextSecondary
                         ),
-                        onClick = {
+                        onClick = {  
                             // Misafir Kontrolü
                             if (isGuest && tab.isProtected) {
                                 haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)

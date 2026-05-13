@@ -37,6 +37,7 @@ object FirebaseService {
     val matchPostsCollection: CollectionReference get() = db.collection(FirestoreCollection.MATCH_POSTS)
     val reviewsCollection: CollectionReference get() = db.collection(FirestoreCollection.REVIEWS)
     val notificationsCollection: CollectionReference get() = db.collection(FirestoreCollection.NOTIFICATIONS)
+    val adminsCollection: CollectionReference get() = db.collection("admins")
 
     // MARK: - Sub-collection References
     fun pitchesCollection(facilityId: String): CollectionReference {

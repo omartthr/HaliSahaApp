@@ -66,6 +66,7 @@ dependencies {
     implementation("com.google.maps.android:maps-compose:4.3.0")
     implementation("com.google.android.gms:play-services-maps:18.2.0")
     implementation("androidx.compose.material3:material3:1.3.1")
+    implementation("com.airbnb.android:lottie-compose:6.4.0")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
 
