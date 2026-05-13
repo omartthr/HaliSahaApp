@@ -93,6 +93,79 @@ struct AppNotification: Identifiable, Codable, Hashable {
             data: NotificationData(bookingId: booking.id, facilityId: booking.facilityId)
         )
     }
+
+    static func bookingCancelled(userId: String, booking: Booking, reason: String? = nil) -> AppNotification {
+        let body: String
+        if let reason, !reason.isEmpty {
+            body = "\(booking.facilityName) – \(booking.formattedDate) tarihli rezervasyonunuz iptal edildi. Sebep: \(reason)"
+        } else {
+            body = "\(booking.facilityName) – \(booking.formattedDate) tarihli rezervasyonunuz iptal edildi."
+        }
+        return AppNotification(
+            userId: userId,
+            title: "Rezervasyon İptali ❌",
+            body: body,
+            type: .bookingCancelled,
+            data: NotificationData(bookingId: booking.id, facilityId: booking.facilityId)
+        )
+    }
+
+    /// Admin'e: yeni rezervasyon (kullanıcı oluşturduğunda)
+    static func newBookingForAdmin(adminId: String, booking: Booking) -> AppNotification {
+        let actionText =
+            booking.status == .pending
+            ? "için ödeme yaptı ve onayınızı bekliyor."
+            : "için ayırdı."
+
+        return AppNotification(
+            userId: adminId,
+            title: "Yeni Rezervasyon 🎫",
+            body: "\(booking.userFullName) – \(booking.pitchName) sahasını \(booking.formattedDate) (\(booking.timeSlotString)) \(actionText)",
+            type: .bookingConfirmed,
+            data: NotificationData(bookingId: booking.id, facilityId: booking.facilityId, pitchId: booking.pitchId)
+        )
+    }
+
+    /// Admin'e: kullanıcı rezervasyonunu iptal etti
+    static func bookingCancelledByUser(adminId: String, booking: Booking) -> AppNotification {
+        AppNotification(
+            userId: adminId,
+            title: "Rezervasyon İptal Edildi ❌",
+            body: "\(booking.userFullName) – \(booking.pitchName) için \(booking.formattedDate) tarihli rezervasyonunu iptal etti.",
+            type: .bookingCancelled,
+            data: NotificationData(bookingId: booking.id, facilityId: booking.facilityId, pitchId: booking.pitchId)
+        )
+    }
+
+    /// Admin'e: yeni değerlendirme alındı
+    static func reviewReceived(
+        adminId: String,
+        facilityName: String,
+        review: Review
+    ) -> AppNotification {
+        let stars = String(format: "%.1f", review.overallRating)
+        let snippet: String = {
+            guard let comment = review.comment, !comment.isEmpty else {
+                return "\(review.userName) tesisini \(stars) yıldızla değerlendirdi."
+            }
+            let truncated = comment.count > 100
+                ? String(comment.prefix(100)) + "…"
+                : comment
+            return "\(review.userName) (\(stars)★): \"\(truncated)\""
+        }()
+
+        return AppNotification(
+            userId: adminId,
+            title: "Yeni Değerlendirme ⭐️",
+            body: snippet,
+            type: .reviewReceived,
+            data: NotificationData(
+                facilityId: review.facilityId,
+                pitchId: review.pitchId,
+                reviewId: review.id
+            )
+        )
+    }
     
     static func matchInvite(userId: String, senderName: String, groupId: String, bookingId: String) -> AppNotification {
         AppNotification(

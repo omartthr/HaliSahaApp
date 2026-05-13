@@ -95,7 +95,7 @@ struct FacilityCard: View {
             }
         }
         .padding(12)
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 2)
     }
@@ -110,7 +110,7 @@ struct FacilityCard: View {
                 }
                 .padding(.horizontal, 6)
                 .padding(.vertical, 3)
-                .background(Color(.systemGray6))
+                .background(Color.appElevatedBackground)
                 .cornerRadius(4)
             }
             
@@ -120,7 +120,7 @@ struct FacilityCard: View {
                     .foregroundColor(.secondary)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 3)
-                    .background(Color(.systemGray6))
+                    .background(Color.appElevatedBackground)
                     .cornerRadius(4)
             }
         }
@@ -136,22 +136,12 @@ struct FeaturedFacilityCard: View {
         VStack(alignment: .leading, spacing: 0) {
             // Image
             ZStack(alignment: .topTrailing) {
-                // Placeholder image
-                ZStack {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color(hex: "2E7D32"), Color(hex: "1B5E20")],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                    
-                    Image(systemName: "sportscourt.fill")
-                        .font(.system(size: 50))
-                        .foregroundColor(.white.opacity(0.3))
-                }
-                .frame(height: 140)
+                FacilityImageView(
+                    url: facility.mainImage,
+                    size: CGSize(width: 260, height: 140),
+                    cornerRadius: 16,
+                    placeholder: "sportscourt.fill"
+                )
                 
                 // Favorite button
                 Button {
@@ -216,7 +206,7 @@ struct FeaturedFacilityCard: View {
             .padding(.vertical, 10)
         }
         .frame(width: 260)
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(20)
         .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 4)
     }
@@ -258,7 +248,7 @@ struct CompactFacilityCard: View {
             }
         }
         .padding(10)
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(14)
         .shadow(color: .black.opacity(0.05), radius: 6, x: 0, y: 2)
     }
@@ -382,7 +372,7 @@ struct MatchPostCard: View {
             }
         }
         .padding(16)
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 2)
     }
@@ -400,7 +390,7 @@ struct MatchPostCard: View {
         FacilityCard(facility: Facility.mockFacility)
     }
     .padding()
-    .background(Color(.systemGroupedBackground))
+    .background(Color.appBackground)
 }
 
 #Preview("Featured Card") {
@@ -411,11 +401,11 @@ struct MatchPostCard: View {
         }
         .padding()
     }
-    .background(Color(.systemGroupedBackground))
+    .background(Color.appBackground)
 }
 
 #Preview("Match Post Card") {
     MatchPostCard(matchPost: MatchPost.mockPost)
         .padding()
-        .background(Color(.systemGroupedBackground))
+        .background(Color.appBackground)
 }

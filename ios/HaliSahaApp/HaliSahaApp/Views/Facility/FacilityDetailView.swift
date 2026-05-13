@@ -70,7 +70,7 @@ struct FacilityDetailView: View {
                 .padding()
             }
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color.appBackground)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -267,7 +267,7 @@ struct FacilityDetailView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 24)
-                .background(Color(.systemGray6))
+                .background(Color.appElevatedBackground)
                 .cornerRadius(12)
             }
         }
@@ -331,7 +331,7 @@ struct FacilityDetailView: View {
             HStack(spacing: 16) {
                 LegendItem(color: Color(hex: "2E7D32"), text: "Seçili")
                 LegendItem(color: Color(.systemGray5), text: "Müsait")
-                LegendItem(color: Color(.systemGray3), text: "Dolu")
+                LegendItem(color: TimeSlotButton.unavailableLegendColor, text: "Dolu")
             }
             .font(.caption)
         }
@@ -410,42 +410,139 @@ struct FacilityDetailView: View {
 
                 Spacer()
 
-                NavigationLink {
-                    // ReviewsListView
-                    Text("Değerlendirmeler - ADIM 8'de")
-                } label: {
-                    Text("Tümü")
+                if viewModel.facility.totalReviews > 0 {
+                    NavigationLink {
+                        ReviewsListView(facility: viewModel.facility)
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text("Tümü")
+                            Image(systemName: "chevron.right")
+                                .font(.caption2)
+                        }
                         .font(.subheadline)
                         .foregroundColor(Color(hex: "2E7D32"))
-                }
-            }
-
-            HStack(spacing: 16) {
-                // Rating
-                VStack {
-                    Text(viewModel.facility.formattedRating)
-                        .font(.system(size: 40, weight: .bold))
-
-                    RatingStarsView(rating: viewModel.facility.averageRating)
-
-                    Text("\(viewModel.facility.totalReviews) değerlendirme")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-
-                Spacer()
-
-                // Rating Bars
-                VStack(spacing: 4) {
-                    ForEach((1...5).reversed(), id: \.self) { star in
-                        RatingBar(star: star, percentage: Double.random(in: 0.1...1.0))
                     }
                 }
             }
-            .padding()
-            .background(Color(.systemGray6))
-            .cornerRadius(12)
+
+            if viewModel.facility.totalReviews == 0 && viewModel.reviews.isEmpty {
+                noReviewsPlaceholder
+            } else {
+                reviewsBreakdown
+
+                // En son 2 yorum (varsa)
+                if !viewModel.latestReviews.isEmpty {
+                    VStack(spacing: 10) {
+                        ForEach(viewModel.latestReviews) { review in
+                            ReviewCard(review: review, showsExpandToggle: false)
+                        }
+                    }
+                    .padding(.top, 4)
+
+                    if viewModel.reviews.count > viewModel.latestReviews.count {
+                        NavigationLink {
+                            ReviewsListView(facility: viewModel.facility)
+                        } label: {
+                            HStack {
+                                Text(
+                                    "Tüm \(viewModel.reviews.count) değerlendirmeyi gör"
+                                )
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                            }
+                            .foregroundColor(Color(hex: "2E7D32"))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Color(hex: "2E7D32").opacity(0.10))
+                            .cornerRadius(10)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
         }
+    }
+
+    // MARK: - No Reviews Placeholder
+    private var noReviewsPlaceholder: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "text.bubble")
+                .font(.title2)
+                .foregroundColor(.secondary)
+
+            Text("Henüz değerlendirme yok")
+                .font(.subheadline)
+                .fontWeight(.medium)
+
+            Text("Bu sahaya ilk değerlendirmeyi yapan sen ol!")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 24)
+        .background(Color.appElevatedBackground)
+        .cornerRadius(12)
+    }
+
+    // MARK: - Reviews Breakdown
+    private var reviewsBreakdown: some View {
+        HStack(spacing: 16) {
+            // Rating
+            VStack {
+                Text(viewModel.facility.formattedRating)
+                    .font(.system(size: 40, weight: .bold))
+
+                RatingStarsView(rating: viewModel.facility.averageRating)
+
+                Text("\(viewModel.facility.totalReviews) değerlendirme")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer()
+
+            // Rating Bars — gerçek yorum dağılımı
+            VStack(spacing: 4) {
+                ForEach((1...5).reversed(), id: \.self) { star in
+                    RatingBar(
+                        star: star,
+                        percentage: ratingPercentage(for: star)
+                    )
+                }
+            }
+        }
+        .padding()
+        .background(Color.appElevatedBackground)
+        .cornerRadius(12)
+    }
+
+    /// Yıldız dağılımı: yüklenmiş yorumlar varsa onlardan sayar; yoksa
+    /// `averageRating`'den deterministik bir görsel tahmin üretir.
+    private func ratingPercentage(for star: Int) -> Double {
+        let dist = viewModel.ratingDistribution
+        if dist.total > 0 {
+            return dist.percentage(for: star)
+        }
+        // Yorum henüz yüklenmediyse veya sıfırsa (totalReviews>0 ama listener gecikmesi)
+        // averageRating üzerinden Gaussian fallback
+        return gaussianRatingDistribution(for: star, average: viewModel.facility.averageRating)
+    }
+
+    /// Fallback: Yorum dizisi henüz boşken `averageRating`'den gauss eğrisi.
+    private func gaussianRatingDistribution(for star: Int, average: Double) -> Double {
+        let variance = 1.2
+
+        func weight(for s: Int) -> Double {
+            let distance = Double(s) - average
+            return exp(-pow(distance, 2) / (2 * variance))
+        }
+
+        let total = (1...5).reduce(0.0) { $0 + weight(for: $1) }
+        guard total > 0 else { return 0 }
+        return weight(for: star) / total
     }
 
     // MARK: - Bottom Bar
@@ -518,7 +615,7 @@ struct FacilityDetailView: View {
                 }
             }
             .padding()
-            .background(Color(.systemBackground))
+            .background(Color.appCardBackground)
         }
     }
 
@@ -579,7 +676,7 @@ struct PitchSelectionCard: View {
             }
             .padding(12)
             .frame(width: 140)
-            .background(isSelected ? Color(hex: "2E7D32").opacity(0.1) : Color(.systemGray6))
+            .background(isSelected ? Color(hex: "2E7D32").opacity(0.1) : Color.appElevatedBackground)
             .cornerRadius(12)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
@@ -614,7 +711,7 @@ struct DateSelectionButton: View {
                     .foregroundColor(isSelected ? .white : .primary)
             }
             .frame(width: 50, height: 60)
-            .background(isSelected ? Color(hex: "2E7D32") : Color(.systemGray6))
+            .background(isSelected ? Color(hex: "2E7D32") : Color.appElevatedBackground)
             .cornerRadius(12)
         }
         .buttonStyle(.plain)
@@ -626,35 +723,45 @@ struct TimeSlotButton: View {
     let isSelected: Bool
     let action: () -> Void
 
+    static let unavailableLegendColor = Color.red.opacity(0.65)
+
     var body: some View {
-        Button(action: action) {
+        Button {
+            guard slot.isAvailable else { return }
+            action()
+        } label: {
             VStack(spacing: 2) {
                 Text(slot.hour.asHourString)
                     .font(.subheadline)
                     .fontWeight(isSelected ? .semibold : .regular)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
 
                 if slot.price > 0 {
                     Text(slot.price.asShortCurrency)
                         .font(.caption2)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                 }
             }
-            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 8)
             .padding(.vertical, 10)
+            .frame(maxWidth: .infinity)
             .foregroundColor(foregroundColor)
             .background(backgroundColor)
             .cornerRadius(8)
         }
         .buttonStyle(.plain)
-        .disabled(!slot.isAvailable)
+        .accessibilityHint(slot.isAvailable ? "" : "Dolu")
     }
 
     private var backgroundColor: Color {
         if isSelected {
             return Color(hex: "2E7D32")
         } else if slot.isAvailable {
-            return Color(.systemGray6)
+            return Color.appElevatedBackground
         } else {
-            return Color(.systemGray4)
+            return Color.red.opacity(0.16)
         }
     }
 
@@ -664,7 +771,7 @@ struct TimeSlotButton: View {
         } else if slot.isAvailable {
             return .primary
         } else {
-            return .secondary
+            return Color.red.opacity(0.72)
         }
     }
 }
@@ -699,7 +806,7 @@ struct AmenityItem: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
-        .background(Color(.systemGray6))
+        .background(Color.appElevatedBackground)
         .cornerRadius(10)
     }
 }

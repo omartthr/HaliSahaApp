@@ -51,6 +51,7 @@ enum TabItem: Int, CaseIterable {
 // MARK: - Notification Names
 extension Notification.Name {
     static let switchToBookingsTab = Notification.Name("switchToBookingsTab")
+    static let switchToHomeTab = Notification.Name("switchToHomeTab")
 }
 
 // MARK: - Main Tab View
@@ -63,8 +64,7 @@ struct MainTabView: View {
 
     // Badge counts
     @State private var unreadBookings: Int = 0
-    @State private var unreadMessages: Int = 3  // Test için
-    @State private var unreadNotifications: Int = 2  // Test için
+    @State private var unreadMessages: Int = 0  // Sohbet özelliği eklenince beslenir
 
     // MARK: - Body
     var body: some View {
@@ -121,7 +121,7 @@ struct MainTabView: View {
 
             // 5: Profil
             NavigationStack {
-                ProfileViewPlaceholder()
+                ProfileView()
             }
             .tag(TabItem.profile)
             .tabItem {
@@ -151,6 +151,9 @@ struct MainTabView: View {
         .onReceive(NotificationCenter.default.publisher(for: .switchToBookingsTab)) { _ in
             selectedTab = .bookings
         }
+        .onReceive(NotificationCenter.default.publisher(for: .switchToHomeTab)) { _ in
+            selectedTab = .home
+        }
     }
 
     // MARK: - Handle Tab Change
@@ -161,6 +164,7 @@ struct MainTabView: View {
         if user.userType == .guest {
             switch tab {
             case .bookings, .chat, .profile:
+                selectedTab = .home
                 showGuestAlert = true
             default:
                 break
@@ -250,70 +254,8 @@ struct ChatListViewPlaceholder: View {
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.systemGroupedBackground))
+        .background(Color.appBackground)
         .navigationTitle("Sohbet")
-    }
-}
-
-// Profile View Placeholder
-struct ProfileViewPlaceholder: View {
-    @StateObject private var authService = AuthService.shared
-
-    var body: some View {
-        VStack(spacing: 20) {
-            // Profile Image
-            ZStack {
-                Circle()
-                    .fill(Color(hex: "2E7D32").opacity(0.1))
-                    .frame(width: 100, height: 100)
-
-                Image(systemName: "person.fill")
-                    .font(.system(size: 40))
-                    .foregroundColor(Color(hex: "2E7D32"))
-            }
-
-            // User Info
-            if let user = authService.currentUser {
-                VStack(spacing: 4) {
-                    Text(user.fullName)
-                        .font(.title2)
-                        .fontWeight(.semibold)
-
-                    Text("@\(user.username)")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-
-                    HStack {
-                        Text(user.preferredPosition.icon)
-                        Text(user.preferredPosition.displayName)
-                    }
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .padding(.top, 4)
-                }
-            }
-
-            Text("ADIM 8'de eklenecek")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .padding(.top, 20)
-
-            Spacer()
-
-            // Logout Button
-            PrimaryButton(
-                title: "Çıkış Yap",
-                icon: "rectangle.portrait.and.arrow.right",
-                style: .outline
-            ) {
-                try? authService.signOut()
-            }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 32)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.systemGroupedBackground))
-        .navigationTitle("Profil")
     }
 }
 

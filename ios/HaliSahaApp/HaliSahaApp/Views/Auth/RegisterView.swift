@@ -38,7 +38,7 @@ struct RegisterView: View {
                 .padding(.vertical, 32)
             }
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color.appBackground)
         .navigationTitle("Kayıt Ol")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
@@ -87,7 +87,7 @@ struct RegisterView: View {
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 16)
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
     }
     
     // MARK: - Step Title
@@ -161,7 +161,7 @@ struct RegisterView: View {
                 }
             }
             .padding(24)
-            .background(Color(.systemBackground))
+            .background(Color.appCardBackground)
             .cornerRadius(20)
             .shadow(color: .black.opacity(0.05), radius: 10)
         }
@@ -212,7 +212,7 @@ struct RegisterView: View {
                 CustomTextField.phone(text: $viewModel.phone)
             }
             .padding(24)
-            .background(Color(.systemBackground))
+            .background(Color.appCardBackground)
             .cornerRadius(20)
             .shadow(color: .black.opacity(0.05), radius: 10)
         }
@@ -250,7 +250,7 @@ struct RegisterView: View {
                 }
             }
             .padding(24)
-            .background(Color(.systemBackground))
+            .background(Color.appCardBackground)
             .cornerRadius(20)
             .shadow(color: .black.opacity(0.05), radius: 10)
             
