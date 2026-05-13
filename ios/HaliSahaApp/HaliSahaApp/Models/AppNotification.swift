@@ -112,10 +112,15 @@ struct AppNotification: Identifiable, Codable, Hashable {
 
     /// Admin'e: yeni rezervasyon (kullanıcı oluşturduğunda)
     static func newBookingForAdmin(adminId: String, booking: Booking) -> AppNotification {
-        AppNotification(
+        let actionText =
+            booking.status == .pending
+            ? "için ödeme yaptı ve onayınızı bekliyor."
+            : "için ayırdı."
+
+        return AppNotification(
             userId: adminId,
             title: "Yeni Rezervasyon 🎫",
-            body: "\(booking.userFullName) – \(booking.pitchName) sahasını \(booking.formattedDate) (\(booking.timeSlotString)) için ayırdı.",
+            body: "\(booking.userFullName) – \(booking.pitchName) sahasını \(booking.formattedDate) (\(booking.timeSlotString)) \(actionText)",
             type: .bookingConfirmed,
             data: NotificationData(bookingId: booking.id, facilityId: booking.facilityId, pitchId: booking.pitchId)
         )

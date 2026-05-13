@@ -24,10 +24,14 @@ struct ContentView: View {
             } else {
                 if authService.isAuthenticated || authService.currentUser?.userType == .guest {
                     // Kullanıcı tipine göre farklı Tab Bar
-                    if authService.currentUser?.userType == .admin {
+                    switch authService.currentUser?.userType {
+                    case .superAdmin:
+                        SuperAdminTabView()
+                            .transition(.opacity)
+                    case .admin:
                         AdminTabView()
                             .transition(.opacity)
-                    } else {
+                    default:
                         MainTabView()
                             .transition(.opacity)
                     }
@@ -39,6 +43,9 @@ struct ContentView: View {
         }
         .animation(.easeInOut(duration: 0.3), value: showSplash)
         .animation(.easeInOut(duration: 0.3), value: authService.isAuthenticated)
+        .onChange(of: authService.isAuthenticated) { _, _ in
+            UIApplication.dismissKeyboard()
+        }
         .onAppear {
             // Splash screen'i animasyonun daha net izlenmesi için biraz daha uzun göster
             DispatchQueue.main.asyncAfter(deadline: .now() + 3.2) {

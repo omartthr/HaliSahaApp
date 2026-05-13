@@ -141,6 +141,12 @@ struct FirestoreField {
     static let businessName = "businessName"
     static let taxNumber = "taxNumber"
     static let approvalStatus = "approvalStatus"
+    static let rejectionReason = "rejectionReason"
+    static let documents = "documents"
+    static let documentsSubmittedAt = "documentsSubmittedAt"
+    static let reviewedBy = "reviewedBy"
+    static let reviewedAt = "reviewedAt"
+    static let approvedAt = "approvedAt"
 }
 
 // MARK: - Firebase Error
@@ -191,18 +197,27 @@ extension FirebaseService {
         }
     }
     
-    /// Generic document create
+    /// Generic document create.
+    /// ÖNEMLİ: Codable'ı önce dictionary'ye encode edip async `setData(_:)`/`getDocument()`
+    /// çağrısı yapıyoruz. Eski `setData(from:)` Firestore Swift Codable extension'ı
+    /// fire-and-forget çalışıyordu (lokal cache'e yazıp dönüyor, server fail olursa
+    /// sessiz kalıyordu). Bu yöntemle yazma server tarafından kabul edilene kadar
+    /// gerçekten bekliyoruz; permission/network hataları throw ediyor.
     func createDocument<T: Encodable>(in collection: CollectionReference, data: T, documentId: String? = nil) async throws -> String {
+        let encoded: [String: Any]
         do {
-            if let documentId = documentId {
-                try collection.document(documentId).setData(from: data)
-                return documentId
-            } else {
-                let docRef = try collection.addDocument(from: data)
-                return docRef.documentID
-            }
+            encoded = try Firestore.Encoder().encode(data)
         } catch {
             throw FirebaseError.encodingError
+        }
+
+        if let documentId = documentId {
+            try await collection.document(documentId).setData(encoded)
+            return documentId
+        } else {
+            let docRef = collection.document()
+            try await docRef.setData(encoded)
+            return docRef.documentID
         }
     }
     

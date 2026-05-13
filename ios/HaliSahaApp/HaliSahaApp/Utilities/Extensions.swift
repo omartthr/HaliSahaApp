@@ -10,6 +10,7 @@
 
 import Foundation
 import SwiftUI
+import UIKit
 
 // MARK: - Date Extensions
 extension Date {
@@ -270,7 +271,16 @@ extension View {
     
     /// Klavyeyi gizle
     func hideKeyboard() {
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        UIApplication.dismissKeyboard()
+    }
+}
+
+// MARK: - UIApplication Extensions
+extension UIApplication {
+    
+    /// Aktif input alanından odağı alıp klavyeyi kapatır.
+    static func dismissKeyboard() {
+        shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
 

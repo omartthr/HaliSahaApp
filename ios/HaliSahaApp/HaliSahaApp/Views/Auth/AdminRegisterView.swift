@@ -240,7 +240,7 @@ struct AdminRegisterView: View {
                             .font(.subheadline)
                         
                         Button {
-                            // Kullanım koşulları sayfası
+                            UIApplication.shared.open(AppConstants.Links.termsOfUse)
                         } label: {
                             Text("Koşulları oku")
                                 .font(.caption)

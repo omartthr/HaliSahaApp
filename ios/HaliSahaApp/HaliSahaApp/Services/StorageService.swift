@@ -63,7 +63,82 @@ final class StorageService {
     private var userImagesRef: StorageReference {
         storage.reference().child("users")
     }
-    
+
+    private var adminDocumentsRef: StorageReference {
+        storage.reference().child("admin_documents")
+    }
+
+    // MARK: - Upload Admin Verification Document
+    /// Vergi levhası, ruhsat, kimlik gibi tek-dosyalık belgeleri yükler.
+    /// Aynı tip için yeniden yükleme yapıldığında üzerine yazar (sabit dosya adı).
+    func uploadAdminDocument(
+        _ image: UIImage,
+        adminId: String,
+        type: AdminDocumentType
+    ) async throws -> String {
+        let ref = adminDocumentsRef.child(adminId).child("\(type.rawValue).jpg")
+        return try await uploadImage(image, to: ref)
+    }
+
+    // MARK: - Upload Admin Facility Photos (Çoklu, all-or-nothing)
+    /// Saha fotoğrafları paralel yüklenir. Bir tanesi bile başarısız olursa
+    /// gerçek hatayı fırlatır — kullanıcı belirsiz "Geçersiz veri" yerine
+    /// asıl sebebi (network, permission vs.) görür.
+    func uploadAdminFacilityPhotos(
+        _ images: [UIImage],
+        adminId: String
+    ) async throws -> [String] {
+        // Parent ref'i MainActor üzerinde önceden hesapla, Task'lar bunu kullansın.
+        let parentRef = adminDocumentsRef.child(adminId).child("facility_photos")
+
+        var urls: [String] = []
+        var errors: [Error] = []
+
+        await withTaskGroup(of: Result<String, Error>.self) { group in
+            for image in images {
+                let imageId = UUID().uuidString
+                let ref = parentRef.child("\(imageId).jpg")
+                group.addTask {
+                    do {
+                        let url = try await self.uploadImage(image, to: ref)
+                        return .success(url)
+                    } catch {
+                        return .failure(error)
+                    }
+                }
+            }
+
+            for await result in group {
+                switch result {
+                case .success(let url): urls.append(url)
+                case .failure(let error): errors.append(error)
+                }
+            }
+        }
+
+        // Tek bir fail bile olsa: başarılı olanları temizle ve gerçek hatayı fırlat.
+        if !errors.isEmpty {
+            // Yarım yüklenen dosyaları arka planda temizle (cevabı bekletmiyoruz).
+            let leftovers = urls
+            Task { [weak self] in
+                guard let self else { return }
+                for url in leftovers {
+                    try? await self.deleteImage(at: url)
+                }
+            }
+            throw errors.first!
+        }
+
+        return urls
+    }
+
+    // MARK: - Delete All Admin Documents
+    /// Admin reddedildiğinde veya hesap silindiğinde belgeleri tamamen siler.
+    func deleteAllAdminDocuments(adminId: String) async throws {
+        let ref = adminDocumentsRef.child(adminId)
+        try await deleteFolder(ref)
+    }
+
     // MARK: - Upload Facility Image
     func uploadFacilityImage(_ image: UIImage, facilityId: String) async throws -> String {
         let imageId = UUID().uuidString

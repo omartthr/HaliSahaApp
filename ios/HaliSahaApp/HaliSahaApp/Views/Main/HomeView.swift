@@ -17,6 +17,7 @@ struct HomeView: View {
     @State private var showNotifications = false
     @State private var showFilters = false
     @State private var showAllFacilities = false
+    @FocusState private var isSearchFocused: Bool
     
     // MARK: - Body
     var body: some View {
@@ -39,6 +40,7 @@ struct HomeView: View {
                 }
             }
         }
+        .scrollDismissesKeyboard(.interactively)
         .background(Color.appBackground)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -159,6 +161,11 @@ struct HomeView: View {
                 
                 TextField("Saha ara...", text: $viewModel.searchText)
                     .textInputAutocapitalization(.never)
+                    .submitLabel(.search)
+                    .focused($isSearchFocused)
+                    .onSubmit {
+                        isSearchFocused = false
+                    }
                 
                 if !viewModel.searchText.isEmpty {
                     Button {
@@ -178,6 +185,7 @@ struct HomeView: View {
             
             // Filter Button
             Button {
+                isSearchFocused = false
                 showFilters.toggle()
             } label: {
                 Image(systemName: viewModel.hasActiveFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")

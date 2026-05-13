@@ -223,7 +223,19 @@ final class FavoritesViewModel: ObservableObject {
 
         isLoading = true
         do {
-            facilities = try await profileService.fetchFavoriteFacilities(ids: user.favoriteFields)
+            let fetched = try await profileService.fetchFavoriteFacilities(ids: user.favoriteFields)
+            facilities = fetched
+
+            // Firestore'da artık bulunmayan (silinmiş) saha ID'lerini temizle
+            let fetchedIds = Set(fetched.compactMap { $0.id })
+            let staleIds = user.favoriteFields.filter { !fetchedIds.contains($0) }
+            for staleId in staleIds {
+                try? await facilityService.removeFromFavorites(facilityId: staleId)
+            }
+            if !staleIds.isEmpty, var updatedUser = authService.currentUser {
+                updatedUser.favoriteFields.removeAll { staleIds.contains($0) }
+                authService.currentUser = updatedUser
+            }
         } catch {
             facilities = []
             errorMessage = error.localizedDescription

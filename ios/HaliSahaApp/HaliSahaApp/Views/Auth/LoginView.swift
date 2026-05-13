@@ -123,6 +123,8 @@ struct LoginView: View {
                 isLoading: viewModel.isLoading,
                 isDisabled: !viewModel.isLoginFormValid
             ) {
+                UIApplication.dismissKeyboard()
+                
                 Task {
                     await viewModel.login()
                 }
@@ -163,6 +165,8 @@ struct LoginView: View {
                     request.nonce = nonce
                 },
                 onCompletion: { result in
+                    UIApplication.dismissKeyboard()
+                    
                     Task {
                         await viewModel.handleAppleSignIn(result: result)
                     }
@@ -174,6 +178,8 @@ struct LoginView: View {
             
             // Google Sign In
             SocialSignInButton(provider: .google, isLoading: viewModel.isLoading) {
+                UIApplication.dismissKeyboard()
+                
                 Task {
                     await viewModel.signInWithGoogle()
                 }
@@ -189,6 +195,7 @@ struct LoginView: View {
                 .foregroundColor(.secondary)
             
             Button {
+                UIApplication.dismissKeyboard()
                 viewModel.continueAsGuest()
                 viewModel.isAuthenticated = true
             } label: {

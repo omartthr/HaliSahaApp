@@ -1,0 +1,314 @@
+rules_version = '2';
+
+// HaliSahaApp - Firestore Security Rules
+//
+// Bu kuralları Firebase Console > Firestore > Rules sekmesine yapıştırarak
+// veya Firebase CLI ile (firebase deploy --only firestore:rules) yayına alabilirsin.
+//
+// Roller:
+//  - player      : müşteri (varsayılan)
+//  - admin       : saha sahibi (admins/{uid} kaydı olur; approvalStatus alanı)
+//  - superAdmin  : platform yöneticisi (sadece Console'dan manuel atanır)
+//
+// Genel yaklaşım: minimum yetki — her rol sadece kendi sorumluluğundaki
+// dokümanları/alanları yazabilir. Çapraz koleksiyon yazımları (örn. yorum
+// yazınca tesisin ortalamasının güncellenmesi) için sıkı alan kısıtlaması
+// kullanılır (onlyChanged + sayısal alan kontrolü).
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- Helper functions ----------
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function userTypeOf(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data.userType;
+    }
+
+    function isSuperAdmin() {
+      return isSignedIn() && userTypeOf(request.auth.uid) == 'superAdmin';
+    }
+
+    function isAdminUser() {
+      return isSignedIn() && userTypeOf(request.auth.uid) == 'admin';
+    }
+
+    function isApprovedAdmin() {
+      return isAdminUser()
+          && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+          && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.approvalStatus == 'approved';
+    }
+
+    // Update sırasında değişen alanların verilen listede olmasını şart koşar.
+    function onlyChanged(allowed) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowed);
+    }
+
+    // Bir tesisin sahibi miyim?
+    function isFacilityOwner(facilityId) {
+      return isApprovedAdmin()
+          && exists(/databases/$(database)/documents/facilities/$(facilityId))
+          && get(/databases/$(database)/documents/facilities/$(facilityId)).data.ownerId == request.auth.uid;
+    }
+
+    // ---------- users/{userId} ----------
+    match /users/{userId} {
+      // Profilleri (giriş yapmış) herkes okuyabilir — keşif/oyuncu listesi için
+      allow read: if isSignedIn();
+
+      // Sadece kullanıcı kendi profilini oluşturabilir. superAdmin client'tan
+      // oluşturulamaz; sadece Console'dan elle atanır.
+      allow create: if isOwner(userId)
+                    && request.resource.data.userType in ['player', 'admin'];
+
+      // Kullanıcı kendi profilini güncelleyebilir AMA userType değiştiremez
+      allow update: if isOwner(userId)
+                    && request.resource.data.userType == resource.data.userType;
+
+      // SuperAdmin başka kullanıcının (userType dahil) profilini güncelleyebilir
+      allow update: if isSuperAdmin();
+
+      // Hesap silme: kullanıcı kendi hesabını silebilir (AuthService.deleteAccount).
+      // SuperAdmin de moderasyon amacıyla silebilir.
+      allow delete: if isOwner(userId) || isSuperAdmin();
+    }
+
+    // ---------- admins/{adminId} ----------
+    match /admins/{adminId} {
+      // Tekil okuma: admin kendi profilini, superAdmin tüm profilleri okuyabilir
+      allow get: if isOwner(adminId) || isSuperAdmin();
+      // Listeleme: yalnız superAdmin (onay paneli için)
+      allow list: if isSuperAdmin();
+
+      // Kayıt akışında AdminProfile oluşturulur (registerAsAdmin)
+      allow create: if isOwner(adminId)
+                    && request.resource.data.approvalStatus == 'pending';
+
+      // Saha sahibi sadece kendi belge & tercih alanlarını güncelleyebilir.
+      // approvalStatus / reviewedBy / approvedAt gibi yetkili alanlara dokunamaz.
+      allow update: if isOwner(adminId)
+                    && onlyChanged([
+                         'documents',
+                         'documentsSubmittedAt',
+                         'businessName',
+                         'taxNumber',
+                         'pushNotificationsEnabled',
+                         'emailNotificationsEnabled',
+                         'autoConfirmBookings',
+                         'rejectionReason',
+                         'updatedAt'
+                       ]);
+
+      // SuperAdmin tüm alanları güncelleyebilir (onay/red/askıya alma)
+      allow update: if isSuperAdmin();
+
+      // Silme yok (audit için tutulur)
+      allow delete: if isSuperAdmin();
+    }
+
+    // ---------- facilities/{facilityId} ----------
+    match /facilities/{facilityId} {
+      // Tesisleri herkes (anonim dahil) okuyabilir — listeleme/keşif için
+      allow read: if true;
+
+      // Onaylı admin kendi adına tesis oluşturabilir
+      allow create: if isApprovedAdmin()
+                    && request.resource.data.ownerId == request.auth.uid;
+
+      // 1) Tesis sahibi her alanı güncelleyebilir
+      allow update: if isApprovedAdmin()
+                    && resource.data.ownerId == request.auth.uid;
+
+      // 2) SuperAdmin her alanı güncelleyebilir
+      allow update: if isSuperAdmin();
+
+      // 3) Giriş yapmış herhangi bir kullanıcı, SADECE yorum aggregasyonu
+      //    alanlarını güncelleyebilir (ReviewService.updateFacilityRating).
+      //    Bu kural, müşterinin yorum bıraktığında tesis ortalamasının
+      //    transaction içinde güncellenebilmesi için zorunludur.
+      allow update: if isSignedIn()
+                    && onlyChanged(['averageRating', 'totalReviews', 'updatedAt'])
+                    && request.resource.data.averageRating is number
+                    && request.resource.data.averageRating >= 0
+                    && request.resource.data.averageRating <= 5
+                    && request.resource.data.totalReviews is int
+                    && request.resource.data.totalReviews >= 0;
+
+      // Silme: sahip veya superAdmin
+      allow delete: if (isApprovedAdmin() && resource.data.ownerId == request.auth.uid)
+                    || isSuperAdmin();
+
+      // Pitches alt-koleksiyonu
+      match /pitches/{pitchId} {
+        allow read: if true;
+        allow write: if (isApprovedAdmin()
+                         && get(/databases/$(database)/documents/facilities/$(facilityId)).data.ownerId == request.auth.uid)
+                      || isSuperAdmin();
+      }
+    }
+
+    // ---------- bookings/{bookingId} ----------
+    // NOT: Firestore'da `allow read` hem `get` (tek dokuman) hem de
+    // `list` (sorgu) için çalışır. Sorgu sırasında kural her dokuman için
+    // ayrı evaluate edilir; resource.data.* gibi koşullar sorgunun
+    // tamamen reddine sebep olur. Bu yüzden get/list ayrılmış.
+    match /bookings/{bookingId} {
+      // Tek dokuman okuma: sıkı per-document kontrol.
+      allow get: if isSignedIn() && (
+                   resource.data.userId == request.auth.uid
+                   || isSuperAdmin()
+                   || (isApprovedAdmin()
+                       && exists(/databases/$(database)/documents/facilities/$(resource.data.facilityId))
+                       && get(/databases/$(database)/documents/facilities/$(resource.data.facilityId)).data.ownerId == request.auth.uid)
+                 );
+
+      // Sorgu: signed-in kullanıcılar listeleyebilir. Hem müşteri (kendi
+      // rezervasyonları) hem admin (tesis rezervasyonları) hem superAdmin
+      // farklı `where` koşullarıyla sorgu çekiyor — bu yüzden gevşek tutuldu.
+      // Üretim sertleştirmesi: per-user subcollection'a taşıma.
+      allow list: if isSignedIn();
+
+      // Oyuncu rezervasyon oluşturabilir (kendi adına)
+      allow create: if isSignedIn()
+                    && request.resource.data.userId == request.auth.uid;
+
+      // Güncelleme: oyuncu kendi rezervasyonunu, tesis sahibi kendi tesisini,
+      // superAdmin hepsini güncelleyebilir.
+      allow update: if isSignedIn() && (
+                      resource.data.userId == request.auth.uid
+                      || isSuperAdmin()
+                      || (isApprovedAdmin()
+                          && exists(/databases/$(database)/documents/facilities/$(resource.data.facilityId))
+                          && get(/databases/$(database)/documents/facilities/$(resource.data.facilityId)).data.ownerId == request.auth.uid)
+                    );
+
+      // Silme: superAdmin (audit için müşteri/admin silemez)
+      allow delete: if isSuperAdmin();
+    }
+
+    // ---------- notifications/{notificationId} ----------
+    // Her bildirim bir hedef userId taşır. Sahibi okuyup işaretleyebilir,
+    // silebilir. Yazma: signed-in herkes (admin müşteriye, müşteri admine
+    // bildirim yazıyor); spam riskini server-side Cloud Functions ile
+    // kısıtlamak ileride mümkün.
+    match /notifications/{notificationId} {
+      allow get: if isSignedIn()
+                 && (resource.data.userId == request.auth.uid || isSuperAdmin());
+
+      // list: client kendi userId'sini filtreliyor; per-doc resource kontrolü
+      // sorguyu reddeder, bu yüzden signed-in yetiyor.
+      allow list: if isSignedIn();
+
+      allow create: if isSignedIn()
+                    && request.resource.data.keys().hasAll(['userId', 'title', 'body', 'type'])
+                    && request.resource.data.userId is string;
+
+      // Sadece bildirimin sahibi (okundu işareti) veya superAdmin güncelleyebilir.
+      allow update: if isSignedIn()
+                    && resource.data.userId == request.auth.uid
+                    && onlyChanged(['isRead', 'updatedAt']);
+      allow update: if isSuperAdmin();
+
+      allow delete: if isSignedIn()
+                    && (resource.data.userId == request.auth.uid || isSuperAdmin());
+    }
+
+    // ---------- reviews/{reviewId} ----------
+    // Saha değerlendirmeleri. Okuma herkese açık (login olmayan da görsün).
+    match /reviews/{reviewId} {
+      allow read: if true;
+
+      // Sadece kendi adıyla, gerçek rezervasyonu olan kullanıcı yorum bırakabilir.
+      // bookingId / userId tutarlılığını client tarafı sağlar; rules tarafında
+      // userId'nin auth.uid'e eşitliği zorunlu.
+      allow create: if isSignedIn()
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.overallRating is number
+                    && request.resource.data.overallRating >= 0
+                    && request.resource.data.overallRating <= 5;
+
+      // Güncelleme: yorum sahibi düzenleyebilir; superAdmin moderasyon yapabilir;
+      // tesis sahibi sadece admin yanıtı / gizleme alanlarına dokunabilir.
+      allow update: if isSignedIn()
+                    && resource.data.userId == request.auth.uid
+                    && request.resource.data.userId == resource.data.userId;
+      allow update: if isSuperAdmin();
+      allow update: if isFacilityOwner(resource.data.facilityId)
+                    && onlyChanged(['adminReply', 'adminReplyDate', 'isHidden', 'updatedAt']);
+
+      // Silme: yorum sahibi veya superAdmin
+      allow delete: if isSignedIn()
+                    && (resource.data.userId == request.auth.uid || isSuperAdmin());
+    }
+
+    // ---------- user_reliability_reviews/{reviewId} ----------
+    // Saha sahibinin kullanıcı hakkında verdiği güvenilirlik puanı.
+    match /user_reliability_reviews/{reviewId} {
+      allow read: if isSignedIn();
+
+      allow create: if isSignedIn()
+                    && request.resource.data.reviewerId == request.auth.uid;
+
+      allow update, delete: if isSignedIn()
+                            && (resource.data.reviewerId == request.auth.uid || isSuperAdmin());
+    }
+
+    // ---------- match_posts/{postId} ----------
+    // Oyuncuların açtığı maç ilanları. Listeleme herkese açık (signed-in).
+    match /match_posts/{postId} {
+      allow read: if isSignedIn();
+
+      allow create: if isSignedIn()
+                    && request.resource.data.creatorId == request.auth.uid;
+
+      // Sahibi her alanı güncelleyebilir, superAdmin de.
+      allow update: if isSignedIn()
+                    && resource.data.creatorId == request.auth.uid
+                    && request.resource.data.creatorId == resource.data.creatorId;
+      allow update: if isSuperAdmin();
+
+      // Üçüncü kişiler "katılma isteği" gibi alanları client-side flow ile
+      // güncelleyebilsin diye: signed-in kullanıcı SADECE oyuncu sayısı vb.
+      // sosyal alanları değiştirebilir.
+      allow update: if isSignedIn()
+                    && onlyChanged(['currentPlayers', 'joinRequests', 'acceptedUserIds', 'updatedAt']);
+
+      allow delete: if isSignedIn()
+                    && (resource.data.creatorId == request.auth.uid || isSuperAdmin());
+    }
+
+    // ---------- groups/{groupId} ----------
+    // MVP: signed-in kullanıcılar maç gruplarını okuyup yazabilir.
+    // Üretim sertleştirmesi: sadece grup üyeleri (memberIds içerir).
+    match /groups/{groupId} {
+      allow read, create: if isSignedIn();
+      allow update, delete: if isSignedIn() && (
+                              resource.data.creatorId == request.auth.uid
+                              || (resource.data.memberIds is list
+                                  && request.auth.uid in resource.data.memberIds)
+                              || isSuperAdmin()
+                            );
+
+      // Grup mesajları
+      match /messages/{messageId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn()
+                      && request.resource.data.senderId == request.auth.uid;
+        allow update, delete: if isSignedIn()
+                              && (resource.data.senderId == request.auth.uid || isSuperAdmin());
+      }
+    }
+
+    // ---------- SuperAdmin catch-all ----------
+    // Bilinmeyen koleksiyonlar için yalnız superAdmin erişimi.
+    match /{document=**} {
+      allow read, write: if isSuperAdmin();
+    }
+  }
+}
