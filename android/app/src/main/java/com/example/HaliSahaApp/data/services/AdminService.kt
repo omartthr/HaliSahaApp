@@ -32,6 +32,9 @@ object AdminService {
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    private val _myAdminProfile = MutableStateFlow<AdminProfile?>(null)
+    val myAdminProfile: StateFlow<AdminProfile?> = _myAdminProfile.asStateFlow()
+
     // MARK: - Dashboard Stats Data Class
     data class DashboardStats(
         var totalFacilities: Int = 0,
@@ -133,6 +136,121 @@ object AdminService {
         } catch (e: Exception) {
             throw AdminError.OperationFailed(e.localizedMessage ?: "İstatistikler alınamadı")
         }
+    }
+
+    // MARK: - Admin Profile Listener
+    fun startMyAdminProfileListener() {
+        val userId = firebaseService.currentUserId ?: return
+        
+        firebaseService.adminsCollection.document(userId).addSnapshotListener { snapshot, error ->
+            if (error != null) return@addSnapshotListener
+            
+            if (snapshot != null && snapshot.exists()) {
+                val profile = snapshot.toObject(AdminProfile::class.java)
+                _myAdminProfile.value = profile
+            } else {
+                _myAdminProfile.value = null
+            }
+        }
+    }
+
+    // MARK: - Admin Verification (Belge Yükleme & Onay Akışı)
+    
+    suspend fun fetchMyAdminProfile(): AdminProfile {
+        val userId = firebaseService.currentUserId ?: throw AdminError.NotAuthenticated
+        return try {
+            firebaseService.fetchDocument(firebaseService.adminsCollection, userId)
+        } catch (e: Exception) {
+            throw AdminError.OperationFailed("Profil yüklenemedi")
+        }
+    }
+    
+    suspend fun fetchAdminProfile(adminId: String): AdminProfile {
+        return firebaseService.fetchDocument(firebaseService.adminsCollection, adminId)
+    }
+    
+    suspend fun submitVerificationDocuments(documents: VerificationDocuments) {
+        val userId = firebaseService.currentUserId ?: throw AdminError.NotAuthenticated
+        if (!documents.isComplete) throw AdminError.InvalidData
+        
+        val updates = mapOf(
+            "documents" to documents,
+            "documentsSubmittedAt" to FieldValue.serverTimestamp(),
+            "approvalStatus" to AdminApprovalStatus.PENDING,
+            "rejectionReason" to FieldValue.delete(),
+            FirestoreField.UPDATED_AT to FieldValue.serverTimestamp()
+        )
+        
+        firebaseService.updateDocument(firebaseService.adminsCollection, userId, updates)
+    }
+    
+    // MARK: - Super Admin Actions
+    
+    suspend fun fetchPendingAdmins(): List<AdminProfile> {
+        val query = firebaseService.adminsCollection
+            .whereEqualTo("approvalStatus", AdminApprovalStatus.PENDING)
+            
+        val admins: List<AdminProfile> = firebaseService.fetchDocuments(query)
+        return admins.filter { it.documentsSubmittedAt != null }
+            .sortedBy { it.documentsSubmittedAt }
+    }
+    
+    suspend fun fetchAllAdmins(status: AdminApprovalStatus? = null): List<AdminProfile> {
+        val query = if (status != null) {
+            firebaseService.adminsCollection.whereEqualTo("approvalStatus", status)
+        } else {
+            firebaseService.adminsCollection
+        }
+        
+        val admins: List<AdminProfile> = firebaseService.fetchDocuments(query)
+        return admins.sortedByDescending { it.createdAt }
+    }
+    
+    suspend fun approveAdmin(adminId: String) {
+        val reviewerId = firebaseService.currentUserId ?: throw AdminError.NotAuthenticated
+        val now = FieldValue.serverTimestamp()
+        
+        val updates = mapOf(
+            "approvalStatus" to AdminApprovalStatus.APPROVED,
+            "approvedAt" to now,
+            "reviewedAt" to now,
+            "reviewedBy" to reviewerId,
+            "rejectionReason" to FieldValue.delete(),
+            FirestoreField.UPDATED_AT to now
+        )
+        firebaseService.updateDocument(firebaseService.adminsCollection, adminId, updates)
+    }
+    
+    suspend fun rejectAdmin(adminId: String, reason: String) {
+        val reviewerId = firebaseService.currentUserId ?: throw AdminError.NotAuthenticated
+        val trimmed = reason.trim()
+        if (trimmed.isEmpty()) throw AdminError.InvalidData
+        
+        val now = FieldValue.serverTimestamp()
+        val updates = mapOf(
+            "approvalStatus" to AdminApprovalStatus.REJECTED,
+            "rejectionReason" to trimmed,
+            "reviewedAt" to now,
+            "reviewedBy" to reviewerId,
+            FirestoreField.UPDATED_AT to now
+        )
+        firebaseService.updateDocument(firebaseService.adminsCollection, adminId, updates)
+    }
+    
+    suspend fun suspendAdmin(adminId: String, reason: String) {
+        val reviewerId = firebaseService.currentUserId ?: throw AdminError.NotAuthenticated
+        val trimmed = reason.trim()
+        if (trimmed.isEmpty()) throw AdminError.InvalidData
+        
+        val now = FieldValue.serverTimestamp()
+        val updates = mapOf(
+            "approvalStatus" to AdminApprovalStatus.SUSPENDED,
+            "rejectionReason" to trimmed,
+            "reviewedAt" to now,
+            "reviewedBy" to reviewerId,
+            FirestoreField.UPDATED_AT to now
+        )
+        firebaseService.updateDocument(firebaseService.adminsCollection, adminId, updates)
     }
 
     // MARK: - Fetch My Facilities

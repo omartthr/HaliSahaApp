@@ -34,8 +34,16 @@ struct Facility: Identifiable, Codable, Hashable {
     var createdAt: Date
     var updatedAt: Date
     var isActive: Bool
-    
+    /// Optional for backward compatibility with documents created before this field existed.
+    /// Read via `effectiveAutoConfirmBookings` which treats nil as `true`.
+    var autoConfirmBookings: Bool?
+
     // MARK: - Computed Properties
+
+    /// Auto-confirm policy with safe default for legacy documents (nil → true).
+    var effectiveAutoConfirmBookings: Bool {
+        autoConfirmBookings ?? true
+    }
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
@@ -68,7 +76,8 @@ struct Facility: Identifiable, Codable, Hashable {
         totalReviews: Int = 0,
         createdAt: Date = Date(),
         updatedAt: Date = Date(),
-        isActive: Bool = true
+        isActive: Bool = true,
+        autoConfirmBookings: Bool? = nil
     ) {
         self.id = id
         self.ownerId = ownerId
@@ -89,6 +98,7 @@ struct Facility: Identifiable, Codable, Hashable {
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.isActive = isActive
+        self.autoConfirmBookings = autoConfirmBookings
     }
 }
 

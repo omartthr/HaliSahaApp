@@ -8,6 +8,7 @@
 //
 
 import CoreLocation
+import FirebaseFirestore
 import Foundation
 import SwiftUI
 
@@ -93,6 +94,7 @@ final class HomeViewModel: ObservableObject {
 
             // Nearby facilities: all approved facilities
             nearbyFacilities = allFacilities
+            upcomingMatches = try await fetchUpcomingMatches()
 
             isLoading = false
         } catch {
@@ -113,6 +115,7 @@ final class HomeViewModel: ObservableObject {
                 allFacilities.sorted { $0.averageRating > $1.averageRating }.prefix(3)
             )
             nearbyFacilities = allFacilities
+            upcomingMatches = try await fetchUpcomingMatches()
 
             isRefreshing = false
         } catch {
@@ -218,6 +221,19 @@ final class HomeViewModel: ObservableObject {
                 daysFromNow: 4
             ),
         ]
+    }
+
+    // MARK: - Fetch Upcoming Matches
+    private func fetchUpcomingMatches() async throws -> [MatchPost] {
+        let snapshot = try await firebaseService.matchPostsCollection
+            .whereField("status", isEqualTo: MatchPostStatus.active.rawValue)
+            .limit(to: 20)
+            .getDocuments()
+
+        return snapshot.documents
+            .compactMap { try? $0.data(as: MatchPost.self) }
+            .filter { !$0.isExpired && !$0.isFull }
+            .sorted { $0.matchDate < $1.matchDate }
     }
 
     // MARK: - Helper: Create Mock Facility

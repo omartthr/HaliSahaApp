@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.SportsSoccer // Sportscourt yerine
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import com.airbnb.lottie.compose.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -21,6 +22,12 @@ import kotlinx.coroutines.delay
 @Composable
 fun SplashScreen(onSplashFinished: () -> Unit) {
     var isAnimating by remember { mutableStateOf(false) }
+    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(com.example.HaliSahaApp.R.raw.splash_soccer_field))
+    val progress by animateLottieCompositionAsState(
+        composition = composition,
+        iterations = LottieConstants.IterateForever,
+        speed = 2.0f // Animasyonu 2 kat hızlandırır
+    )
 
     // Animasyon (Swift'teki scaleEffect karşılığı)
     val scale by animateFloatAsState(
@@ -48,21 +55,12 @@ fun SplashScreen(onSplashFinished: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Logo
+            // Logo Animasyonu
             Box(contentAlignment = Alignment.Center) {
-                Surface(
-                    modifier = Modifier
-                        .size(140.dp)
-                        .scale(scale),
-                    shape = CircleShape,
-                    color = Color.White.copy(alpha = 0.2f)
-                ) {}
-
-                Icon(
-                    imageVector = Icons.Default.SportsSoccer,
-                    contentDescription = "Logo",
-                    tint = Color.White,
-                    modifier = Modifier.size(60.dp)
+                LottieAnimation(
+                    composition = composition,
+                    progress = { progress },
+                    modifier = Modifier.size(180.dp)
                 )
             }
 

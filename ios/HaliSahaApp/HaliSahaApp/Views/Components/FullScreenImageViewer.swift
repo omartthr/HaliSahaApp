@@ -93,9 +93,10 @@ struct ZoomableImageView: View {
     
     var body: some View {
         GeometryReader { geometry in
+            let displayScale = UIScreen.main.scale
             CachedAsyncImage(
                 url: imageURL,
-                targetSize: CGSize(width: geometry.size.width * 2, height: geometry.size.height * 2)
+                targetSize: CGSize(width: geometry.size.width * displayScale, height: geometry.size.height * displayScale)
             ) { image in
                 image
                     .resizable()

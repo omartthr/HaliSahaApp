@@ -62,6 +62,61 @@ data class AppNotification(
             data = NotificationData(bookingId = booking.id, facilityId = booking.facilityId)
         )
 
+        fun bookingCancelled(userId: String, booking: Booking, reason: String? = null): AppNotification {
+            val body = if (!reason.isNullOrEmpty()) {
+                "${booking.facilityName} – ${booking.formattedDate} tarihli rezervasyonunuz iptal edildi. Sebep: $reason"
+            } else {
+                "${booking.facilityName} – ${booking.formattedDate} tarihli rezervasyonunuz iptal edildi."
+            }
+            return AppNotification(
+                userId = userId,
+                title = "Rezervasyon İptali ❌",
+                body = body,
+                type = NotificationType.BOOKING_CANCELLED,
+                data = NotificationData(bookingId = booking.id, facilityId = booking.facilityId)
+            )
+        }
+
+        fun newBookingForAdmin(adminId: String, booking: Booking): AppNotification {
+            val actionText = if (booking.status == BookingStatus.pending) {
+                "için ödeme yaptı ve onayınızı bekliyor."
+            } else {
+                "için ayırdı."
+            }
+            return AppNotification(
+                userId = adminId,
+                title = "Yeni Rezervasyon 🎫",
+                body = "${booking.userFullName} – ${booking.pitchName} sahasını ${booking.formattedDate} (${booking.timeSlotString}) $actionText",
+                type = NotificationType.BOOKING_CONFIRMED,
+                data = NotificationData(bookingId = booking.id, facilityId = booking.facilityId, pitchId = booking.pitchId)
+            )
+        }
+
+        fun bookingCancelledByUser(adminId: String, booking: Booking) = AppNotification(
+            userId = adminId,
+            title = "Rezervasyon İptal Edildi ❌",
+            body = "${booking.userFullName} – ${booking.pitchName} için ${booking.formattedDate} tarihli rezervasyonunu iptal etti.",
+            type = NotificationType.BOOKING_CANCELLED,
+            data = NotificationData(bookingId = booking.id, facilityId = booking.facilityId, pitchId = booking.pitchId)
+        )
+
+        fun reviewReceived(adminId: String, facilityName: String, review: Review): AppNotification {
+            val stars = String.format(Locale.US, "%.1f", review.overallRating)
+            val snippet = if (!review.comment.isNullOrEmpty()) {
+                val truncated = if (review.comment.length > 100) "${review.comment.take(100)}…" else review.comment
+                "${review.userName} ($stars★): \"$truncated\""
+            } else {
+                "${review.userName} tesisini $stars yıldızla değerlendirdi."
+            }
+            return AppNotification(
+                userId = adminId,
+                title = "Yeni Değerlendirme ⭐️",
+                body = snippet,
+                type = NotificationType.REVIEW_RECEIVED,
+                data = NotificationData(facilityId = review.facilityId, pitchId = review.pitchId, reviewId = review.id)
+            )
+        }
+
         fun bookingReminder(userId: String, booking: Booking, hoursLeft: Int) = AppNotification(
             userId = userId,
             title = "Maç Hatırlatması ⚽",

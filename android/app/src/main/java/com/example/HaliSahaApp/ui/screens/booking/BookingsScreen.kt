@@ -40,6 +40,10 @@ fun BookingsScreen(
     val pullRefreshState = rememberPullToRefreshState()
     val scope = rememberCoroutineScope()
 
+    LaunchedEffect(Unit) {
+        viewModel.refresh()
+    }
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -73,8 +77,14 @@ fun BookingsScreen(
                         message = "Seçilen kategoride randevunuz yok.",
                         buttonTitle = if (uiState.selectedFilter == BookingFilter.UPCOMING) "Saha Bul" else null,
                         onButtonClick = {
-                            // Ana sayfaya yönlendir (Tab 0)
-                            // navController.navigate(BottomTab.HOME.route)
+                            // Home (Keşfet) tab'ına yönlendir
+                            navController.navigate("home") {
+                                popUpTo(navController.graph.startDestinationId) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
                         }
                     )
                 } else {

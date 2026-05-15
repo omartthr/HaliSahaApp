@@ -9,6 +9,7 @@
 
 import SwiftUI
 import UIKit
+import FirebaseFirestore
 
 // MARK: - Admin Bookings View
 struct AdminBookingsView: View {
@@ -40,10 +41,17 @@ struct AdminBookingsView: View {
                 bookingsList
             }
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color.appBackground)
         .navigationTitle("Rezervasyonlar")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                NavigationLink {
+                    AdminQRScannerView()
+                } label: {
+                    Image(systemName: "qrcode.viewfinder")
+                }
+            }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
                     Button {
@@ -51,7 +59,7 @@ struct AdminBookingsView: View {
                     } label: {
                         Label("Dışa Aktar", systemImage: "square.and.arrow.up")
                     }
-                    
+
                     Button {
                         printBookings()
                     } label: {
@@ -146,7 +154,7 @@ struct AdminBookingsView: View {
             .padding(.horizontal)
             .padding(.vertical, 12)
         }
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
     }
     
     // MARK: - Date Picker
@@ -185,7 +193,7 @@ struct AdminBookingsView: View {
             }
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
     }
     
     // MARK: - Empty State
@@ -257,7 +265,7 @@ struct AdminBookingsView: View {
             )
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(12)
     }
 }
@@ -307,16 +315,10 @@ final class AdminBookingsViewModel: ObservableObject {
     // MARK: - Date Navigation
     func previousDay() {
         selectedDate = Calendar.current.date(byAdding: .day, value: -1, to: selectedDate) ?? selectedDate
-        Task {
-            await loadBookings()
-        }
     }
     
     func nextDay() {
         selectedDate = Calendar.current.date(byAdding: .day, value: 1, to: selectedDate) ?? selectedDate
-        Task {
-            await loadBookings()
-        }
     }
     
     // MARK: - Filter Count
@@ -342,16 +344,27 @@ final class AdminBookingsViewModel: ObservableObject {
         errorMessage = ""
         
         do {
-            // Gerçek Firebase verileri
+            let calendar = Calendar.current
+            let startOfDay = calendar.startOfDay(for: selectedDate)
+            let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) ?? selectedDate
+            
             let facilities = try await adminService.fetchMyFacilities()
             let facilityIds = facilities.compactMap { $0.id }
             
-            // Tüm rezervasyonları çek ve tesislerime göre filtrele
+            guard !facilityIds.isEmpty else {
+                allBookings = []
+                filteredBookings = []
+                isLoading = false
+                return
+            }
+            
             let query = FirebaseService.shared.bookingsCollection
+                .whereField(FirestoreField.date, isGreaterThanOrEqualTo: Timestamp(date: startOfDay))
+                .whereField(FirestoreField.date, isLessThan: Timestamp(date: endOfDay))
                 .order(by: FirestoreField.date, descending: true)
             
-            let allFetchedBookings: [Booking] = try await FirebaseService.shared.fetchDocuments(query: query)
-            allBookings = allFetchedBookings.filter { facilityIds.contains($0.facilityId) }
+            let dailyBookings: [Booking] = try await FirebaseService.shared.fetchDocuments(query: query)
+            allBookings = dailyBookings.filter { facilityIds.contains($0.facilityId) }
             
             applyFilter(currentFilter)
         } catch {
@@ -688,7 +701,7 @@ struct FilterChip: View {
             .foregroundColor(isSelected ? .white : .primary)
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
-            .background(isSelected ? Color(hex: "2E7D32") : Color(.systemGray6))
+            .background(isSelected ? Color(hex: "2E7D32") : Color.appElevatedBackground)
             .cornerRadius(20)
         }
     }
@@ -790,7 +803,7 @@ struct AdminBookingDetailCard: View {
             }
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(Color.appCardBackground)
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.03), radius: 8)
     }

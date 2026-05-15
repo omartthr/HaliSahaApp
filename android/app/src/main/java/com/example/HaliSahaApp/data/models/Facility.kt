@@ -25,11 +25,15 @@ data class Facility(
     val totalReviews: Int = 0,
     val createdAt: Date = Date(),
     val updatedAt: Date = Date(),
-    val isActive: Boolean = true
+    val isActive: Boolean = true,
+    val autoConfirmBookings: Boolean? = null
 ) {
     // MARK: - Computed Properties
     // Not: LatLng sınıfı için Google Maps bağımlılığı gerekir.
     // UI katmanında ihtiyaç duyduğunda MapView için dönüştürebilirsin.
+
+    val effectiveAutoConfirmBookings: Boolean
+        get() = autoConfirmBookings ?: true
 
     val mainImage: String?
         get() = images.firstOrNull()

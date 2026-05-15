@@ -81,7 +81,9 @@ struct EditPitchView: View {
                 Button("Sil", role: .destructive) {
                     Task {
                         await viewModel.deletePitch()
-                        dismiss()
+                        if viewModel.saveSuccess {
+                            dismiss()
+                        }
                     }
                 }
             } message: {
@@ -424,11 +426,14 @@ final class EditPitchViewModel: ObservableObject {
         loadingMessage = "Saha siliniyor..."
         
         do {
-            // Fotoğrafları sil
-            try await storageService.deletePitchImages(facilityId: facilityId, pitchId: pitchId)
-            
-            // Sahayı sil
+            // Önce aktif rezervasyon kontrolü ve Firestore silme işlemi çalışsın.
             try await adminService.deletePitch(pitchId: pitchId, facilityId: facilityId)
+
+            // Saha başarıyla kaldırıldıktan sonra depodaki görselleri temizle.
+            loadingMessage = "Fotoğraflar siliniyor..."
+            try await storageService.deletePitchImages(facilityId: facilityId, pitchId: pitchId)
+
+            saveSuccess = true
         } catch {
             errorMessage = error.localizedDescription
             showError = true
