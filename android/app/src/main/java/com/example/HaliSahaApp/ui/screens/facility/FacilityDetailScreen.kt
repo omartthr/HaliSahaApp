@@ -39,6 +39,13 @@ import java.util.Date
 import java.util.Locale
 import androidx.compose.foundation.lazy.items
 import com.example.HaliSahaApp.ui.screens.booking.BookingFlowScreen
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.MarkerState
+import com.google.maps.android.compose.rememberCameraPositionState
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.MapUiSettings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -639,20 +646,29 @@ fun LocationSection(facility: Facility) {
             color = AppColors.TextPrimary
         )
 
-        // Placeholder Map
-        Box(modifier = Modifier
-            .fillMaxWidth()
-            .height(150.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color.LightGray)
+        val facilityLocation = LatLng(facility.latitude, facility.longitude)
+        val cameraPositionState = rememberCameraPositionState {
+            position = CameraPosition.fromLatLngZoom(facilityLocation, 15f)
+        }
+
+        GoogleMap(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(150.dp)
+                .clip(RoundedCornerShape(12.dp)),
+            cameraPositionState = cameraPositionState,
+            uiSettings = MapUiSettings(
+                zoomControlsEnabled = false,
+                scrollGesturesEnabled = false,
+                zoomGesturesEnabled = false,
+                rotationGesturesEnabled = false,
+                tiltGesturesEnabled = false
+            )
         ) {
-            Column(
-                modifier = Modifier.align(Alignment.Center),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Icon(Icons.Default.LocationOn, null, tint = Color.DarkGray)
-                Text("Harita Önizleme (API Key Gerekli)", color = Color.DarkGray, fontSize = 12.sp)
-            }
+            Marker(
+                state = MarkerState(position = facilityLocation),
+                title = facility.name
+            )
         }
 
         Button(
