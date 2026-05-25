@@ -196,6 +196,17 @@ struct AppNotification: Identifiable, Codable, Hashable {
             data: NotificationData(groupId: groupId)
         )
     }
+
+    static func joinRequestRejected(userId: String, facilityName: String, postId: String, reason: String? = nil) -> AppNotification {
+        let suffix = (reason?.isEmpty == false) ? " Sebep: \(reason!)" : ""
+        return AppNotification(
+            userId: userId,
+            title: "İstek Reddedildi",
+            body: "\(facilityName)'daki maça katılma isteğiniz kabul edilmedi.\(suffix)",
+            type: .joinRequestRejected,
+            data: NotificationData(matchPostId: postId)
+        )
+    }
     
     static func newMessage(userId: String, senderName: String, groupId: String, groupName: String) -> AppNotification {
         AppNotification(

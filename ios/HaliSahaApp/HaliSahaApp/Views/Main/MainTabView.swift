@@ -108,7 +108,7 @@ struct MainTabView: View {
 
             // 4: Sohbet
             NavigationStack {
-                ChatListViewPlaceholder()
+                ChatListView()
             }
             .tag(TabItem.chat)
             .tabItem {
@@ -232,30 +232,6 @@ struct GuestRestrictionSheet: View {
             Spacer()
         }
         .padding(.top, 8)
-    }
-}
-
-// MARK: - (Sonraki adımlarda güncellicez bunları)
-
-// Chat List View Placeholder
-struct ChatListViewPlaceholder: View {
-    var body: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "bubble.left.and.bubble.right.fill")
-                .font(.system(size: 60))
-                .foregroundColor(Color(hex: "2E7D32").opacity(0.5))
-
-            Text("Sohbet")
-                .font(.title2)
-                .fontWeight(.semibold)
-
-            Text("ADIM 7'de eklenecek")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.appBackground)
-        .navigationTitle("Sohbet")
     }
 }
 

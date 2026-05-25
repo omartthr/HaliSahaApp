@@ -356,21 +356,28 @@ final class BookingService: ObservableObject {
             throw BookingError.cannotCancel
         }
 
-        // İade durumu
-        let paymentStatus: PaymentStatus = booking.isRefundable ? .refunded : .partialRefund
-
-        // Güncelle
-        try await firebaseService.updateDocument(
-            in: firebaseService.bookingsCollection,
-            documentId: bookingId,
-            fields: [
-                FirestoreField.status: BookingStatus.cancelled.rawValue,
-                "paymentStatus": paymentStatus.rawValue,
-                "cancellationReason": reason ?? "",
-                "cancelledAt": Timestamp(date: Date()),
-                FirestoreField.updatedAt: Timestamp(date: Date()),
-            ]
-        )
+        if booking.paymentStatus == .depositPaid {
+            // Kapora ödenmiş — iade Cloud Function üzerinden yürütülür.
+            // Sunucu hem iyzico refund'ını atar hem booking'i `cancelled`
+            // durumuna geçirir ve paymentStatus'u günceller.
+            _ = try await PaymentService.shared.refundDeposit(
+                bookingId: bookingId,
+                reason: reason
+            )
+        } else {
+            // Ödeme alınmamış — direkt Firestore üzerinde iptal işaretle.
+            // (paymentStatus alanını değiştirmiyoruz; bu sadece sunucunun yetkisinde.)
+            try await firebaseService.updateDocument(
+                in: firebaseService.bookingsCollection,
+                documentId: bookingId,
+                fields: [
+                    FirestoreField.status: BookingStatus.cancelled.rawValue,
+                    "cancellationReason": reason ?? "",
+                    "cancelledAt": Timestamp(date: Date()),
+                    FirestoreField.updatedAt: Timestamp(date: Date()),
+                ]
+            )
+        }
 
         // Cache'i temizle
         clearTimeSlotCache(
@@ -383,8 +390,10 @@ final class BookingService: ObservableObject {
     // MARK: - Side Effects (Notifications & Reminders)
 
     /// Ödeme başarısı sonrası: uygunsa kullanıcının cihazında local reminder kur, admin'e bildirim yaz.
+    /// iyzico akışında `BookingFlowView.handlePaymentSuccess` tarafından, Firestore'dan
+    /// güncel (server tarafından `confirmed`+`depositPaid` yapılmış) booking ile çağrılır.
     @MainActor
-    private func triggerNewBookingSideEffects(booking: Booking, status: BookingStatus) async {
+    func triggerNewBookingSideEffects(booking: Booking, status: BookingStatus) async {
         var updatedBooking = booking
         updatedBooking.status = status
         updatedBooking.paymentStatus = .depositPaid
@@ -443,60 +452,6 @@ final class BookingService: ObservableObject {
         }
     }
 
-    // MARK: - Process Payment (Simulation)
-    @MainActor
-    func processPayment(booking: Booking, paymentMethod: PaymentMethod) async throws
-        -> PaymentResult
-    {
-        // Simüle edilmiş ödeme işlemi
-        try await Task.sleep(nanoseconds: 1_500_000_000)  // 1.5 saniye bekleme
-
-        // %95 başarı oranı simülasyonu
-        let isSuccessful = Double.random(in: 0...1) > 0.05
-
-        guard let bookingId = booking.id else {
-            throw BookingError.unknown("Rezervasyon ID bulunamadı")
-        }
-
-        if isSuccessful {
-            let shouldAutoConfirm = await shouldAutoConfirmBooking(facilityId: booking.facilityId)
-            let newStatus: BookingStatus = shouldAutoConfirm ? .confirmed : .pending
-
-            // Rezervasyon durumunu güncelle
-            try await firebaseService.updateDocument(
-                in: firebaseService.bookingsCollection,
-                documentId: bookingId,
-                fields: [
-                    FirestoreField.status: newStatus.rawValue,
-                    "paymentStatus": PaymentStatus.depositPaid.rawValue,
-                    FirestoreField.updatedAt: Timestamp(date: Date()),
-                ]
-            )
-
-            // Yan etkiler: yerel hatırlatmaları kur + admin'e bildirim
-            await triggerNewBookingSideEffects(booking: booking, status: newStatus)
-
-            return PaymentResult(
-                success: true,
-                transactionId: UUID().uuidString,
-                message: shouldAutoConfirm
-                    ? "Ödeme başarıyla tamamlandı"
-                    : "Ödeme alındı. Rezervasyon işletme onayı bekliyor."
-            )
-        } else {
-            try await markPaymentFailed(
-                booking: booking,
-                reason: "Ödeme işlemi başarısız oldu."
-            )
-
-            return PaymentResult(
-                success: false,
-                transactionId: nil,
-                message: "Ödeme işlemi başarısız oldu. Lütfen tekrar deneyin."
-            )
-        }
-    }
-
     // MARK: - Generate QR Code Data
     private func generateQRCodeData(for booking: Booking) -> String {
         let data: [String: Any] = [
@@ -515,32 +470,6 @@ final class BookingService: ObservableObject {
         }
 
         return booking.ticketNumber
-    }
-
-    // MARK: - Mark Payment Failed
-    @MainActor
-    func markPaymentFailed(booking: Booking, reason: String) async throws {
-        guard let bookingId = booking.id else {
-            throw BookingError.unknown("Rezervasyon ID bulunamadı")
-        }
-
-        try await firebaseService.updateDocument(
-            in: firebaseService.bookingsCollection,
-            documentId: bookingId,
-            fields: [
-                FirestoreField.status: BookingStatus.cancelled.rawValue,
-                "paymentStatus": PaymentStatus.failed.rawValue,
-                "cancellationReason": reason,
-                "cancelledAt": Timestamp(date: Date()),
-                FirestoreField.updatedAt: Timestamp(date: Date()),
-            ]
-        )
-
-        clearTimeSlotCache(
-            facilityId: booking.facilityId,
-            pitchId: booking.pitchId,
-            date: booking.date
-        )
     }
 
     // MARK: - Slot Blocking
@@ -597,26 +526,3 @@ enum BookingError: LocalizedError {
     }
 }
 
-// MARK: - Payment Method
-enum PaymentMethod: String, CaseIterable, Identifiable {
-    case creditCard = "Kredi Kartı"
-    case debitCard = "Banka Kartı"
-    case wallet = "Cüzdan"
-
-    var id: String { rawValue }
-
-    var icon: String {
-        switch self {
-        case .creditCard: return "creditcard.fill"
-        case .debitCard: return "creditcard"
-        case .wallet: return "wallet.pass.fill"
-        }
-    }
-}
-
-// MARK: - Payment Result
-struct PaymentResult {
-    let success: Bool
-    let transactionId: String?
-    let message: String
-}
