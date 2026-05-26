@@ -193,11 +193,17 @@ fun FacilityDetailScreen(
         ) {
             BookingFlowScreen(
                 viewModel = viewModel,
-                onDismiss = { viewModel.proceedToBooking() }, // Toggle gibi çalışır, false yapar
+                onDismiss = { viewModel.closeBookingFlow() },
                 onBookingCompleted = {
-                    // Ana sayfaya veya randevulara yönlendir
-                    navController.popBackStack()
-                    // navController.navigate(BottomTab.BOOKINGS.route) // İstersen
+                    viewModel.closeBookingFlow()
+                    // Randevularım tab'ına git
+                    navController.navigate("bookings") {
+                        popUpTo(navController.graph.startDestinationId) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
                 }
             )
         }

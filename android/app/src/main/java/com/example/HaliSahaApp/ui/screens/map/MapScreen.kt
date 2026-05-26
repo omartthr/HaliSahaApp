@@ -65,7 +65,7 @@ fun MapScreen(
     var showSearchThisArea by remember { mutableStateOf(false) }
 
     val cameraPositionState = rememberCameraPositionState {
-        position = uiState.cameraPosition ?: CameraPosition.fromLatLngZoom(LatLng(41.0082, 28.9784), 10f)
+        position = uiState.cameraPosition ?: CameraPosition.fromLatLngZoom(LatLng(39.9334, 32.8597), 11f)
     }
 
     LaunchedEffect(uiState.cameraPosition) {
@@ -251,7 +251,9 @@ fun MapScreen(
                 facility = facility,
                 distance = viewModel.getDistanceString(facility),
                 onClose = { viewModel.selectFacility(null) },
-                onNavigate = { /* Harita uygulamasını aç */ },
+                onViewDetail = {
+                    navController.navigate("facility_detail/${facility.id}")
+                },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(bottom = 100.dp, start = 16.dp, end = 16.dp)
@@ -268,9 +270,11 @@ fun MapScreen(
         ) {
             FacilityListSheetContent(
                 facilities = uiState.filteredFacilities,
-                onFacilityClick = {
-                    viewModel.selectFacility(it)
-                    scope.launch { sheetState.hide() }.invokeOnCompletion { showListSheet = false }
+                onFacilityClick = { facility ->
+                    scope.launch { sheetState.hide() }.invokeOnCompletion {
+                        showListSheet = false
+                        navController.navigate("facility_detail/${facility.id}")
+                    }
                 },
                 onClose = {
                     scope.launch { sheetState.hide() }.invokeOnCompletion { showListSheet = false }
@@ -322,7 +326,7 @@ fun FacilityMapCard(
     facility: Facility,
     distance: String,
     onClose: () -> Unit,
-    onNavigate: () -> Unit,
+    onViewDetail: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -378,7 +382,7 @@ fun FacilityMapCard(
             }
 
             Button(
-                onClick = { /* Detay sayfasına git */ },
+                onClick = onViewDetail,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 12.dp),

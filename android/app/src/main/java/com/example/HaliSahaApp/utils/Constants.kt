@@ -77,9 +77,9 @@ object AppConstants {
     const val MAX_IMAGES_PER_REVIEW = 5
 
     // MARK: - Map
-    const val DEFAULT_LATITUDE = 41.0082  // İstanbul
-    const val DEFAULT_LONGITUDE = 28.9784
-    const val DEFAULT_MAP_ZOOM = 12f      // Google Maps Zoom seviyesi (Swift'teki Span yerine)
+    const val DEFAULT_LATITUDE = 39.9334  // Ankara
+    const val DEFAULT_LONGITUDE = 32.8597
+    const val DEFAULT_MAP_ZOOM = 11f      // Google Maps Zoom seviyesi
     const val NEARBY_RADIUS_KM = 10.0
 
     // MARK: - Animation (Millis cinsinden)
