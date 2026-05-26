@@ -21,6 +21,7 @@ import com.example.HaliSahaApp.ui.components.PrimaryButton
 import com.example.HaliSahaApp.ui.screens.home.HomeScreen
 import com.example.HaliSahaApp.ui.screens.map.MapScreen
 import com.example.HaliSahaApp.utils.AppColors
+import com.example.HaliSahaApp.utils.AppEventBus
 import com.example.HaliSahaApp.utils.AppIcons
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
@@ -58,7 +59,32 @@ fun MainScreen(onLogout: () -> Unit) {
     val sheetState = rememberModalBottomSheetState()
     val haptic = LocalHapticFeedback.current
 
-    // Scaffold
+    // iOS'un NotificationCenter.onReceive(.switchToBookingsTab) karşılığı
+    // AppEventBus'tan gelen event'leri dinle ve tab'ı değiştir
+    LaunchedEffect(Unit) {
+        AppEventBus.events.collect { event ->
+            when (event) {
+                is AppEventBus.AppEvent.SwitchToBookingsTab -> {
+                    navController.navigate(BottomTab.BOOKINGS.route) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
+                is AppEventBus.AppEvent.SwitchToHomeTab -> {
+                    navController.navigate(BottomTab.HOME.route) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
+            }
+        }
+    }
     Scaffold(
         bottomBar = {
             NavigationBar(

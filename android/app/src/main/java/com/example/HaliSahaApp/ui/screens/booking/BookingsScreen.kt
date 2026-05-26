@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.SportsSoccer
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -158,7 +159,7 @@ fun BookingCard(booking: Booking, onClick: () -> Unit) {
                     modifier = Modifier.size(50.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default. SportsSoccer, null, tint = AppColors.Primary)
+                        Icon(Icons.Default.SportsSoccer, null, tint = AppColors.Primary)
                     }
                 }
 
@@ -169,7 +170,7 @@ fun BookingCard(booking: Booking, onClick: () -> Unit) {
                         booking.facilityName,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = AppColors.TextPrimary // <-- BUNU EKLE (İsmi Siyah Yapar)
+                        color = AppColors.TextPrimary
                     )
                     Text(booking.pitchName, style = MaterialTheme.typography.bodyMedium, color = AppColors.TextSecondary)
                 }
@@ -193,7 +194,62 @@ fun BookingCard(booking: Booking, onClick: () -> Unit) {
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(booking.timeSlotString, style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
             }
+
+            // Geri Sayım ve Bilet No (iOS BookingCard'daki gibi)
+            // Sadece yaklaşan onaylı/bekleyen randevular için göster
+            if (!booking.isPast && (booking.status == BookingStatus.confirmed || booking.status == BookingStatus.pending)) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.Timer,
+                        null,
+                        tint = AppColors.Primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = countdownText(booking),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AppColors.TextSecondary
+                    )
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    if (booking.ticketNumber.isNotEmpty()) {
+                        Text(
+                            text = booking.ticketNumber,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = AppColors.Primary
+                        )
+                    }
+                }
+            }
         }
+    }
+}
+
+/**
+ * iOS BookingCard.countdownText(for:) fonksiyonunun Android muadili.
+ * Yaklaşan randevuya ne kadar kaldığını gösterir.
+ */
+private fun countdownText(booking: Booking): String {
+    val now = java.util.Calendar.getInstance()
+    val bookingCal = java.util.Calendar.getInstance().apply {
+        time = booking.date
+        set(java.util.Calendar.HOUR_OF_DAY, booking.startHour.toInt())
+        set(java.util.Calendar.MINUTE, 0)
+        set(java.util.Calendar.SECOND, 0)
+    }
+
+    val diffMs = bookingCal.timeInMillis - now.timeInMillis
+    val diffHours = java.util.concurrent.TimeUnit.MILLISECONDS.toHours(diffMs)
+    val diffDays = java.util.concurrent.TimeUnit.MILLISECONDS.toDays(diffMs)
+
+    return when {
+        diffDays > 0 -> "$diffDays gün sonra"
+        diffHours > 0 -> "$diffHours saat sonra"
+        else -> "Bugün"
     }
 }
 

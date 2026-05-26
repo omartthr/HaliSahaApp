@@ -85,7 +85,7 @@ object NotificationService {
     private fun scheduleSingle(booking: Booking, bookingId: String, hoursBefore: Int) {
         val calendar = Calendar.getInstance()
         calendar.time = booking.date
-        calendar.set(Calendar.HOUR_OF_DAY, booking.startHour)
+        calendar.set(Calendar.HOUR_OF_DAY, booking.startHour.toInt())
         calendar.set(Calendar.MINUTE, 0)
         calendar.set(Calendar.SECOND, 0)
         

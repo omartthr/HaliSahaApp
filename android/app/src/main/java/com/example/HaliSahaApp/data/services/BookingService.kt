@@ -141,9 +141,9 @@ object BookingService {
             userFullName = user.fullName,
             userPhone = user.phone,
             date = date,
-            startHour = startHour,
-            endHour = endHour,
-            duration = duration,
+            startHour = startHour.toLong(),
+            endHour = endHour.toLong(),
+            duration = duration.toLong(),
             totalPrice = totalPrice,
             depositAmount = depositAmount,
             remainingAmount = remainingAmount,
@@ -304,12 +304,14 @@ object BookingService {
             throw BookingError.CannotCancel
         }
 
-        val paymentStatus = if (booking.isRefundable) PaymentStatus.refunded else PaymentStatus.partialRefund
-
+        // NOT: paymentStatus alanı Firestore rules tarafından client-side güncellemelere kapalı.
+        // İade işlemi (refund) server-side Cloud Function ile yapılmalı.
+        // Client tarafında yalnızca izin verilen alanları güncelliyoruz:
+        // ['status', 'cancellationReason', 'cancelledAt', 'updatedAt', 'groupId']
         val updates = mapOf(
             FirestoreField.STATUS to BookingStatus.cancelled.rawValue,
-            "paymentStatus" to paymentStatus.rawValue,
             "cancellationReason" to (reason ?: ""),
+            "cancelledAt" to FieldValue.serverTimestamp(),
             FirestoreField.UPDATED_AT to FieldValue.serverTimestamp()
         )
 
@@ -329,9 +331,13 @@ object BookingService {
         return if (isSuccessful) {
             val bookingId = booking.id ?: throw BookingError.Unknown("Rezervasyon ID yok")
 
+            // NOT: paymentStatus alanı Firestore rules tarafından client-side
+            // güncellemelere kapatılmış. Bu alan sadece server-side (iyzicoCallback
+            // Cloud Function / Admin SDK) tarafından güncellenebilir.
+            // Client tarafında yalnızca izin verilen alanları güncelliyoruz:
+            // ['status', 'cancellationReason', 'cancelledAt', 'updatedAt', 'groupId']
             val updates = mapOf(
                 FirestoreField.STATUS to BookingStatus.confirmed.rawValue,
-                "paymentStatus" to PaymentStatus.depositPaid.rawValue,
                 FirestoreField.UPDATED_AT to FieldValue.serverTimestamp()
             )
 
@@ -392,8 +398,8 @@ object BookingService {
                 depositAmount = 140.0,
                 remainingAmount = 400.0,
                 currency = "TRY",
-                status = BookingStatus.confirmed,
-                paymentStatus = PaymentStatus.depositPaid,
+                statusRaw = BookingStatus.confirmed.rawValue,
+                paymentStatusRaw = PaymentStatus.depositPaid.rawValue,
                 ticketNumber = Booking.generateTicketNumber()
             )
         )

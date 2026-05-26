@@ -60,7 +60,16 @@ fun FacilityDetailScreen(
     // TopBar Scroll davranışı için state
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
-    if (uiState.isLoading || uiState.facility == null) {
+    // NOT: isLoading kontrolünü sadece ilk veri yüklemesi için kullanıyoruz.
+    // showBookingFlow aktifken (booking oluşturma sırasında isLoading=true olabilir),
+    // Dialog'u yok etmemek için burada showBookingFlow kontrolü ekliyoruz.
+    if (!uiState.showBookingFlow && (uiState.facility == null && uiState.isLoading)) {
+        LoadingView()
+        return
+    }
+
+    // facility hala null ise (loading bitti ama veri gelmedi), boş ekran göster
+    if (uiState.facility == null) {
         LoadingView()
         return
     }
@@ -195,15 +204,9 @@ fun FacilityDetailScreen(
                 viewModel = viewModel,
                 onDismiss = { viewModel.closeBookingFlow() },
                 onBookingCompleted = {
+                    // iOS'taki gibi: dismiss() + NotificationCenter.post(.switchToBookingsTab)
                     viewModel.closeBookingFlow()
-                    // Randevularım tab'ına git
-                    navController.navigate("bookings") {
-                        popUpTo(navController.graph.startDestinationId) {
-                            saveState = true
-                        }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
+                    AppEventBus.tryEmit(AppEventBus.AppEvent.SwitchToBookingsTab)
                 }
             )
         }

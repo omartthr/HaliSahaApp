@@ -89,7 +89,8 @@ fun BookingFlowScreen(
                                     currentStep = BookingStep.CONFIRMATION // Move to the confirmation step
                                 },
                                 onError = { error ->
-                                    // Show payment error
+                                    errorMessage = error
+                                    showErrorDialog = true
                                 }
                             )
                         }
@@ -379,7 +380,7 @@ fun BookingConfirmationStep(booking: Booking?, onGoHome: () -> Unit) {
 
                     // Üst Kısım: Saha Adı ve QR
                     Row(verticalAlignment = Alignment.Top) {
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 booking.facilityName.uppercase(), // Büyük harf
                                 fontWeight = FontWeight.Bold,
@@ -392,12 +393,11 @@ fun BookingConfirmationStep(booking: Booking?, onGoHome: () -> Unit) {
                                 color = AppColors.TextSecondary
                             )
                         }
-                        Spacer(modifier = Modifier.weight(1f))
-                        Icon(
-                            Icons.Default.QrCode,
-                            null,
-                            modifier = Modifier.size(32.dp),
-                            tint = AppColors.TextPrimary
+                        Spacer(modifier = Modifier.width(12.dp))
+                        // Gerçek QR Kod (iOS TicketCardView'daki gibi)
+                        QRCodeImage(
+                            data = if (booking.qrCode.isNotEmpty()) booking.qrCode else booking.ticketNumber,
+                            size = 60.dp
                         )
                     }
 

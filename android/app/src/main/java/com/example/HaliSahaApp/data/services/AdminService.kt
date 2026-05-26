@@ -334,10 +334,10 @@ object AdminService {
     }
 
     suspend fun rejectBooking(bookingId: String, reason: String) {
+        // NOT: paymentStatus client-side güncellemelere kapalı (Firestore rules)
         val updates = mapOf(
             FirestoreField.STATUS to BookingStatus.cancelled.rawValue,
             "cancellationReason" to reason,
-            "paymentStatus" to PaymentStatus.refunded.rawValue,
             FirestoreField.UPDATED_AT to FieldValue.serverTimestamp()
         )
         try {
@@ -382,8 +382,8 @@ object AdminService {
                 depositAmount = 130.0,
                 remainingAmount = 520.0,
                 currency = "TRY",
-                status = com.example.HaliSahaApp.data.models.BookingStatus.confirmed,
-                paymentStatus = com.example.HaliSahaApp.data.models.PaymentStatus.depositPaid,
+                statusRaw = BookingStatus.confirmed.rawValue,
+                paymentStatusRaw = PaymentStatus.depositPaid.rawValue,
                 ticketNumber = "HS-2024-001"
             ),
             Booking(
@@ -404,8 +404,8 @@ object AdminService {
                 depositAmount = 130.0,
                 remainingAmount = 520.0,
                 currency = "TRY",
-                status = com.example.HaliSahaApp.data.models.BookingStatus.pending, // Bekleyen örnek
-                paymentStatus = com.example.HaliSahaApp.data.models.PaymentStatus.depositPaid,
+                statusRaw = BookingStatus.pending.rawValue, // Bekleyen örnek
+                paymentStatusRaw = PaymentStatus.depositPaid.rawValue,
                 ticketNumber = "HS-2024-002"
             ),
             Booking(
@@ -426,8 +426,8 @@ object AdminService {
                 depositAmount = 140.0,
                 remainingAmount = 560.0,
                 currency = "TRY",
-                status = com.example.HaliSahaApp.data.models.BookingStatus.confirmed,
-                paymentStatus = com.example.HaliSahaApp.data.models.PaymentStatus.depositPaid,
+                statusRaw = BookingStatus.confirmed.rawValue,
+                paymentStatusRaw = PaymentStatus.depositPaid.rawValue,
                 ticketNumber = "HS-2024-003"
             )
         )

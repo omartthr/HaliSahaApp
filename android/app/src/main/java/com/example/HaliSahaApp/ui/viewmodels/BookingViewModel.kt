@@ -28,6 +28,10 @@ data class BookingsUiState(
 )
 
 // MARK: - ViewModel
+// iOS BookingsViewModel'den port edildi:
+//   - filteredBookings computed property mantığı
+//   - loadBookings() async task yapısı
+//   - hata yönetimi
 class BookingsViewModel : ViewModel() {
 
     private val bookingService = BookingService
@@ -40,16 +44,23 @@ class BookingsViewModel : ViewModel() {
 
     fun loadBookings() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+            _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                // Gerçek data çekiliyor
                 val bookings = bookingService.fetchUserBookings()
+                println("📋 BookingsViewModel: ${bookings.size} rezervasyon yüklendi")
+
+                // Debug: her rezervasyonun durumunu logla
+                bookings.forEach { booking ->
+                    println("  → ${booking.facilityName} | status=${booking.status} | isPast=${booking.isPast} | id=${booking.id}")
+                }
 
                 _uiState.update {
                     it.copy(bookings = bookings, isLoading = false)
                 }
                 applyFilter()
             } catch (e: Exception) {
+                println("❌ BookingsViewModel: Rezervasyon yüklenemedi: ${e.message}")
+                e.printStackTrace()
                 _uiState.update { it.copy(isLoading = false, error = e.localizedMessage) }
             }
         }
@@ -60,18 +71,36 @@ class BookingsViewModel : ViewModel() {
         applyFilter()
     }
 
+    // iOS BookingsViewModel.filteredBookings mantığından port edildi:
+    //
+    // iOS:
+    //   case .upcoming: return bookings.filter { !$0.isPast && $0.status == .confirmed }
+    //   case .past:     return bookings.filter { $0.isPast || $0.status == .completed }
+    //   case .cancelled: return bookings.filter { $0.status == .cancelled }
+    //
+    // Android'de pending durumunu da upcoming'e ekliyoruz çünkü:
+    // 1. Yeni oluşturulan booking'ler 'pending' ile başlıyor
+    // 2. processPayment sonrası 'confirmed' oluyor
+    // 3. Ancak auto-confirm kapalıysa 'pending' kalabilir
+    // 4. Kullanıcı kendi oluşturduğu 'pending' booking'leri de görmeli
     private fun applyFilter() {
         val currentState = _uiState.value
         val result = when (currentState.selectedFilter) {
-            BookingFilter.UPCOMING -> currentState.bookings.filter { !it.isPast && it.status == BookingStatus.confirmed }
-            BookingFilter.PAST -> currentState.bookings.filter { it.isPast || it.status == BookingStatus.completed }
-            BookingFilter.CANCELLED -> currentState.bookings.filter { it.status == BookingStatus.cancelled }
+            BookingFilter.UPCOMING -> currentState.bookings.filter {
+                !it.isPast && (it.status == BookingStatus.confirmed || it.status == BookingStatus.pending)
+            }
+            BookingFilter.PAST -> currentState.bookings.filter {
+                it.isPast || it.status == BookingStatus.completed
+            }
+            BookingFilter.CANCELLED -> currentState.bookings.filter {
+                it.status == BookingStatus.cancelled
+            }
         }
+        println("📋 BookingsViewModel: Filtre=${currentState.selectedFilter}, Sonuç=${result.size} adet")
         _uiState.update { it.copy(filteredBookings = result) }
     }
 
     suspend fun refresh() {
-        // Gerçek senaryoda servisten tekrar çekilir
         loadBookings()
     }
 }
