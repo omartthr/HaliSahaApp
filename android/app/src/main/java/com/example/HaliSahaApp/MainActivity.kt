@@ -55,9 +55,9 @@ fun HaliSahaRoot() {
             SplashScreen(onSplashFinished = {
                 // YÖNLENDİRME MANTIĞI GÜNCELLENDİ:
                 // Giriş yapmışsa VEYA Misafir ise -> Ana Sayfaya git
-                val isGuest = currentUser?.userType == UserType.GUEST
-                val isAdmin = currentUser?.userType == UserType.ADMIN
-                val isSuperAdmin = currentUser?.userType == UserType.SUPER_ADMIN
+                val isGuest = currentUser?.userTypeEnum == UserType.GUEST
+                val isAdmin = currentUser?.userTypeEnum == UserType.ADMIN
+                val isSuperAdmin = currentUser?.userTypeEnum == UserType.SUPER_ADMIN
 
                 if (isAuthenticated || isGuest) {
                     if (isSuperAdmin) {

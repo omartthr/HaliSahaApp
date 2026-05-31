@@ -31,6 +31,8 @@ import com.example.HaliSahaApp.ui.screens.facility.FacilityDetailScreen
 import com.example.HaliSahaApp.ui.screens.facility.FacilityListScreen
 import com.example.HaliSahaApp.ui.screens.chat.ChatListScreen
 import com.example.HaliSahaApp.ui.screens.chat.ChatDetailScreen
+import com.example.HaliSahaApp.ui.screens.profile.ProfileScreen
+import com.example.HaliSahaApp.ui.screens.profile.ProfileSettingsScreen
 
 // MARK: - Tab Item Enum
 enum class BottomTab(
@@ -54,7 +56,7 @@ fun MainScreen(onLogout: () -> Unit) {
     val currentRoute = navBackStackEntry?.destination?.route
 
     val currentUser by AuthService.currentUser.collectAsState()
-    val isGuest = currentUser?.userType == UserType.GUEST
+    val isGuest = currentUser?.userTypeEnum == UserType.GUEST
 
     // Guest Alert Bottom Sheet State
     var showGuestSheet by remember { mutableStateOf(false) }
@@ -94,22 +96,9 @@ fun MainScreen(onLogout: () -> Unit) {
                 contentColor = AppColors.Primary
             ) {
                 BottomTab.entries.forEach { tab ->
-                    // Rozet (Badge) Mantığı (Test verileri)
-                    val badgeCount = when (tab) {
-                        BottomTab.CHAT -> 3
-                        BottomTab.BOOKINGS -> 0
-                        else -> 0
-                    }
-
                     NavigationBarItem(
                         icon = {
-                            if (badgeCount > 0) {
-                                BadgedBox(badge = { Badge { Text("$badgeCount") } }) {
-                                    Icon(imageVector = tab.icon, contentDescription = tab.title)
-                                }
-                            } else {
-                                Icon(imageVector = tab.icon, contentDescription = tab.title)
-                            }
+                            Icon(imageVector = tab.icon, contentDescription = tab.title)
                         },
                         label = { Text(tab.title, maxLines = 1, fontSize = 9.sp, softWrap = false) },
                         selected = currentRoute == tab.route,
@@ -154,7 +143,9 @@ fun MainScreen(onLogout: () -> Unit) {
                 BookingsScreen(navController = navController) // Placeholder yerine gerçek ekran
             }
             composable(BottomTab.CHAT.route) { ChatListScreen(navController = navController) }
-            composable(BottomTab.PROFILE.route) { ProfileScreenPlaceholder(onLogout) }
+            composable(BottomTab.PROFILE.route) {
+                ProfileScreen(navController = navController, onLogout = onLogout)
+            }
 
             // 👇 EKSİK OLANLARI BURAYA EKLİYORUZ 👇
 
@@ -189,6 +180,35 @@ fun MainScreen(onLogout: () -> Unit) {
                         groupId = groupId
                     )
                 }
+            }
+
+            // 4. Profile Settings
+            composable(Screen.ProfileSettings.route) {
+                ProfileSettingsScreen(
+                    navController = navController,
+                    onLogout = onLogout
+                )
+            }
+
+            // 5. Create Match Post
+            composable(
+                route = Screen.CreateMatchPost.route,
+                arguments = listOf(navArgument("bookingId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val bookingId = backStackEntry.arguments?.getString("bookingId")
+                if (bookingId != null) {
+                    com.example.HaliSahaApp.ui.screens.matchpost.CreateMatchPostScreen(
+                        navController = navController,
+                        bookingId = bookingId
+                    )
+                }
+            }
+
+            // 6. Notifications
+            composable(Screen.NotificationsList.route) {
+                com.example.HaliSahaApp.ui.screens.home.NotificationsPlaceholderScreen(
+                    navController = navController
+                )
             }
         }
     }

@@ -286,7 +286,7 @@ class FacilityDetailViewModel(
     }
 
     fun proceedToBooking() {
-        val isGuest = authService.currentUser.value?.userType == UserType.GUEST
+        val isGuest = authService.currentUser.value?.userTypeEnum == UserType.GUEST
         if (isGuest) {
             _uiState.update { it.copy(showGuestAlert = true) }
         } else {

@@ -46,17 +46,14 @@ fun LoginScreen(
     val email by viewModel.email.collectAsState()
     val password by viewModel.password.collectAsState()
 
-    // ✅ Hata VE Başarı Mesajları
-    LaunchedEffect(uiState) {
+    // ✅ Giriş başarılı olduğunda kullanıcı tipine göre yönlendir
+    LaunchedEffect(uiState, currentUser) {
         if (uiState.isSuccess && currentUser != null) {
-            // Toast mesajı (İsteğe bağlı)
-            // Toast.makeText(context, "Giriş Başarılı", Toast.LENGTH_SHORT).show()
-
-            // KULLANICI TİPİ KONTROLÜ
-            val targetRoute = if (currentUser?.userType == UserType.ADMIN) {
-                Screen.AdminMain.route // Admin ise Admin Paneline
-            } else {
-                Screen.Main.route // Değilse Normal Ana Sayfaya
+            // KULLANICI TİPİ KONTROLÜ (SuperAdmin dahil)
+            val targetRoute = when (currentUser?.userTypeEnum) {
+                UserType.SUPER_ADMIN -> Screen.SuperAdminMain.route
+                UserType.ADMIN -> Screen.AdminOnboarding.route
+                else -> Screen.Main.route
             }
 
             // Yönlendirme
@@ -70,6 +67,22 @@ fun LoginScreen(
         if (uiState.error != null) {
             Toast.makeText(context, uiState.error, Toast.LENGTH_LONG).show()
             viewModel.clearError()
+        }
+    }
+
+    // ✅ AuthStateListener üzerinden de authentication dinle
+    // (signIn sonrası AuthStateListener tetiklenir ve isAuthenticated true olur)
+    val isAuthenticated by AuthService.isAuthenticated.collectAsState()
+    LaunchedEffect(isAuthenticated, currentUser) {
+        if (isAuthenticated && currentUser != null) {
+            val targetRoute = when (currentUser?.userTypeEnum) {
+                UserType.SUPER_ADMIN -> Screen.SuperAdminMain.route
+                UserType.ADMIN -> Screen.AdminOnboarding.route
+                else -> Screen.Main.route
+            }
+            navController.navigate(targetRoute) {
+                popUpTo(Screen.Login.route) { inclusive = true }
+            }
         }
     }
 

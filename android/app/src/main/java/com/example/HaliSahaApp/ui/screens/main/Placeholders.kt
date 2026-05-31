@@ -126,12 +126,12 @@ fun ProfileScreenPlaceholder(onLogout: () -> Unit) {
                 color = AppColors.TextSecondary
             )
 
-            if (currentUser?.userType != UserType.GUEST) {
+            if (currentUser?.userTypeEnum != UserType.GUEST) {
                 Spacer(modifier = Modifier.height(8.dp))
                 SuggestionChip(
                     onClick = { },
                     label = {
-                        Text("${currentUser?.preferredPosition?.icon} ${currentUser?.preferredPosition?.displayName}")
+                        Text("${currentUser?.preferredPositionEnum?.icon} ${currentUser?.preferredPositionEnum?.displayName}")
                     }
                 )
             }

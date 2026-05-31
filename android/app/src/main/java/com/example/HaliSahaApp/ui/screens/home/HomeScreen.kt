@@ -549,3 +549,43 @@ fun NotificationsSheetView(onClose: () -> Unit) {
         )
     }
 }
+
+// MARK: - Notifications Placeholder Screen (Tam ekran)
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun NotificationsPlaceholderScreen(navController: NavController) {
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                    Text("Bildirimler", fontWeight = FontWeight.SemiBold)
+                },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = "Geri"
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = AppColors.Background
+                )
+            )
+        },
+        containerColor = AppColors.Background
+    ) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+            contentAlignment = Alignment.Center
+        ) {
+            EmptyStateView(
+                icon = Icons.Default.Notifications,
+                title = "Bildiriminiz yok",
+                message = "Şu an için yeni bir bildiriminiz bulunmuyor."
+            )
+        }
+    }
+}

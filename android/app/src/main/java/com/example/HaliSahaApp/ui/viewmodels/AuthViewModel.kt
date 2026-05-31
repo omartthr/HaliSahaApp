@@ -131,8 +131,10 @@ class AuthViewModel : ViewModel() {
             _uiState.value = AuthUiState(isLoading = true)
             try {
                 authService.signIn(email.value.trim(), password.value)
+                // signIn başarılı - AuthService.fetchUserProfile() currentUser'ı set edecek
+                // clearForm() burada ÇAĞRILMAMALI: currentUser henüz null olabilir
+                // ve LaunchedEffect'te currentUser != null kontrolü başarısız olur
                 _uiState.value = AuthUiState(isSuccess = true)
-                clearForm()
             } catch (e: Exception) {
                 val errorMsg = (e as? AuthError)?.message ?: "Giriş başarısız."
                 _uiState.value = AuthUiState(error = errorMsg)

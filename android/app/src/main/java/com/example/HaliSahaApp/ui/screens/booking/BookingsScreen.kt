@@ -97,8 +97,10 @@ fun BookingsScreen(
                             BookingCard(
                                 booking = booking,
                                 onClick = {
-                                    // Detay Sayfasına Git
-                                    // navController.navigate("booking_detail/${booking.id}")
+                                    val bookingId = booking.id ?: return@BookingCard
+                                    navController.navigate(
+                                        com.example.HaliSahaApp.ui.navigation.Screen.CreateMatchPost.createRoute(bookingId)
+                                    )
                                 }
                             )
                         }
