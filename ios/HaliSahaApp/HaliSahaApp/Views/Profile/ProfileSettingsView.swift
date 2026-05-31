@@ -27,6 +27,7 @@ struct ProfileSettingsView: View {
     @State private var showLogoutAlert = false
     @State private var showDeleteConfirm = false
     @State private var showFinalDeleteConfirm = false
+    @State private var showResetOnboardingAlert = false
     @State private var isProcessing = false
     @State private var errorMessage = ""
     @State private var showError = false
@@ -48,6 +49,9 @@ struct ProfileSettingsView: View {
 
             // Danger Zone
             dangerZoneSection
+
+            // Debug / Test
+            debugSection
 
             // App Info
             appInfoSection
@@ -83,6 +87,16 @@ struct ProfileSettingsView: View {
         } message: {
             Text("Bu işlemi onaylamak için \"Hesabı Sil\" seçeneğine dokunun.")
         }
+        .alert("Onboarding'i Sıfırla", isPresented: $showResetOnboardingAlert) {
+            Button("Vazgeç", role: .cancel) {}
+            Button("Sıfırla ve Çıkış Yap", role: .destructive) {
+                Task { await resetOnboardingAndSignOut() }
+            }
+        } message: {
+            Text(
+                "Onboarding cevapların silinecek ve hesabından çıkış yapılacaksın. Tekrar giriş yaptığında onboarding'i baştan göreceksin."
+            )
+        }
         .alert("Hata", isPresented: $showError) {
             Button("Tamam", role: .cancel) {}
         } message: {
@@ -106,6 +120,33 @@ struct ProfileSettingsView: View {
                 EditProfileView()
             } label: {
                 SettingsRow(icon: "person.fill", iconColor: Color(hex: "2E7D32"), title: "Profili Düzenle")
+            }
+
+            NavigationLink {
+                EditBillingAddressView()
+            } label: {
+                HStack {
+                    SettingsRow(
+                        icon: "creditcard.fill",
+                        iconColor: Color(hex: "2E7D32"),
+                        title: "Fatura Adresi",
+                        chevron: false
+                    )
+                    Spacer()
+                    if authService.currentUser?.billingAddress?.isComplete != true {
+                        Text("Eksik")
+                            .font(.caption2)
+                            .fontWeight(.semibold)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Color.orange.opacity(0.18))
+                            .foregroundColor(.orange)
+                            .clipShape(Capsule())
+                    }
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
 
             NavigationLink {
@@ -333,6 +374,32 @@ struct ProfileSettingsView: View {
         }
     }
 
+    private var debugSection: some View {
+        Section {
+            Button {
+                showResetOnboardingAlert = true
+            } label: {
+                HStack {
+                    SettingsRow(
+                        icon: "arrow.counterclockwise.circle.fill",
+                        iconColor: .purple,
+                        title: "Onboarding'i Sıfırla (Test)",
+                        chevron: false,
+                        titleColor: .purple
+                    )
+                    Spacer()
+                }
+            }
+        } header: {
+            Text("Geliştirici")
+        } footer: {
+            Text(
+                "Onboarding cevaplarını siler ve çıkış yapar. Tekrar giriş yaptığında onboarding'i baştan görürsün."
+            )
+            .font(.caption2)
+        }
+    }
+
     private var appInfoSection: some View {
         Section {
             HStack {
@@ -364,6 +431,19 @@ struct ProfileSettingsView: View {
     // MARK: - Actions
     private func signOut() {
         do {
+            try authService.signOut()
+        } catch {
+            errorMessage = error.localizedDescription
+            showError = true
+        }
+    }
+
+    private func resetOnboardingAndSignOut() async {
+        isProcessing = true
+        defer { isProcessing = false }
+
+        do {
+            try await ProfileService.shared.resetOnboarding()
             try authService.signOut()
         } catch {
             errorMessage = error.localizedDescription

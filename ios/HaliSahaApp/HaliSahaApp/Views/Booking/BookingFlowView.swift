@@ -7,6 +7,7 @@
 //  Created by Mehmet Mert Mazıcı on 20.01.2026.
 //
 
+import FirebaseFirestore
 import SwiftUI
 
 // MARK: - Booking Flow View
@@ -17,69 +18,70 @@ struct BookingFlowView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var currentStep: BookingStep = .summary
-    @State private var selectedPaymentMethod: PaymentMethod = .creditCard
-    @State private var cardNumber = ""
-    @State private var cardHolder = ""
-    @State private var expiryDate = ""
-    @State private var cvv = ""
     @State private var isProcessingPayment = false
     @State private var paymentError: String?
     @State private var createdBooking: Booking?
+
+    // iyzico ödeme akışı
+    @State private var showPaymentSheet = false
+    @State private var pendingPaymentUrl: URL?
+    @State private var pendingPaymentDocId: String?
+    @State private var pendingBookingId: String?
 
     // Bildirim izni prompt'u (ilk rezervasyon sonrası)
     @State private var showNotificationPrompt = false
 
     private let bookingService = BookingService.shared
     private let authService = AuthService.shared
+    private let paymentService = PaymentService.shared
+    private let firebaseService = FirebaseService.shared
 
     // MARK: - Body
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                // Progress Indicator
-                progressIndicator
+        VStack(spacing: 0) {
+            // Progress Indicator
+            progressIndicator
 
-                // Content
-                ScrollView {
-                    VStack(spacing: 24) {
-                        switch currentStep {
-                        case .summary:
-                            summaryStep
-                        case .payment:
-                            paymentStep
-                        case .confirmation:
-                            confirmationStep
-                        }
-                    }
-                    .padding()
-                }
-
-                // Bottom Bar
-                if currentStep != .confirmation {
-                    bottomBar
-                }
-            }
-            .background(Color.appBackground)
-            .navigationTitle(currentStep.title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    if currentStep != .confirmation {
-                        Button("İptal") {
-                            dismiss()
-                        }
+            // Content
+            ScrollView {
+                VStack(spacing: 24) {
+                    switch currentStep {
+                    case .summary:
+                        summaryStep
+                    case .payment:
+                        paymentStep
+                    case .confirmation:
+                        confirmationStep
                     }
                 }
+                .padding()
             }
-            .interactiveDismissDisabled(currentStep == .confirmation)
-            .alert("Ödeme Hatası", isPresented: .constant(paymentError != nil)) {
-                Button("Tamam") {
-                    paymentError = nil
-                }
-            } message: {
-                if let error = paymentError {
-                    Text(error)
-                }
+
+            // Bottom Bar
+            if currentStep != .confirmation {
+                bottomBar
+            }
+        }
+        .background(Color.appBackground)
+        .navigationTitle(currentStep.title)
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(currentStep == .confirmation)
+        .alert("Ödeme Hatası", isPresented: .constant(paymentError != nil)) {
+            Button("Tamam") {
+                paymentError = nil
+            }
+        } message: {
+            if let error = paymentError {
+                Text(error)
+            }
+        }
+        .fullScreenCover(isPresented: $showPaymentSheet) {
+            if let url = pendingPaymentUrl, let docId = pendingPaymentDocId {
+                IyzicoPaymentView(
+                    paymentPageUrl: url,
+                    paymentDocId: docId,
+                    onFinish: handlePaymentOutcome
+                )
             }
         }
     }
@@ -225,94 +227,11 @@ struct BookingFlowView: View {
     // MARK: - Payment Step
     private var paymentStep: some View {
         VStack(spacing: 20) {
-            // Payment Method Selection
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Ödeme Yöntemi")
-                    .font(.headline)
+            // iyzico Provider Info
+            iyzicoInfoCard
 
-                ForEach(PaymentMethod.allCases) { method in
-                    PaymentMethodRow(
-                        method: method,
-                        isSelected: selectedPaymentMethod == method
-                    ) {
-                        selectedPaymentMethod = method
-                    }
-                }
-            }
-
-            // Card Details (for Credit/Debit Card)
-            if selectedPaymentMethod == .creditCard || selectedPaymentMethod == .debitCard {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Kart Bilgileri")
-                        .font(.headline)
-
-                    CustomTextField(
-                        title: "Kart Numarası",
-                        placeholder: "1234 5678 9012 3456",
-                        text: $cardNumber,
-                        icon: "creditcard.fill",
-                        keyboardType: .numberPad,
-                        textContentType: .creditCardNumber,
-                        errorMessage: cardNumberError
-                    )
-                    .onChange(of: cardNumber) { _, newValue in
-                        let formattedValue = PaymentInputFormatter.cardNumber(newValue)
-                        if formattedValue != newValue {
-                            cardNumber = formattedValue
-                        }
-                    }
-
-                    CustomTextField(
-                        title: "Kart Sahibi",
-                        placeholder: "AD SOYAD",
-                        text: $cardHolder,
-                        icon: "person.fill",
-                        textContentType: .name,
-                        autocapitalization: .characters,
-                        errorMessage: cardHolderError
-                    )
-                    .onChange(of: cardHolder) { _, newValue in
-                        let formattedValue = PaymentInputFormatter.cardHolder(newValue)
-                        if formattedValue != newValue {
-                            cardHolder = formattedValue
-                        }
-                    }
-
-                    HStack(spacing: 12) {
-                        CustomTextField(
-                            title: "Son Kullanma",
-                            placeholder: "AA/YY",
-                            text: $expiryDate,
-                            keyboardType: .numberPad,
-                            errorMessage: expiryDateError
-                        )
-                        .onChange(of: expiryDate) { _, newValue in
-                            let formattedValue = PaymentInputFormatter.expiryDate(newValue)
-                            if formattedValue != newValue {
-                                expiryDate = formattedValue
-                            }
-                        }
-
-                        CustomTextField(
-                            title: "CVV",
-                            placeholder: "123",
-                            text: $cvv,
-                            keyboardType: .numberPad,
-                            isSecure: true,
-                            errorMessage: cvvError
-                        )
-                        .onChange(of: cvv) { _, newValue in
-                            let formattedValue = PaymentInputFormatter.cvv(newValue)
-                            if formattedValue != newValue {
-                                cvv = formattedValue
-                            }
-                        }
-                    }
-                }
-                .padding()
-                .background(Color.appCardBackground)
-                .cornerRadius(16)
-            }
+            // Billing Address Status
+            billingStatusCard
 
             // Amount to Pay
             VStack(spacing: 8) {
@@ -324,6 +243,10 @@ struct BookingFlowView: View {
                     .font(.largeTitle)
                     .fontWeight(.bold)
                     .foregroundColor(Color(hex: "2E7D32"))
+
+                Text("Kalan tutar sahada ödenecektir")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
             .frame(maxWidth: .infinity)
             .padding()
@@ -334,11 +257,91 @@ struct BookingFlowView: View {
             HStack(spacing: 8) {
                 Image(systemName: "lock.fill")
                     .foregroundColor(.green)
-                Text("256-bit SSL ile güvenli ödeme")
+                Text("Ödeme iyzico altyapısı ile 3DS güvencesinde alınır")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.leading)
+            }
+        }
+    }
+
+    // MARK: - iyzico Info Card
+    private var iyzicoInfoCard: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color(hex: "2E7D32").opacity(0.12))
+                    .frame(width: 44, height: 44)
+                Image(systemName: "creditcard.and.123")
+                    .font(.title3)
+                    .foregroundColor(Color(hex: "2E7D32"))
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Güvenli Ödeme")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                Text("Kart bilgileriniz iyzico'nun güvenli sayfasında girilir. Uygulama kart verilerinizi saklamaz.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .background(Color.appCardBackground)
+        .cornerRadius(14)
+    }
+
+    // MARK: - Billing Status Card
+    private var billingStatusCard: some View {
+        let isComplete = isBillingComplete
+        return NavigationLink {
+            EditBillingAddressView()
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: isComplete ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
+                    .font(.title3)
+                    .foregroundColor(isComplete ? Color(hex: "2E7D32") : .orange)
+                    .frame(width: 30)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(isComplete ? "Fatura Bilgileri Tamam" : "Fatura Bilgileri Eksik")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                    Text(
+                        isComplete
+                            ? "Düzenlemek için dokunun"
+                            : "Ödemeye geçmek için TC kimlik ve adres bilgilerinizi girin"
+                    )
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.leading)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
+            .padding(14)
+            .background(
+                (isComplete ? Color(hex: "2E7D32") : Color.orange)
+                    .opacity(0.08)
+            )
+            .cornerRadius(14)
+            .overlay {
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(
+                        (isComplete ? Color(hex: "2E7D32") : Color.orange).opacity(0.4),
+                        lineWidth: 1
+                    )
+            }
         }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Confirmation Step
@@ -488,11 +491,11 @@ struct BookingFlowView: View {
                 Spacer()
 
                 PrimaryButton(
-                    title: currentStep == .summary ? "Ödemeye Geç" : "Ödemeyi Tamamla",
+                    title: currentStep == .summary ? "Ödemeye Geç" : "Güvenli Ödemeye Geç",
                     icon: currentStep == .payment ? "lock.fill" : nil,
                     size: .medium,
                     isLoading: isProcessingPayment,
-                    isDisabled: currentStep == .payment && !isPaymentFormValid,
+                    isDisabled: currentStep == .payment && !isBillingComplete,
                     fullWidth: false
                 ) {
                     handleNextStep()
@@ -504,49 +507,8 @@ struct BookingFlowView: View {
     }
 
     // MARK: - Computed Properties
-    private var isPaymentFormValid: Bool {
-        if selectedPaymentMethod == .wallet {
-            return true
-        }
-        return PaymentFormValidator.isValidCardNumber(cardNumber)
-            && PaymentFormValidator.isValidCardHolder(cardHolder)
-            && PaymentFormValidator.isValidExpiryDate(expiryDate)
-            && PaymentFormValidator.isValidCVV(cvv, cardNumber: cardNumber)
-    }
-
-    private var cardNumberError: String? {
-        guard !cardNumber.isEmpty else { return nil }
-
-        let digits = PaymentInputFormatter.digitsOnly(cardNumber)
-        if digits.count < PaymentFormValidator.minimumCardNumberLength {
-            return "Kart numarası eksik"
-        }
-
-        return PaymentFormValidator.isValidCardNumber(cardNumber)
-            ? nil : "Kart numarası geçerli değil"
-    }
-
-    private var cardHolderError: String? {
-        guard !cardHolder.isEmpty else { return nil }
-        return PaymentFormValidator.isValidCardHolder(cardHolder) ? nil : "Ad ve soyad girin"
-    }
-
-    private var expiryDateError: String? {
-        guard !expiryDate.isEmpty else { return nil }
-
-        let digits = PaymentInputFormatter.digitsOnly(expiryDate)
-        if digits.count < 4 {
-            return "AA/YY formatında girin"
-        }
-
-        return PaymentFormValidator.isValidExpiryDate(expiryDate)
-            ? nil : "Son kullanma tarihi geçerli değil"
-    }
-
-    private var cvvError: String? {
-        guard !cvv.isEmpty else { return nil }
-        return PaymentFormValidator.isValidCVV(cvv, cardNumber: cardNumber)
-            ? nil : "CVV \(PaymentFormValidator.requiredCVVLength(for: cardNumber)) haneli olmalı"
+    private var isBillingComplete: Bool {
+        authService.currentUser?.billingAddress?.isComplete == true
     }
 
     // MARK: - Actions
@@ -566,11 +528,15 @@ struct BookingFlowView: View {
     }
 
     private func processPayment() {
+        guard isBillingComplete else {
+            paymentError = "Ödemeye geçmek için profil ayarlarından fatura bilgilerinizi tamamlayın."
+            return
+        }
+
         isProcessingPayment = true
 
         Task {
             do {
-                // Rezervasyon oluştur
                 guard let user = authService.currentUser,
                     let pitch = viewModel.selectedPitch,
                     let startHour = viewModel.selectedStartHour,
@@ -579,6 +545,7 @@ struct BookingFlowView: View {
                     throw BookingError.unknown("Eksik bilgi")
                 }
 
+                // 1) Booking'i oluştur (pending durumda).
                 let booking = try await bookingService.createBooking(
                     facility: viewModel.facility,
                     pitch: pitch,
@@ -588,29 +555,103 @@ struct BookingFlowView: View {
                     user: user
                 )
 
-                // Ödeme işlemi
-                let result = try await bookingService.processPayment(
-                    booking: booking,
-                    paymentMethod: selectedPaymentMethod
-                )
-
-                if result.success {
-                    var confirmedBooking = booking
-                    confirmedBooking.status = .confirmed
-                    confirmedBooking.paymentStatus = .depositPaid
-                    createdBooking = confirmedBooking
-                    withAnimation {
-                        currentStep = .confirmation
-                    }
-                } else {
-                    paymentError = result.message
+                guard let bookingId = booking.id else {
+                    throw BookingError.unknown("Rezervasyon kimliği oluşturulamadı.")
                 }
 
+                // 2) iyzico CheckoutForm'u initialize et.
+                let initResult = try await paymentService.initiateDepositPayment(bookingId: bookingId)
+
+                // 3) WebView'i aç. Sonuç IyzicoPaymentView üzerinden Firestore
+                //    listener ile gelir (handlePaymentOutcome).
+                pendingBookingId = bookingId
+                pendingPaymentUrl = initResult.paymentPageUrl
+                pendingPaymentDocId = initResult.paymentDocId
+                isProcessingPayment = false
+                showPaymentSheet = true
+
             } catch {
+                isProcessingPayment = false
                 paymentError = error.localizedDescription
             }
+        }
+    }
 
-            isProcessingPayment = false
+    // MARK: - Payment outcome handler
+    private func handlePaymentOutcome(_ outcome: IyzicoPaymentOutcome) {
+        showPaymentSheet = false
+
+        switch outcome {
+        case .success:
+            Task { await handlePaymentSuccess() }
+
+        case .failed(let message):
+            // Server zaten booking'i cancelled olarak işaretliyor; iOS state
+            // sadece reset edilir.
+            paymentError = message
+            Task { await resetPaymentState() }
+
+        case .cancelled:
+            // Kullanıcı WebView'i kapattı: pending booking slotu blokluyor.
+            // İptal et ve state'i sıfırla, kullanıcı baştan deneyebilir.
+            Task { await abandonPendingBooking() }
+
+        case .expired:
+            paymentError = "Ödeme süresi doldu. Lütfen yeniden deneyin."
+            Task { await abandonPendingBooking() }
+        }
+    }
+
+    /// Kullanıcı ödemeden vazgeçtiğinde mevcut pending booking'i iptal eder
+    /// (slot bloğunu kaldırır) ve state'i temiz bir başlangıca alır.
+    @MainActor
+    private func abandonPendingBooking() async {
+        guard let bookingId = pendingBookingId else { return }
+        try? await firebaseService.updateDocument(
+            in: firebaseService.bookingsCollection,
+            documentId: bookingId,
+            fields: [
+                FirestoreField.status: BookingStatus.cancelled.rawValue,
+                "cancellationReason": "Kullanıcı ödemeyi tamamlamadı.",
+                "cancelledAt": Timestamp(date: Date()),
+                FirestoreField.updatedAt: Timestamp(date: Date()),
+            ]
+        )
+        bookingService.clearAllCache()
+        await resetPaymentState()
+    }
+
+    @MainActor
+    private func resetPaymentState() async {
+        pendingBookingId = nil
+        pendingPaymentUrl = nil
+        pendingPaymentDocId = nil
+    }
+
+    @MainActor
+    private func handlePaymentSuccess() async {
+        guard let bookingId = pendingBookingId else {
+            paymentError = "Ödeme tamamlandı ancak rezervasyon yüklenemedi."
+            return
+        }
+
+        do {
+            // Sunucu zaten booking'i güncelledi; nihai durumu çekiyoruz.
+            let updated: Booking = try await firebaseService.fetchDocument(
+                from: firebaseService.bookingsCollection,
+                documentId: bookingId
+            )
+            createdBooking = updated
+
+            // Yan etkiler: local reminder + admin bildirimi (eski simüle akışıyla aynı).
+            await bookingService.triggerNewBookingSideEffects(
+                booking: updated,
+                status: updated.status
+            )
+
+            withAnimation { currentStep = .confirmation }
+        } catch {
+            paymentError = "Ödeme alındı ancak rezervasyon yüklenemedi: \(error.localizedDescription)"
         }
     }
 }
@@ -627,145 +668,6 @@ enum BookingStep: Int, CaseIterable {
         case .payment: return "Ödeme"
         case .confirmation: return "Onay"
         }
-    }
-}
-
-// MARK: - Payment Input Formatting
-enum PaymentInputFormatter {
-    static func digitsOnly(_ value: String) -> String {
-        value.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
-    }
-
-    static func cardNumber(_ value: String) -> String {
-        let digits = String(digitsOnly(value).prefix(PaymentFormValidator.maximumCardNumberLength))
-        return stride(from: 0, to: digits.count, by: 4)
-            .map { index in
-                let start = digits.index(digits.startIndex, offsetBy: index)
-                let end = digits.index(start, offsetBy: min(4, digits.distance(from: start, to: digits.endIndex)))
-                return String(digits[start..<end])
-            }
-            .joined(separator: " ")
-    }
-
-    static func cardHolder(_ value: String) -> String {
-        let allowedCharacters = CharacterSet.letters
-            .union(.whitespaces)
-            .union(CharacterSet(charactersIn: "-'"))
-
-        let filteredValue = String(value.unicodeScalars.filter { allowedCharacters.contains($0) })
-        let normalizedSpacing = filteredValue.replacingOccurrences(
-            of: "\\s+",
-            with: " ",
-            options: .regularExpression
-        )
-
-        return String(normalizedSpacing.uppercased(with: Locale(identifier: "tr_TR")).prefix(40))
-    }
-
-    static func expiryDate(_ value: String) -> String {
-        let digits = String(digitsOnly(value).prefix(4))
-
-        guard !digits.isEmpty else { return "" }
-
-        if digits.count == 1 {
-            guard let monthFirstDigit = Int(digits), monthFirstDigit > 1 else {
-                return digits
-            }
-
-            return "0\(digits)/"
-        }
-
-        let month = String(digits.prefix(2))
-        let year = String(digits.dropFirst(2))
-
-        guard !year.isEmpty else {
-            return "\(month)/"
-        }
-
-        return "\(month)/\(year)"
-    }
-
-    static func cvv(_ value: String) -> String {
-        String(digitsOnly(value).prefix(PaymentFormValidator.maximumCVVLength))
-    }
-}
-
-// MARK: - Payment Form Validation
-enum PaymentFormValidator {
-    static let minimumCardNumberLength = 13
-    static let maximumCardNumberLength = 19
-    static let maximumCVVLength = 4
-
-    static func isValidCardNumber(_ value: String) -> Bool {
-        let digits = PaymentInputFormatter.digitsOnly(value)
-
-        guard (minimumCardNumberLength...maximumCardNumberLength).contains(digits.count) else {
-            return false
-        }
-
-        return passesLuhnCheck(digits)
-    }
-
-    static func isValidCardHolder(_ value: String) -> Bool {
-        let words = value.trimmingCharacters(in: .whitespacesAndNewlines)
-            .split(separator: " ")
-
-        return words.count >= 2 && words.allSatisfy { word in
-            word.filter(\.isLetter).count >= 2
-        }
-    }
-
-    static func isValidExpiryDate(_ value: String, today: Date = Date()) -> Bool {
-        let digits = PaymentInputFormatter.digitsOnly(value)
-
-        guard digits.count == 4,
-            let month = Int(digits.prefix(2)),
-            let yearSuffix = Int(digits.suffix(2)),
-            (1...12).contains(month)
-        else {
-            return false
-        }
-
-        let fullYear = 2000 + yearSuffix
-        let calendar = Calendar.current
-        let currentYear = calendar.component(.year, from: today)
-        let currentMonth = calendar.component(.month, from: today)
-
-        return fullYear > currentYear || (fullYear == currentYear && month >= currentMonth)
-    }
-
-    static func isValidCVV(_ value: String, cardNumber: String) -> Bool {
-        PaymentInputFormatter.digitsOnly(value).count == requiredCVVLength(for: cardNumber)
-    }
-
-    static func requiredCVVLength(for cardNumber: String) -> Int {
-        isAmericanExpress(cardNumber) ? 4 : 3
-    }
-
-    private static func isAmericanExpress(_ cardNumber: String) -> Bool {
-        let digits = PaymentInputFormatter.digitsOnly(cardNumber)
-        return digits.hasPrefix("34") || digits.hasPrefix("37")
-    }
-
-    private static func passesLuhnCheck(_ digits: String) -> Bool {
-        let reversedDigits = digits.reversed().compactMap { Int(String($0)) }
-
-        guard reversedDigits.count == digits.count else {
-            return false
-        }
-
-        let checksum = reversedDigits.enumerated().reduce(0) { partialResult, item in
-            let (index, digit) = item
-
-            guard index.isMultiple(of: 2) == false else {
-                return partialResult + digit
-            }
-
-            let doubledDigit = digit * 2
-            return partialResult + (doubledDigit > 9 ? doubledDigit - 9 : doubledDigit)
-        }
-
-        return checksum.isMultiple(of: 10)
     }
 }
 
@@ -788,41 +690,6 @@ struct PriceRow: View {
                 .fontWeight(isHighlighted ? .bold : .regular)
                 .foregroundColor(isHighlighted ? Color(hex: "2E7D32") : .primary)
         }
-    }
-}
-
-struct PaymentMethodRow: View {
-    let method: PaymentMethod
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                Image(systemName: method.icon)
-                    .font(.title3)
-                    .foregroundColor(isSelected ? Color(hex: "2E7D32") : .secondary)
-                    .frame(width: 30)
-
-                Text(method.rawValue)
-                    .font(.subheadline)
-                    .foregroundColor(.primary)
-
-                Spacer()
-
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .foregroundColor(isSelected ? Color(hex: "2E7D32") : .gray)
-            }
-            .padding()
-            .background(isSelected ? Color(hex: "2E7D32").opacity(0.1) : Color.appCardBackground)
-            .cornerRadius(12)
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(
-                        isSelected ? Color(hex: "2E7D32") : Color.gray.opacity(0.2), lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
     }
 }
 

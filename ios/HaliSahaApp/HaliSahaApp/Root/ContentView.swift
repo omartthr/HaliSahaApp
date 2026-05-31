@@ -32,8 +32,16 @@ struct ContentView: View {
                         AdminTabView()
                             .transition(.opacity)
                     default:
-                        MainTabView()
-                            .transition(.opacity)
+                        // Oyuncu: onboarding tamamlanmadıysa önce onu göster
+                        if let user = authService.currentUser,
+                           user.userType == .player,
+                           !user.hasCompletedOnboarding {
+                            OnboardingCoordinator()
+                                .transition(.opacity)
+                        } else {
+                            MainTabView()
+                                .transition(.opacity)
+                        }
                     }
                 } else {
                     LoginView()
@@ -43,6 +51,7 @@ struct ContentView: View {
         }
         .animation(.easeInOut(duration: 0.3), value: showSplash)
         .animation(.easeInOut(duration: 0.3), value: authService.isAuthenticated)
+        .animation(.easeInOut(duration: 0.4), value: authService.currentUser?.hasCompletedOnboarding)
         .onChange(of: authService.isAuthenticated) { _, _ in
             UIApplication.dismissKeyboard()
         }
