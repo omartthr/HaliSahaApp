@@ -55,6 +55,38 @@ final class ProfileService {
         return updatedUser
     }
 
+    // MARK: - Update Billing Address
+    /// iyzico ödemesi için zorunlu olan fatura adresi alanlarını günceller.
+    /// `BillingAddress.validate()` çağıran tarafın sorumluluğunda — buraya gelen
+    /// veri formatın doğru olduğu varsayılır (UI tarafında validate ediliyor).
+    func updateBillingAddress(_ address: BillingAddress) async throws -> User {
+        guard let userId = firebaseService.currentUserId else {
+            throw ProfileError.notAuthenticated
+        }
+
+        try await firebaseService.updateDocument(
+            in: firebaseService.usersCollection,
+            documentId: userId,
+            fields: [
+                "billingAddress": [
+                    "identityNumber": address.identityNumber,
+                    "address": address.address,
+                    "city": address.city,
+                    "district": address.district,
+                    "zipCode": address.zipCode,
+                    "country": address.country,
+                ],
+                "updatedAt": Timestamp(date: Date()),
+            ]
+        )
+
+        let updatedUser: User = try await firebaseService.fetchDocument(
+            from: firebaseService.usersCollection,
+            documentId: userId
+        )
+        return updatedUser
+    }
+
     // MARK: - Profile Photo
     func updateProfilePhoto(_ image: UIImage) async throws -> String {
         guard let userId = firebaseService.currentUserId else {
@@ -126,6 +158,68 @@ final class ProfileService {
             }
             throw ProfileError.unknown(error.localizedDescription)
         }
+    }
+
+    // MARK: - Onboarding
+
+    /// Onboarding sırasında her ekran cevabını anında Firestore'a kaydeder.
+    /// Kullanıcı yarıda bırakırsa kaldığı yerden devam edebilsin diye partial update.
+    func updateOnboardingFields(_ fields: [String: Any]) async throws {
+        guard let userId = firebaseService.currentUserId else {
+            throw ProfileError.notAuthenticated
+        }
+
+        var payload = fields
+        payload["updatedAt"] = Timestamp(date: Date())
+
+        try await firebaseService.updateDocument(
+            in: firebaseService.usersCollection,
+            documentId: userId,
+            fields: payload
+        )
+    }
+
+    /// (Debug) Onboarding ile ilgili tüm alanları siler — kullanıcı tekrar girişte onboarding'i baştan görür.
+    func resetOnboarding() async throws {
+        guard let userId = firebaseService.currentUserId else {
+            throw ProfileError.notAuthenticated
+        }
+
+        try await firebaseService.updateDocument(
+            in: firebaseService.usersCollection,
+            documentId: userId,
+            fields: [
+                "onboardingCompletedAt": FieldValue.delete(),
+                "playFrequency": FieldValue.delete(),
+                "skillLevel": FieldValue.delete(),
+                "preferredDays": FieldValue.delete(),
+                "preferredTimeSlots": FieldValue.delete(),
+                "motivations": FieldValue.delete(),
+                "updatedAt": Timestamp(date: Date()),
+            ]
+        )
+    }
+
+    /// Onboarding tamamlanma timestamp'ini yazar.
+    func completeOnboarding() async throws -> User {
+        guard let userId = firebaseService.currentUserId else {
+            throw ProfileError.notAuthenticated
+        }
+
+        try await firebaseService.updateDocument(
+            in: firebaseService.usersCollection,
+            documentId: userId,
+            fields: [
+                "onboardingCompletedAt": Timestamp(date: Date()),
+                "updatedAt": Timestamp(date: Date()),
+            ]
+        )
+
+        let updatedUser: User = try await firebaseService.fetchDocument(
+            from: firebaseService.usersCollection,
+            documentId: userId
+        )
+        return updatedUser
     }
 
     // MARK: - Favorites

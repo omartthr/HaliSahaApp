@@ -5,6 +5,7 @@
 //  Keşfet Ana Sayfası
 //
 
+import FirebaseFirestore
 import SwiftUI
 
 // MARK: - Home View
@@ -430,13 +431,20 @@ struct FilterPill: View {
 
 // MARK: - Match Post Detail View
 struct MatchPostDetailView: View {
-    let matchPost: MatchPost
+    @State private var matchPost: MatchPost
 
     @StateObject private var authService = AuthService.shared
-    @State private var hasAppliedLocally = false
-    @State private var showApplicationAlert = false
+
+    @State private var isSubmitting = false
+    @State private var errorMessage: String?
+    @State private var showApplicants = false
+    @State private var postListener: ListenerRegistration?
 
     private let accentColor = Color(hex: "2E7D32")
+
+    init(matchPost: MatchPost) {
+        _matchPost = State(initialValue: matchPost)
+    }
 
     var body: some View {
         ScrollView {
@@ -466,10 +474,57 @@ struct MatchPostDetailView: View {
         .safeAreaInset(edge: .bottom) {
             bottomActionBar
         }
-        .alert("Başvuru Alındı", isPresented: $showApplicationAlert) {
-            Button("Tamam", role: .cancel) {}
-        } message: {
-            Text("Başvurun ilan sahibine iletilmek üzere hazırlandı.")
+        .onAppear { startListening() }
+        .onDisappear { stopListening() }
+        .navigationDestination(isPresented: $showApplicants) {
+            MatchPostApplicantsView(matchPost: matchPost)
+        }
+        .alert(
+            "Hata",
+            isPresented: Binding(
+                get: { errorMessage != nil },
+                set: { if !$0 { errorMessage = nil } }
+            ),
+            presenting: errorMessage
+        ) { _ in
+            Button("Tamam") { errorMessage = nil }
+        } message: { msg in
+            Text(msg)
+        }
+    }
+
+    // MARK: - Real-time Listener
+    private func startListening() {
+        guard let id = matchPost.id, postListener == nil else { return }
+        postListener = MatchPostService.shared.observePost(id: id) { updated in
+            if let updated = updated {
+                matchPost = updated
+            }
+        }
+    }
+
+    private func stopListening() {
+        postListener?.remove()
+        postListener = nil
+    }
+
+    // MARK: - Apply / Withdraw Action
+    private func performApplyAction() async {
+        guard let user = authService.currentUser else {
+            errorMessage = "Başvurmak için giriş yapmalısınız."
+            return
+        }
+        isSubmitting = true
+        defer { isSubmitting = false }
+
+        do {
+            if hasApplied {
+                try await MatchPostService.shared.withdrawApplication(from: matchPost)
+            } else {
+                try await MatchPostService.shared.applyToPost(matchPost, applicant: user)
+            }
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 
@@ -683,13 +738,23 @@ struct MatchPostDetailView: View {
 
     private var bottomActionBar: some View {
         VStack(spacing: 8) {
-            PrimaryButton(
-                title: actionTitle,
-                icon: actionIcon,
-                isDisabled: isActionDisabled
-            ) {
-                hasAppliedLocally = true
-                showApplicationAlert = true
+            if isOwnPost {
+                PrimaryButton(
+                    title: pendingCount > 0
+                        ? "Başvuranları Gör (\(pendingCount))"
+                        : "Başvuranlar",
+                    icon: "person.crop.circle.badge.checkmark"
+                ) {
+                    showApplicants = true
+                }
+            } else {
+                PrimaryButton(
+                    title: actionTitle,
+                    icon: actionIcon,
+                    isDisabled: isActionDisabled || isSubmitting
+                ) {
+                    Task { await performApplyAction() }
+                }
             }
 
             Text(actionHint)
@@ -720,13 +785,22 @@ struct MatchPostDetailView: View {
     }
 
     private var hasApplied: Bool {
-        guard let currentUserId else { return hasAppliedLocally }
-        return hasAppliedLocally || matchPost.hasApplied(currentUserId)
+        guard let currentUserId else { return false }
+        return matchPost.hasApplied(currentUserId)
     }
 
     private var isAccepted: Bool {
         guard let currentUserId else { return false }
         return matchPost.isAccepted(currentUserId)
+    }
+
+    private var isRejected: Bool {
+        guard let currentUserId else { return false }
+        return matchPost.isRejected(currentUserId)
+    }
+
+    private var pendingCount: Int {
+        matchPost.pendingApplicationsCount
     }
 
     private var confirmedPlayers: Int {
@@ -778,38 +852,51 @@ struct MatchPostDetailView: View {
     }
 
     private var actionTitle: String {
-        if isOwnPost { return "Bu İlan Sana Ait" }
         if isAccepted { return "Kadroya Kabul Edildin" }
-        if hasApplied { return "Başvuru Alındı" }
+        if hasApplied { return "Başvuruyu Geri Çek" }
         if matchPost.isExpired { return "Maç Saati Geçti" }
         if matchPost.isFull || matchPost.status == .full { return "Kadro Tamamlandı" }
         if matchPost.status != .active { return "Başvuru Kapalı" }
         if currentUserId == nil { return "Giriş Yaparak Başvur" }
+        if isRejected { return "Tekrar Başvur" }
         return "Maça Başvur"
     }
 
     private var actionIcon: String {
-        if isAccepted || hasApplied { return "checkmark.circle.fill" }
+        if isAccepted { return "checkmark.seal.fill" }
+        if hasApplied { return "arrow.uturn.backward" }
         if isActionDisabled { return "lock.fill" }
         return "paperplane.fill"
     }
 
+    /// "Geri çek" akışı için: kullanıcı başvurmuşsa buton aktif kalmalı.
+    /// Sadece kabul edilmiş / süresi dolmuş / dolu / aktif değil durumlarında pasif.
     private var isActionDisabled: Bool {
-        isOwnPost ||
-        isAccepted ||
-        hasApplied ||
-        currentUserId == nil ||
-        matchPost.status != .active ||
-        matchPost.isExpired ||
-        matchPost.isFull
+        if isAccepted { return true }
+        if currentUserId == nil { return true }
+        if matchPost.isExpired { return true }
+        // Henüz başvurmamış kullanıcılar için kapasite/aktiflik kontrolü
+        if !hasApplied {
+            if matchPost.isFull { return true }
+            if matchPost.status != .active { return true }
+        }
+        return false
     }
 
     private var actionHint: String {
         if isOwnPost {
-            return "Kendi ilanındaki başvuruları randevular ekranından takip edebilirsin."
+            return pendingCount > 0
+                ? "\(pendingCount) yeni başvuru bekliyor."
+                : "Henüz bekleyen başvuru yok."
         }
-        if hasApplied || isAccepted {
+        if isAccepted {
+            return "Tebrikler! Sohbet sekmesinden takımla iletişime geçebilirsin."
+        }
+        if hasApplied {
             return "İlan sahibi başvurunu değerlendirdiğinde bildirim alacaksın."
+        }
+        if isRejected {
+            return "Önceki başvurun reddedilmiş. Tekrar başvurabilirsin."
         }
         if currentUserId == nil {
             return "Başvurmak için oyuncu hesabıyla giriş yapmalısın."

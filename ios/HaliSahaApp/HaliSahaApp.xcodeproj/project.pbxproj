@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		841273D72FC4ECB600066A0F /* FirebaseFunctions in Frameworks */ = {isa = PBXBuildFile; productRef = 841273D62FC4ECB600066A0F /* FirebaseFunctions */; };
 		84F8424D2EF9BCA5003929DA /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 84F8424C2EF9BCA5003929DA /* FirebaseAnalytics */; };
 		84F8424F2EF9BCA5003929DA /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 84F8424E2EF9BCA5003929DA /* FirebaseAuth */; };
 		84F842512EF9BCA5003929DA /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 84F842502EF9BCA5003929DA /* FirebaseFirestore */; };
@@ -49,6 +50,7 @@
 				84F842902EFC3179003929DA /* GoogleSignIn in Frameworks */,
 				84F842A22F113B01003929DA /* Lottie in Frameworks */,
 				84F8424D2EF9BCA5003929DA /* FirebaseAnalytics in Frameworks */,
+				841273D72FC4ECB600066A0F /* FirebaseFunctions in Frameworks */,
 				84F842532EF9BCA5003929DA /* FirebaseStorage in Frameworks */,
 				84F842922EFC3179003929DA /* GoogleSignInSwift in Frameworks */,
 				84F8424F2EF9BCA5003929DA /* FirebaseAuth in Frameworks */,
@@ -59,10 +61,18 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		841273D52FC4ECB600066A0F /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		84F842322EF95B7A003929DA = {
 			isa = PBXGroup;
 			children = (
 				84F8423D2EF95B7A003929DA /* HaliSahaApp */,
+				841273D52FC4ECB600066A0F /* Frameworks */,
 				84F8423C2EF95B7A003929DA /* Products */,
 			);
 			sourceTree = "<group>";
@@ -102,6 +112,7 @@
 				84F8428F2EFC3179003929DA /* GoogleSignIn */,
 				84F842912EFC3179003929DA /* GoogleSignInSwift */,
 				84F842A12F113B01003929DA /* Lottie */,
+				841273D62FC4ECB600066A0F /* FirebaseFunctions */,
 			);
 			productName = HaliSahaApp;
 			productReference = 84F8423B2EF95B7A003929DA /* HaliSahaApp.app */;
@@ -406,6 +417,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		841273D62FC4ECB600066A0F /* FirebaseFunctions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 84F8424B2EF9BCA5003929DA /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFunctions;
+		};
 		84F8424C2EF9BCA5003929DA /* FirebaseAnalytics */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 84F8424B2EF9BCA5003929DA /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;

@@ -132,6 +132,14 @@ final class AuthService: ObservableObject {
         }
     }
     
+    // MARK: - Refresh Current User
+    /// Mevcut kullanıcıyı Firestore'dan tekrar yükler. Onboarding gibi profil değişikliklerinden sonra çağrılır.
+    @MainActor
+    func refreshCurrentUser() async {
+        guard let userId = auth.currentUser?.uid else { return }
+        try? await fetchUserProfile(userId: userId)
+    }
+
     // MARK: - Email/Password Sign Up
     @MainActor
     func signUp(

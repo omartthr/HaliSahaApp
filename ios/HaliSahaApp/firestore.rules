@@ -174,22 +174,51 @@ service cloud.firestore {
       // Üretim sertleştirmesi: per-user subcollection'a taşıma.
       allow list: if isSignedIn();
 
-      // Oyuncu rezervasyon oluşturabilir (kendi adına)
+      // Oyuncu rezervasyon oluşturabilir (kendi adına).
+      // Yeni rezervasyonun ödeme durumu mutlaka `pending` olmalı —
+      // ödemenin "yapılmış" şeklinde işaretlenmesi sadece iyzicoCallback
+      // Cloud Function'ı tarafından (admin SDK ile) yapılabilir.
       allow create: if isSignedIn()
-                    && request.resource.data.userId == request.auth.uid;
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.paymentStatus == 'pending';
 
-      // Güncelleme: oyuncu kendi rezervasyonunu, tesis sahibi kendi tesisini,
-      // superAdmin hepsini güncelleyebilir.
+      // Güncelleme yetkisi: kendi rezervasyonu, tesis sahibi veya superAdmin.
+      // Ek olarak, client yalnızca aşağıdaki alanları değiştirebilir.
+      // `paymentStatus`, `qrCode`, `ticketNumber`, fiyat ve kimlik alanları
+      // sadece server-side (iyzicoCallback / refundDeposit) tarafından
+      // güncellenebilir. SuperAdmin için bu kısıt yok (manuel müdahale).
       allow update: if isSignedIn() && (
-                      resource.data.userId == request.auth.uid
-                      || isSuperAdmin()
-                      || (isApprovedAdmin()
-                          && exists(/databases/$(database)/documents/facilities/$(resource.data.facilityId))
-                          && get(/databases/$(database)/documents/facilities/$(resource.data.facilityId)).data.ownerId == request.auth.uid)
-                    );
+                       isSuperAdmin()
+                       || (
+                         (resource.data.userId == request.auth.uid
+                          || (isApprovedAdmin()
+                              && exists(/databases/$(database)/documents/facilities/$(resource.data.facilityId))
+                              && get(/databases/$(database)/documents/facilities/$(resource.data.facilityId)).data.ownerId == request.auth.uid))
+                         && onlyChanged([
+                              'status',
+                              'cancellationReason',
+                              'cancelledAt',
+                              'updatedAt',
+                              'groupId'
+                            ])
+                       )
+                     );
 
       // Silme: superAdmin (audit için müşteri/admin silemez)
       allow delete: if isSuperAdmin();
+    }
+
+    // ---------- payments/{paymentId} ----------
+    // iyzico ödeme akışında server-side fonksiyonların yazdığı kayıtlar.
+    // iOS uygulaması `IyzicoPaymentView` içinde kendi ödemesinin sonucunu
+    // izlemek için listener kurar — bu yüzden okuma sahibine açıktır.
+    // Yazma her zaman reddedilir; sadece Admin SDK (Cloud Functions)
+    // güvenlik kurallarını bypass ederek yazabilir.
+    match /payments/{paymentId} {
+      allow get: if isSignedIn()
+                 && (resource.data.userId == request.auth.uid || isSuperAdmin());
+      allow list: if isSuperAdmin();
+      allow write: if false;
     }
 
     // ---------- notifications/{notificationId} ----------
@@ -282,41 +311,138 @@ service cloud.firestore {
       allow create: if isSignedIn()
                     && request.resource.data.creatorId == request.auth.uid;
 
-      // Sahibi her alanı güncelleyebilir, superAdmin de.
+      // (a) Sahibi her alanı güncelleyebilir (accept/reject, currentPlayers vb.).
+      // creatorId immutable.
       allow update: if isSignedIn()
                     && resource.data.creatorId == request.auth.uid
                     && request.resource.data.creatorId == resource.data.creatorId;
+
+      // (b) SuperAdmin moderasyon yapabilir.
       allow update: if isSuperAdmin();
 
-      // Üçüncü kişiler "katılma isteği" gibi alanları client-side flow ile
-      // güncelleyebilsin diye: signed-in kullanıcı SADECE oyuncu sayısı vb.
-      // sosyal alanları değiştirebilir.
+      // (c) Üçüncü kişi: ilana SADECE kendisini başvuran olarak ekleyebilir
+      //     veya başvurusunu geri çekebilir. `acceptedIds`/`rejectedIds`/
+      //     `currentPlayers` gibi alanlara ASLA dokunamaz.
       allow update: if isSignedIn()
-                    && onlyChanged(['currentPlayers', 'joinRequests', 'acceptedUserIds', 'updatedAt']);
+                    && onlyChanged(['applicantIds', 'updatedAt'])
+                    && request.resource.data.applicantIds is list
+                    && (
+                         // self-apply: yeni listede ben varım, eskide yoktum, başka kimse eklenmedi/çıkmadı
+                         (
+                           request.auth.uid in request.resource.data.applicantIds
+                           && !(request.auth.uid in resource.data.applicantIds)
+                           && request.resource.data.applicantIds.size() == resource.data.applicantIds.size() + 1
+                           && request.resource.data.applicantIds.hasAll(resource.data.applicantIds)
+                         )
+                         ||
+                         // self-withdraw: eskide vardım, yenide yokum, başka kimse değişmedi
+                         (
+                           !(request.auth.uid in request.resource.data.applicantIds)
+                           && request.auth.uid in resource.data.applicantIds
+                           && request.resource.data.applicantIds.size() == resource.data.applicantIds.size() - 1
+                           && resource.data.applicantIds.hasAll(request.resource.data.applicantIds)
+                         )
+                       );
 
       allow delete: if isSignedIn()
                     && (resource.data.creatorId == request.auth.uid || isSuperAdmin());
     }
 
     // ---------- groups/{groupId} ----------
-    // MVP: signed-in kullanıcılar maç gruplarını okuyup yazabilir.
-    // Üretim sertleştirmesi: sadece grup üyeleri (memberIds içerir).
+    // Sohbet grupları: yalnız `memberIds` içindeki kullanıcılar okuyup yazabilir.
+    // Yol 1 (ilan kabul) akışında host (creator) `memberIds`'i günceller.
+    // Yol 2 (manuel davet) akışı Aşama 4'te `pendingInviteIds` alanıyla eklenecek.
     match /groups/{groupId} {
-      allow read, create: if isSignedIn();
-      allow update, delete: if isSignedIn() && (
-                              resource.data.creatorId == request.auth.uid
-                              || (resource.data.memberIds is list
-                                  && request.auth.uid in resource.data.memberIds)
-                              || isSuperAdmin()
-                            );
 
-      // Grup mesajları
+      // Üye mi?
+      // NOT: `is list` kontrolü yok — `arrayContains` query filtresi zaten alanın
+      // array olduğunu zorunlu kılar; ek kontrol Firestore'un statik analizini
+      // yanıltıp liste sorgularını yanlışlıkla reddetmesine sebep olabiliyor.
+      function isGroupMember() {
+        return isSignedIn()
+            && request.auth.uid in resource.data.memberIds;
+      }
+
+      // Kurucu veya admin mi?
+      function isGroupCreatorOrAdmin() {
+        return isSignedIn()
+            && (resource.data.creatorId == request.auth.uid
+                || (resource.data.adminIds is list
+                    && request.auth.uid in resource.data.adminIds));
+      }
+
+      // Okuma: yalnız üyeler. (Client `memberIds arrayContains` filtresiyle sorgular.)
+      // ÖNEMLİ: SuperAdmin durumunu ayrı `allow read`'a aldık. Tek `if A || B`
+      // şeklinde yazıldığında Firestore statik analizi `isSuperAdmin()`'i
+      // ispatlayamadığı için tüm sorguyu reddedebiliyor. İki ayrı satır halinde
+      // her biri bağımsız ispatlanır; birinin geçmesi yeterli.
+      allow read: if isGroupMember();
+      allow read: if isSuperAdmin();
+
+      // Oluşturma: signed-in, creatorId == auth.uid, ve kurucu memberIds içinde.
+      // matchGroup ise `linkedBookingId` zorunlu (otomatik üretim akışı).
+      allow create: if isSignedIn()
+                    && request.resource.data.creatorId == request.auth.uid
+                    && request.resource.data.memberIds is list
+                    && request.auth.uid in request.resource.data.memberIds
+                    && request.resource.data.memberIds.size() <= request.resource.data.maxMembers;
+
+      // (a) Kurucu/admin: her alanı güncelleyebilir (üye ekleme/çıkarma dahil).
+      allow update: if isGroupCreatorOrAdmin();
+
+      // (b) Üye: yalnız son mesaj önizlemesini güncelleyebilir (mesaj atınca).
+      allow update: if isGroupMember()
+                    && onlyChanged(['lastMessage', 'updatedAt']);
+
+      // (c) Üye: gruptan KENDİSİNİ çıkarabilir (başkasını çıkaramaz).
+      allow update: if isGroupMember()
+                    && onlyChanged(['memberIds', 'updatedAt'])
+                    && !(request.auth.uid in request.resource.data.memberIds)
+                    && request.resource.data.memberIds.size() == resource.data.memberIds.size() - 1;
+
+      // Silme: yalnız kurucu veya superAdmin.
+      allow delete: if isSignedIn()
+                    && (resource.data.creatorId == request.auth.uid || isSuperAdmin());
+
+      // ---------- Mesajlar (subcollection) ----------
       match /messages/{messageId} {
-        allow read: if isSignedIn();
-        allow create: if isSignedIn()
-                      && request.resource.data.senderId == request.auth.uid;
-        allow update, delete: if isSignedIn()
-                              && (resource.data.senderId == request.auth.uid || isSuperAdmin());
+
+        // Parent grubun üyesi mi? (get ile tek seferlik kontrol)
+        function isParentGroupMember() {
+          return isSignedIn()
+              && exists(/databases/$(database)/documents/groups/$(groupId))
+              && request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds;
+        }
+
+        // Okuma: yalnız grup üyeleri. (OR yerine ayrı satırlar — statik analiz için.)
+        allow read: if isParentGroupMember();
+        allow read: if isSuperAdmin();
+
+        // Oluşturma: grup üyesi olmalı, kendi adına yazmalı, içerik <= 2000 karakter.
+        // Sistem mesajları client tarafından yazılmaz; service layer addMember/leaveMember
+        // sırasında host'un yetkisiyle yazılır (host zaten üye).
+        allow create: if isParentGroupMember()
+                      && request.resource.data.senderId == request.auth.uid
+                      && request.resource.data.groupId == groupId
+                      && request.resource.data.content is string
+                      && request.resource.data.content.size() <= 2000;
+
+        // Düzenleme: yalnız kendi mesajını, 15 dakika içinde, sadece içerik/edit/silme alanları.
+        allow update: if isSignedIn()
+                      && resource.data.senderId == request.auth.uid
+                      && onlyChanged(['content', 'isEdited', 'isDeleted', 'updatedAt'])
+                      && (request.time.toMillis() - resource.data.createdAt.toMillis()) < 15 * 60 * 1000;
+
+        // Okundu işareti: herhangi bir üye sadece KENDİSİNİ readBy'a ekleyebilir,
+        // mevcut işaretleri silemez.
+        allow update: if isParentGroupMember()
+                      && onlyChanged(['readBy', 'updatedAt'])
+                      && request.resource.data.readBy.hasAll(resource.data.readBy)
+                      && request.auth.uid in request.resource.data.readBy;
+
+        // Silme: yalnız mesaj sahibi veya superAdmin (soft-delete tercih edilmeli).
+        allow delete: if isSignedIn()
+                      && (resource.data.senderId == request.auth.uid || isSuperAdmin());
       }
     }
 
