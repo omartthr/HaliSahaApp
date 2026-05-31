@@ -21,4 +21,7 @@ sealed class Screen(val route: String) {
         fun createRoute(bookingId: String) = "write_review/$bookingId"
     }
     object NotificationsList : Screen("notifications")
+    object ChatDetail : Screen("chat_detail/{groupId}") {
+        fun createRoute(groupId: String) = "chat_detail/$groupId"
+    }
 }

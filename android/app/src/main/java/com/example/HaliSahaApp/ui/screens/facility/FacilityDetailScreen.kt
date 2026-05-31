@@ -214,6 +214,7 @@ fun FacilityDetailScreen(
 }
 
 // MARK: - Hero Section
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun HeroSection(facility: Facility) {
     Box(
@@ -221,22 +222,59 @@ fun HeroSection(facility: Facility) {
             .fillMaxWidth()
             .height(250.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(Color(0xFF2E7D32), Color(0xFF1B5E20))
-                    )
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.SportsSoccer,
-                contentDescription = null,
-                tint = Color.White.copy(alpha = 0.3f),
-                modifier = Modifier.size(80.dp)
+        if (facility.images.isNotEmpty()) {
+            val pagerState = androidx.compose.foundation.pager.rememberPagerState(
+                pageCount = { facility.images.size }
             )
+            androidx.compose.foundation.pager.HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize()
+            ) { page ->
+                coil.compose.AsyncImage(
+                    model = facility.images[page],
+                    contentDescription = "Saha Görseli",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                )
+            }
+            
+            // Pager Indicator
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 16.dp),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                repeat(facility.images.size) { iteration ->
+                    val color = if (pagerState.currentPage == iteration) Color.White else Color.White.copy(alpha = 0.5f)
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = 4.dp)
+                            .clip(CircleShape)
+                            .background(color)
+                            .size(8.dp)
+                    )
+                }
+            }
+        } else {
+            // Placeholder
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(Color(0xFF2E7D32), Color(0xFF1B5E20))
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.SportsSoccer,
+                    contentDescription = null,
+                    tint = Color.White.copy(alpha = 0.3f),
+                    modifier = Modifier.size(80.dp)
+                )
+            }
         }
 
         Surface(
@@ -648,20 +686,34 @@ fun LocationSection(facility: Facility) {
             color = AppColors.TextPrimary
         )
 
-        // Placeholder Map
-        Box(modifier = Modifier
-            .fillMaxWidth()
-            .height(150.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color.LightGray)
+        // Map Preview
+        val cameraPositionState = com.google.maps.android.compose.rememberCameraPositionState {
+            position = com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(
+                com.google.android.gms.maps.model.LatLng(facility.latitude, facility.longitude),
+                14f
+            )
+        }
+
+        com.google.maps.android.compose.GoogleMap(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(150.dp)
+                .clip(RoundedCornerShape(12.dp)),
+            cameraPositionState = cameraPositionState,
+            uiSettings = com.google.maps.android.compose.MapUiSettings(
+                zoomControlsEnabled = false,
+                scrollGesturesEnabled = false,
+                zoomGesturesEnabled = false,
+                rotationGesturesEnabled = false,
+                tiltGesturesEnabled = false
+            )
         ) {
-            Column(
-                modifier = Modifier.align(Alignment.Center),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Icon(Icons.Default.LocationOn, null, tint = Color.DarkGray)
-                Text("Harita Önizleme (API Key Gerekli)", color = Color.DarkGray, fontSize = 12.sp)
-            }
+            com.google.maps.android.compose.Marker(
+                state = com.google.maps.android.compose.MarkerState(
+                    position = com.google.android.gms.maps.model.LatLng(facility.latitude, facility.longitude)
+                ),
+                title = facility.name
+            )
         }
 
         Button(

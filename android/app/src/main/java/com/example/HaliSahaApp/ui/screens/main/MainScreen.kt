@@ -29,6 +29,8 @@ import com.example.HaliSahaApp.ui.navigation.Screen
 import com.example.HaliSahaApp.ui.screens.booking.BookingsScreen
 import com.example.HaliSahaApp.ui.screens.facility.FacilityDetailScreen
 import com.example.HaliSahaApp.ui.screens.facility.FacilityListScreen
+import com.example.HaliSahaApp.ui.screens.chat.ChatListScreen
+import com.example.HaliSahaApp.ui.screens.chat.ChatDetailScreen
 
 // MARK: - Tab Item Enum
 enum class BottomTab(
@@ -151,7 +153,7 @@ fun MainScreen(onLogout: () -> Unit) {
             composable(BottomTab.BOOKINGS.route) {
                 BookingsScreen(navController = navController) // Placeholder yerine gerçek ekran
             }
-            composable(BottomTab.CHAT.route) { ChatScreenPlaceholder() }
+            composable(BottomTab.CHAT.route) { ChatListScreen(navController = navController) }
             composable(BottomTab.PROFILE.route) { ProfileScreenPlaceholder(onLogout) }
 
             // 👇 EKSİK OLANLARI BURAYA EKLİYORUZ 👇
@@ -173,6 +175,20 @@ fun MainScreen(onLogout: () -> Unit) {
             // 2. Facility List (Tümünü Gör)
             composable(Screen.FacilityList.route) {
                 FacilityListScreen(navController = navController)
+            }
+
+            // 3. Chat Detail
+            composable(
+                route = Screen.ChatDetail.route,
+                arguments = listOf(navArgument("groupId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val groupId = backStackEntry.arguments?.getString("groupId")
+                if (groupId != null) {
+                    ChatDetailScreen(
+                        navController = navController,
+                        groupId = groupId
+                    )
+                }
             }
         }
     }

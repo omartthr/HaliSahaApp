@@ -147,7 +147,7 @@ fun HomeTopBar(onNotificationClick: () -> Unit) {
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "HalıSaha",
+                    text = "Alo HalıSaha",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = AppColors.TextPrimary

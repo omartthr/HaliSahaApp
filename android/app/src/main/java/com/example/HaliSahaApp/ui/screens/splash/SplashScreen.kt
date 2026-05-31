@@ -68,7 +68,7 @@ fun SplashScreen(onSplashFinished: () -> Unit) {
 
             // App Name
             Text(
-                text = "HalıSaha",
+                text = "Alo HalıSaha",
                 fontSize = 36.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White
