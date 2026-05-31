@@ -365,7 +365,7 @@ export default function Chatbot() {
             onBlur={(e) => { e.target.style.borderColor = "rgba(46,125,50,0.2)"; }}
           />
           <button
-            onClick={sendMessage}
+            onClick={() => sendMessage()}
             disabled={loading || !input.trim()}
             style={{
               width: 40,

@@ -91,7 +91,7 @@ export default function MatchCreatePage() {
       const slotLabel = timeSlots.find(s => s.hour === selectedSlots[0])?.label || "";
       const bookingRef = await createBooking({
         fieldId: selectedFacility!.id!,
-        fieldName: selectedFacility!.name || "Bilinmeyen Saha",
+        fieldName: (selectedFacility!.name as string) || "Bilinmeyen Saha",
         userId: user.uid,
         userName: user.displayName || userData?.firstName || "Kullanıcı",
         date: format(selectedDate, "yyyy-MM-dd"),
@@ -106,8 +106,8 @@ export default function MatchCreatePage() {
         creatorProfileImage: user.photoURL || "",
         bookingId: bookingRef.id,
         facilityId: selectedFacility!.id!,
-        facilityName: selectedFacility!.name || "Bilinmeyen Saha",
-        facilityAddress: selectedFacility!.address || "",
+        facilityName: (selectedFacility!.name as string) || "Bilinmeyen Saha",
+        facilityAddress: (selectedFacility!.address as string) || "",
         pitchName: selectedPitch.name,
         matchDate: format(selectedDate, "yyyy-MM-dd"),
         startHour: selectedSlots[0],
@@ -286,7 +286,7 @@ export default function MatchCreatePage() {
                   <p style={{ fontSize: 14, color: "#9ca3af" }}>Yükleniyor...</p>
                 ) : fields.map((facility) => {
                   const isSelected = selectedFacility?.id === facility.id;
-                  const cityName = facility.address ? facility.address.split(',')[0] : "İlçe";
+                  const cityName = facility.address ? (facility.address as string).split(',')[0] : "İlçe";
                   return (
                     <button
                       key={facility.id}
@@ -305,9 +305,9 @@ export default function MatchCreatePage() {
                       <p style={{ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: "#2E7D32", fontWeight: 700, marginBottom: 3 }}>
                         {cityName}
                       </p>
-                      <p style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", marginBottom: 4 }}>{facility.name}</p>
+                      <p style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", marginBottom: 4 }}>{facility.name as string}</p>
                       <p style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#64748b", margin: 0 }}>
-                        <MapPin size={13} /> {facility.address}
+                        <MapPin size={13} /> {facility.address as string}
                       </p>
                     </button>
                   );
@@ -319,7 +319,7 @@ export default function MatchCreatePage() {
               <p style={{ fontSize: 13, color: "#6b7280", fontWeight: 600, marginBottom: 10 }}>Pitches (Oyun Alanı)</p>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10 }}>
                 {/* Firebase'de pitch datası varsa onu, yoksa mockPitches kullan */}
-                {(selectedFacility?.pitches?.length ? selectedFacility.pitches : mockPitches).map((pitch: any) => (
+                {((selectedFacility?.pitches as any[] | undefined)?.length ? (selectedFacility!.pitches as any[]) : mockPitches).map((pitch: any) => (
                   <button
                     key={pitch.id}
                     onClick={() => setSelectedPitch(pitch)}
@@ -449,7 +449,7 @@ export default function MatchCreatePage() {
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15 }}>
                 <span style={{ color: "#6b7280" }}>Saha</span>
-                <span style={{ fontWeight: 700, color: "#111827" }}>{selectedFacility.name}</span>
+                <span style={{ fontWeight: 700, color: "#111827" }}>{selectedFacility.name as string}</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15 }}>
                 <span style={{ color: "#6b7280" }}>Tarih</span>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import Navbar from "@/frontend/components/common/Navbar";
 import Link from "next/link";
 import { Search, MapPin, Calendar, Users, ArrowRight, Star, Shield, Clock, ChevronRight, User } from "lucide-react";
@@ -50,15 +50,27 @@ export default function Home() {
     return () => unsub();
   }, []);
 
-  const filteredFields = realFields.filter((field) => {
+  const filteredFields = useMemo(() => {
     const normalizedQuery = fieldSearch.trim().toLocaleLowerCase("tr-TR");
-    if (!normalizedQuery) return true;
+    if (!normalizedQuery) return realFields;
 
-    return [field.name, field.address]
-      .join(" ")
-      .toLocaleLowerCase("tr-TR")
-      .includes(normalizedQuery);
-  });
+    return realFields.filter((field) =>
+      [field.name, field.address]
+        .join(" ")
+        .toLocaleLowerCase("tr-TR")
+        .includes(normalizedQuery)
+    );
+  }, [realFields, fieldSearch]);
+
+  const sortedTopFields = useMemo(() => {
+    return [...realFields]
+      .sort((a, b) => ((b.averageRating as number) || 0) - ((a.averageRating as number) || 0))
+      .slice(0, 2);
+  }, [realFields]);
+
+  const handleSearchChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setFieldSearch(event.target.value);
+  }, []);
 
   return (
     <div className="page-wrapper">
@@ -197,7 +209,7 @@ export default function Home() {
                 <input
                   type="search"
                   value={fieldSearch}
-                  onChange={(event) => setFieldSearch(event.target.value)}
+                  onChange={handleSearchChange}
                   placeholder="Saha ara"
                   aria-label="Saha ara"
                   style={{ width: "100%", border: "none", outline: "none", background: "transparent", color: "#111827", fontSize: "0.98rem", fontWeight: 500 }}
@@ -242,10 +254,7 @@ export default function Home() {
             </Link>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {[...realFields]
-              .sort((a, b) => ((b.averageRating as number) || 0) - ((a.averageRating as number) || 0))
-              .slice(0, 2)
-              .map((field, fi) => {
+            {sortedTopFields.map((field, fi) => {
               const rating = (field.averageRating as number) || 0;
               const reviews = (field.totalReviews as number) || 0;
               const name = (field.name as string) || "İsimsiz Saha";

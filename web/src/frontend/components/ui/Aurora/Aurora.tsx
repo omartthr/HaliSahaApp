@@ -119,10 +119,22 @@ interface AuroraProps {
     time?: number;
 }
 
+// Parse hex colors once outside the component so it's not repeated on every render
+function parseColorStops(stops: string[]): number[][] {
+    return stops.map(hex => {
+        const c = new Color(hex);
+        return [c.r, c.g, c.b];
+    });
+}
+
 export default function Aurora(props: AuroraProps) {
     const { colorStops = ['#5227FF', '#7cff67', '#5227FF'], amplitude = 1.0, blend = 0.5 } = props;
     const propsRef = useRef(props);
     propsRef.current = props;
+
+    // Cache parsed colors — only re-parse when colorStops array reference changes
+    const parsedColorsRef = useRef<number[][]>(parseColorStops(colorStops));
+    const prevColorStopsRef = useRef<string[]>(colorStops);
 
     const ctnDom = useRef<HTMLDivElement>(null);
 
@@ -139,7 +151,7 @@ export default function Aurora(props: AuroraProps) {
             renderer = new Renderer({
                 alpha: true,
                 premultipliedAlpha: true,
-                antialias: true
+                antialias: false, // antialias not needed for full-screen shader
             });
         } catch {
             return;
@@ -161,17 +173,19 @@ export default function Aurora(props: AuroraProps) {
                 program.uniforms.uResolution.value = [width, height];
             }
         }
-        window.addEventListener('resize', resize);
+
+        // Throttle resize events
+        let resizeTimer: ReturnType<typeof setTimeout>;
+        const onResize = () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(resize, 120);
+        };
+        window.addEventListener('resize', onResize);
 
         const geometry = new Triangle(gl);
         if (geometry.attributes.uv) {
             delete geometry.attributes.uv;
         }
-
-        const colorStopsArray = colorStops.map(hex => {
-            const c = new Color(hex);
-            return [c.r, c.g, c.b];
-        });
 
         program = new Program(gl, {
             vertex: VERT,
@@ -179,7 +193,7 @@ export default function Aurora(props: AuroraProps) {
             uniforms: {
                 uTime: { value: 0 },
                 uAmplitude: { value: amplitude },
-                uColorStops: { value: colorStopsArray },
+                uColorStops: { value: parsedColorsRef.current },
                 uResolution: { value: [ctn.offsetWidth, ctn.offsetHeight] },
                 uBlend: { value: blend }
             }
@@ -189,26 +203,52 @@ export default function Aurora(props: AuroraProps) {
         ctn.appendChild(gl.canvas);
 
         let animateId = 0;
+        // Throttle to ~24 fps for the aurora shader — visually indistinguishable from 60fps
+        const TARGET_FPS = 24;
+        const FRAME_INTERVAL = 1000 / TARGET_FPS;
+        let lastFrameTime = 0;
+        let isPageVisible = true;
+
         const update = (t: number) => {
             animateId = requestAnimationFrame(update);
+
+            // Skip rendering when tab is hidden or page is not visible
+            if (!isPageVisible) return;
+
+            const delta = t - lastFrameTime;
+            if (delta < FRAME_INTERVAL) return; // skip frame
+            lastFrameTime = t - (delta % FRAME_INTERVAL);
+
             const { time = t * 0.01, speed = 1.0 } = propsRef.current;
             program.uniforms.uTime.value = time * speed * 0.1;
             program.uniforms.uAmplitude.value = propsRef.current.amplitude ?? amplitude;
             program.uniforms.uBlend.value = propsRef.current.blend ?? blend;
-            const stops = propsRef.current.colorStops ?? colorStops;
-            program.uniforms.uColorStops.value = stops.map(hex => {
-                const c = new Color(hex);
-                return [c.r, c.g, c.b];
-            });
+
+            // Only re-parse colors when they actually change
+            const currentStops = propsRef.current.colorStops ?? colorStops;
+            if (currentStops !== prevColorStopsRef.current) {
+                prevColorStopsRef.current = currentStops;
+                parsedColorsRef.current = parseColorStops(currentStops);
+            }
+            program.uniforms.uColorStops.value = parsedColorsRef.current;
+
             renderer.render({ scene: mesh });
         };
         animateId = requestAnimationFrame(update);
 
         resize();
 
+        // Pause animation when tab is not visible
+        const onVisChange = () => {
+            isPageVisible = !document.hidden;
+        };
+        document.addEventListener('visibilitychange', onVisChange);
+
         return () => {
             cancelAnimationFrame(animateId);
-            window.removeEventListener('resize', resize);
+            clearTimeout(resizeTimer);
+            window.removeEventListener('resize', onResize);
+            document.removeEventListener('visibilitychange', onVisChange);
             if (ctn && gl.canvas.parentNode === ctn) {
                 ctn.removeChild(gl.canvas);
             }
@@ -221,5 +261,5 @@ export default function Aurora(props: AuroraProps) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [amplitude]);
 
-    return <div ref={ctnDom} className="aurora-container" />;
+    return <div ref={ctnDom} className="aurora-container" style={{ willChange: 'transform' }} />;
 }

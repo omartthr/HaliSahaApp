@@ -565,8 +565,8 @@ body {
 /* ---- Interactive Glassmorphism Card ---- */
 .interactive-glass-card {
   background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 1);
   border-radius: 24px;
   padding: 1.5rem 1.5rem;
@@ -577,8 +577,9 @@ body {
   align-items: flex-start;
   text-decoration: none;
   color: #111827;
-  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1), background 0.35s;
   cursor: pointer;
+  contain: layout style;
 }
 
 .interactive-glass-card:hover {
@@ -805,8 +806,8 @@ body {
 /* ---- Location Card (birebir interactive-glass-card ile esit) ---- */
 .location-card {
   background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 1);
   border-radius: 24px;
   padding: 1.4rem 1.5rem;
@@ -815,9 +816,10 @@ body {
   flex-direction: column;
   gap: 5px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
-  transition: background 0.35s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: background 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
   color: #111827;
+  contain: layout style;
 }
 
 .location-card:hover,
@@ -1201,11 +1203,13 @@ body {
   opacity: 0;
   transform: translateY(36px);
   transition: none;
+  will-change: opacity, transform; /* GPU katmanını önceden hazırla */
 }
 
 /* IntersectionObserver .visible ekler → animasyon çalışır */
 .reveal.visible {
-  animation: revealFadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: revealFadeUp 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: auto; /* Animasyon bitti mi? GPU katmanını serbest bırak */
 }
 
 .reveal.visible.reveal-left {
