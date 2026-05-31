@@ -46,7 +46,7 @@ export type MatchPost = {
   expiresAt?: any;
 };
 
-const COLLECTION = "matchPosts";
+const COLLECTION = "match_posts";
 
 /** Yeni maç ilanı (MatchPost) oluştur */
 export async function createMatchPost(data: Omit<MatchPost, "id" | "applicantIds" | "acceptedIds" | "rejectedIds" | "status" | "createdAt" | "updatedAt">) {

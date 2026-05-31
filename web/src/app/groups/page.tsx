@@ -5,8 +5,14 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import Navbar from "@/frontend/components/common/Navbar";
 import { ArrowRight, ChevronLeft, MapPin, Users } from "lucide-react";
+import { useEffect } from "react";
+import { getActiveMatchPostsRealtime, MatchPost, applyToMatchPost } from "@/backend/services/matchPostService";
+import { getFieldsRealtime, FieldRecord } from "@/backend/services/fieldService";
+import { getUserProfile, UserProfile } from "@/backend/services/userService";
+import { useAuth } from "@/frontend/context/AuthContext";
+import { toast } from "react-hot-toast";
 
-type Listing = {
+export type Listing = {
   id: string;
   title: string;
   district: string;
@@ -16,54 +22,20 @@ type Listing = {
   level: string;
   lat: number;
   lng: number;
+  isPositionMatch: boolean;
+  preferredPositions?: string[];
+  description?: string;
+  costPerPlayer?: number;
 };
 
-const listings: Listing[] = [
-  {
-    id: "g1",
-    title: "5v5 Akşam Maçı - Kadıköy",
-    district: "Kadıköy",
-    address: "Moda Sahili Halı Saha",
-    date: "Bugün 21:00",
-    neededPlayers: 3,
-    level: "Orta Seviye",
-    lat: 40.9857,
-    lng: 29.0265,
-  },
-  {
-    id: "g2",
-    title: "7v7 Hafta Sonu - Üsküdar",
-    district: "Üsküdar",
-    address: "Bağlarbaşı Spor Tesisi",
-    date: "Cumartesi 19:00",
-    neededPlayers: 5,
-    level: "İleri Seviye",
-    lat: 41.0243,
-    lng: 29.0209,
-  },
-  {
-    id: "g3",
-    title: "Dostluk Maçı - Beşiktaş",
-    district: "Beşiktaş",
-    address: "Abbasağa Halı Saha",
-    date: "Pazar 18:00",
-    neededPlayers: 2,
-    level: "Başlangıç",
-    lat: 41.0437,
-    lng: 29.0047,
-  },
-  {
-    id: "g4",
-    title: "Gece Maçı - Ataşehir",
-    district: "Ataşehir",
-    address: "Kayışdağı Arena",
-    date: "Cuma 22:30",
-    neededPlayers: 4,
-    level: "Orta Seviye",
-    lat: 40.9918,
-    lng: 29.1283,
-  },
-];
+const formatFirestoreDate = (dateVal: any) => {
+  if (!dateVal) return "";
+  if (typeof dateVal === "string") return dateVal;
+  if (typeof dateVal === "number") return new Date(dateVal).toLocaleDateString("tr-TR");
+  if (dateVal.seconds) return new Date(dateVal.seconds * 1000).toLocaleDateString("tr-TR");
+  if (dateVal.toDate) return dateVal.toDate().toLocaleDateString("tr-TR");
+  return String(dateVal);
+};
 
 const GroupsListingsMap = dynamic(() => import("@/frontend/components/map/GroupsListingsMap"), {
   ssr: false,
@@ -75,14 +47,97 @@ const GroupsListingsMap = dynamic(() => import("@/frontend/components/map/Groups
 });
 
 export default function GroupsPage() {
-  const [selectedListingId, setSelectedListingId] = useState(listings[0].id);
+  const { user } = useAuth();
+  const [matchPosts, setMatchPosts] = useState<MatchPost[]>([]);
+  const [fields, setFields] = useState<FieldRecord[]>([]);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
 
-  const selectedListing = useMemo(
-    () => listings.find((listing) => listing.id === selectedListingId) ?? listings[0],
-    [selectedListingId]
+  useEffect(() => {
+    const unsubFields = getFieldsRealtime(setFields);
+    return () => unsubFields();
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      getUserProfile(user.uid).then(setUserProfile);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    let unsubPosts: (() => void) | undefined;
+    if (user) {
+      unsubPosts = getActiveMatchPostsRealtime(setMatchPosts);
+    } else {
+      setMatchPosts([]);
+    }
+    return () => {
+      if (unsubPosts) unsubPosts();
+    };
+  }, [user]);
+
+  const listings: Listing[] = useMemo(() => {
+    const arr = matchPosts.map(post => {
+      const field = fields.find(f => f.id === post.facilityId);
+      const district = post.facilityAddress ? post.facilityAddress.split(',')[0] : "İlçe";
+      
+      const isPositionMatch = Boolean(
+        userProfile?.position && 
+        post.preferredPositions && 
+        post.preferredPositions.includes(userProfile.position)
+      );
+
+      return {
+        id: post.id!,
+        title: post.title,
+        district: district,
+        address: post.facilityName,
+        date: `${formatFirestoreDate(post.matchDate)} ${post.startHour}:00`,
+        neededPlayers: post.maxPlayers - post.currentPlayers,
+        level: post.skillLevel,
+        lat: (field?.location as any)?.lat || 41.0082,
+        lng: (field?.location as any)?.lng || 28.9784,
+        isPositionMatch,
+        preferredPositions: post.preferredPositions,
+        description: post.description,
+        costPerPlayer: post.costPerPlayer,
+      };
+    });
+
+    return arr.sort((a, b) => {
+      if (a.isPositionMatch && !b.isPositionMatch) return -1;
+      if (!a.isPositionMatch && b.isPositionMatch) return 1;
+      return 0;
+    });
+  }, [matchPosts, fields, userProfile]);
+
+  // Set the first listing as selected by default once loaded
+  useEffect(() => {
+    if (listings.length > 0 && !selectedListingId) {
+      setSelectedListingId(listings[0].id);
+    }
+  }, [listings, selectedListingId]);
+
+  const selectedPost = useMemo(
+    () => matchPosts.find(p => p.id === selectedListingId),
+    [matchPosts, selectedListingId]
   );
 
-  const canBook = Boolean(selectedListingId);
+  const hasApplied = selectedPost && user && selectedPost.applicantIds?.includes(user.uid);
+  const isCreator = selectedPost && user && selectedPost.creatorId === user.uid;
+
+  const handleApply = async () => {
+    if (!user) return toast.error("Giriş yapmalısınız!");
+    if (!selectedPost?.id) return;
+    try {
+      await applyToMatchPost(selectedPost.id, user.uid);
+      toast.success("İstek başarıyla gönderildi!");
+    } catch (error) {
+      toast.error("İstek gönderilemedi.");
+    }
+  };
+
+  const selectedListingData = listings.find(l => l.id === selectedListingId);
 
   return (
     <div className="page-wrapper groups-page-wrapper">
@@ -157,7 +212,7 @@ export default function GroupsPage() {
         </div>
       </div>
 
-      <div className="content-container groups-main-content" style={{ position: "relative", zIndex: 2, marginTop: -220, paddingTop: 24, paddingBottom: 100 }}>
+      <div className="content-container groups-main-content" style={{ position: "relative", zIndex: 2, marginTop: -220, paddingTop: 24, paddingBottom: 100, maxWidth: 1400, width: "95%" }}>
         <div className="auth-dynamo-glass match-dynamo-card groups-main-card" style={{ padding: 24, borderRadius: 24, display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, gap: 12, flexWrap: "wrap" }}>
             <h2 style={{ fontSize: 18, fontWeight: 700, color: "#111827", display: "flex", alignItems: "center", gap: 8 }}>
@@ -169,14 +224,16 @@ export default function GroupsPage() {
           <div className="groups-split-grid" style={{ display: "grid", gap: 16, flex: 1, minHeight: 0 }}>
             <div className="groups-map-panel" style={{ borderRadius: 20, overflow: "hidden", height: "100%", boxShadow: "0 8px 32px rgba(0,0,0,0.1)" }}>
               <GroupsListingsMap
-                center={[selectedListing.lat, selectedListing.lng]}
+                center={selectedListingData ? [selectedListingData.lat, selectedListingData.lng] : [41.0082, 28.9784]}
                 listings={listings}
               />
             </div>
 
             <div className="groups-list-panel" style={{ height: "100%", overflowY: "auto", overflowX: "hidden", borderRadius: 12 }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 12, paddingRight: 4 }}>
-                {listings.map((listing) => {
+                {listings.length === 0 ? (
+                  <p style={{ color: "#6b7280", textAlign: "center", marginTop: 40, fontSize: 15 }}>Şu an aktif oyuncu arayan maç ilanı bulunmuyor.</p>
+                ) : listings.map((listing) => {
                   const isSelected = listing.id === selectedListingId;
 
                   return (
@@ -187,31 +244,57 @@ export default function GroupsPage() {
                         textAlign: "left",
                         borderRadius: 18,
                         padding: "14px 16px",
-                        border: `1px solid ${isSelected ? "#2E7D32" : "rgba(15,23,42,0.08)"}`,
-                        background: isSelected ? "rgba(232,245,233,0.85)" : "rgba(255,255,255,0.82)",
+                        border: `1px solid ${isSelected ? "#2E7D32" : listing.isPositionMatch ? "#F59E0B" : "rgba(15,23,42,0.08)"}`,
+                        background: isSelected ? "rgba(232,245,233,0.85)" : listing.isPositionMatch ? "rgba(254,243,199,0.5)" : "rgba(255,255,255,0.82)",
                         boxShadow: isSelected ? "0 10px 26px rgba(46,125,50,0.12)" : "0 8px 24px rgba(0,0,0,0.04)",
                         cursor: "pointer",
                         transition: "all 0.2s ease",
                       }}
                     >
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 6 }}>
-                        <p style={{ fontWeight: 700, fontSize: 15, color: "#111827", lineHeight: 1.3 }}>{listing.title}</p>
-                        <span style={{ background: "#2E7D32", color: "white", borderRadius: 999, padding: "4px 10px", fontSize: 12, fontWeight: 700 }}>
-                          {listing.neededPlayers} kisi
+                      {listing.isPositionMatch && (
+                        <div style={{ fontSize: 11, fontWeight: "bold", color: "#B45309", marginBottom: 6, display: "flex", alignItems: "center", gap: 4 }}>
+                          ⭐ Mevkinize Uygun
+                        </div>
+                      )}
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 8 }}>
+                        <p style={{ fontWeight: 800, fontSize: 16, color: "#111827", lineHeight: 1.3 }}>{listing.title}</p>
+                        <span style={{ background: "#2E7D32", color: "white", borderRadius: 999, padding: "4px 10px", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>
+                          {listing.neededPlayers} kişi aranıyor
                         </span>
                       </div>
+
+                      {listing.preferredPositions && listing.preferredPositions.length > 0 && (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+                          {listing.preferredPositions.map((pos: string) => (
+                            <span key={pos} style={{ background: "#FEF3C7", color: "#D97706", borderRadius: 12, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>
+                              {pos}
+                            </span>
+                          ))}
+                        </div>
+                      )}
 
                       <p style={{ fontSize: 12, color: "#2E7D32", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 4 }}>
                         {listing.district}
                       </p>
 
-                      <p style={{ display: "flex", alignItems: "center", gap: 6, color: "#6b7280", fontSize: 13, marginBottom: 8 }}>
+                      <p style={{ display: "flex", alignItems: "center", gap: 6, color: "#6b7280", fontSize: 13, marginBottom: 6 }}>
                         <MapPin size={13} /> {listing.address}
                       </p>
 
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
-                        <span style={{ color: "#9ca3af" }}>{listing.date}</span>
-                        <span style={{ color: "#2E7D32", fontWeight: 700 }}>{listing.level}</span>
+                      {listing.description && (
+                        <p style={{ fontSize: 13, color: "#4B5563", marginBottom: 8, fontStyle: "italic" }}>
+                          "{listing.description}"
+                        </p>
+                      )}
+
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, borderTop: "1px solid #f3f4f6", paddingTop: 8, marginTop: 4 }}>
+                        <span style={{ color: "#9ca3af", fontWeight: 500 }}>{listing.date}</span>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <span style={{ color: "#2E7D32", fontWeight: 700, background: "#E8F5E9", padding: "2px 8px", borderRadius: 8 }}>{listing.level}</span>
+                          {listing.costPerPlayer && (
+                            <span style={{ color: "#0369a1", fontWeight: 700, background: "#e0f2fe", padding: "2px 8px", borderRadius: 8 }}>₺{listing.costPerPlayer}/kişi</span>
+                          )}
+                        </div>
                       </div>
                     </button>
                   );
@@ -222,17 +305,29 @@ export default function GroupsPage() {
         </div>
       </div>
 
-      <div className="match-booking-bar">
-        <Link
-          className={`match-booking-button ${canBook ? "is-active" : "is-disabled"}`}
-          href={canBook ? `/booking/${selectedListing.id}` : "#"}
-          style={{
-            textDecoration: "none",
-            pointerEvents: canBook ? "auto" : "none",
-          }}
-        >
-          Rezervasyon Yap <ArrowRight size={18} />
-        </Link>
+      <div className="match-booking-bar bg-white border-t border-gray-100 p-4 sticky bottom-0 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
+        {selectedPost ? (
+          isCreator ? (
+            <button className="match-booking-button bg-gray-200 text-gray-500 rounded-xl py-3 w-full font-bold cursor-not-allowed">
+              Bu Sizin İlanınız
+            </button>
+          ) : hasApplied ? (
+            <button className="match-booking-button bg-green-100 text-green-700 rounded-xl py-3 w-full font-bold cursor-not-allowed flex items-center justify-center gap-2">
+              <ArrowRight size={18} /> İstek Gönderildi
+            </button>
+          ) : (
+            <button 
+              onClick={handleApply}
+              className="match-booking-button bg-[#2E7D32] hover:bg-[#1B5E20] text-white rounded-xl py-3 w-full font-bold transition-colors flex items-center justify-center gap-2"
+            >
+              Katılmak İstiyorum <ArrowRight size={18} />
+            </button>
+          )
+        ) : (
+          <button className="match-booking-button bg-gray-200 text-gray-400 rounded-xl py-3 w-full font-bold cursor-not-allowed">
+            Lütfen Bir İlan Seçin
+          </button>
+        )}
       </div>
     </div>
   );

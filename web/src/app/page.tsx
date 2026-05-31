@@ -8,6 +8,7 @@ import MapSection from "@/frontend/components/map/MapSection";
 import Aurora from "@/frontend/components/ui/Aurora/Aurora";
 import { useAuth } from "@/frontend/context/AuthContext";
 import { getFieldsRealtime, FieldRecord } from "@/backend/services/fieldService";
+import { getActiveMatchPostsRealtime, MatchPost } from "@/backend/services/matchPostService";
 import { useScrollReveal } from "@/frontend/hooks/useScrollReveal";
 
 const featuredFields = [
@@ -16,17 +17,23 @@ const featuredFields = [
   { id: "3", name: "Üsküdar Sahil Halı Saha", address: "Mimar Sinan, Üsküdar / İstanbul", rating: 4.2, reviews: 53, features: ["🚿", "🍔", "💡"], color: "from-emerald-700 to-green-600" },
 ];
 
-const upcomingMatches = [
-  { id: "1", title: "5v5 Maç — Kadıköy Merkez", creator: "Ahmet Y.", date: "Bugün 20:00", facility: "Kadıköy Merkez", available: 3, total: 10, current: 7, skill: "⚡ Orta Seviye", cost: "₺60/kişi" },
-  { id: "2", title: "Hafta sonu maçı arayanlar — Beşiktaş", creator: "Mert K.", date: "Cumartesi 18:00", facility: "Beşiktaş Vadi", available: 5, total: 10, current: 5, skill: "🔥 Profesyonel", cost: "₺80/kişi" },
-];
+// removed upcomingMatches hardcoded data
 
 const quickActions = [
   { icon: Users, title: "Gruplar", subtitle: "Acilan mac gruplarini kesfet", color: "#2E7D32", href: "/groups" },
   { icon: Users, title: "Maç Kur", subtitle: "Arkadaşlarınla maç organize et", color: "#1565C0", href: "/groups/create" },
-  { icon: Calendar, title: "Randevularım", subtitle: "Rezervasyonlarını yönet", color: "#E65100", href: "/profile" },
-  { icon: Star, title: "Favoriler", subtitle: "Kaydettiğin sahalar", color: "#6A1B9A", href: "/profile" },
+  { icon: Search, title: "Oyuncu Ara", subtitle: "Takımına yeni oyuncular bul", color: "#E65100", href: "/players" },
+  { icon: Calendar, title: "Randevularım", subtitle: "Rezervasyonlarını yönet", color: "#6A1B9A", href: "/profile" },
 ];
+
+const formatFirestoreDate = (dateVal: any) => {
+  if (!dateVal) return "";
+  if (typeof dateVal === "string") return dateVal;
+  if (typeof dateVal === "number") return new Date(dateVal).toLocaleDateString("tr-TR");
+  if (dateVal.seconds) return new Date(dateVal.seconds * 1000).toLocaleDateString("tr-TR");
+  if (dateVal.toDate) return dateVal.toDate().toLocaleDateString("tr-TR");
+  return String(dateVal);
+};
 
 const nearbyFields = [
   { name: "Saha 1", district: "İlçe", address: "Adres bilgisi gelecek" },
@@ -41,14 +48,29 @@ export default function Home() {
   const [fieldSearch, setFieldSearch] = useState("");
   const { user } = useAuth();
   const [realFields, setRealFields] = useState<FieldRecord[]>([]);
+  const [matchPosts, setMatchPosts] = useState<MatchPost[]>([]);
   useScrollReveal();
 
   useEffect(() => {
-    const unsub = getFieldsRealtime((fields) => {
+    const unsubFields = getFieldsRealtime((fields) => {
       setRealFields(fields);
     });
-    return () => unsub();
+    return () => unsubFields();
   }, []);
+
+  useEffect(() => {
+    let unsubPosts: (() => void) | undefined;
+    if (user) {
+      unsubPosts = getActiveMatchPostsRealtime((posts) => {
+        setMatchPosts(posts);
+      });
+    } else {
+      setMatchPosts([]);
+    }
+    return () => {
+      if (unsubPosts) unsubPosts();
+    };
+  }, [user]);
 
   const filteredFields = useMemo(() => {
     const normalizedQuery = fieldSearch.trim().toLocaleLowerCase("tr-TR");
@@ -124,6 +146,10 @@ export default function Home() {
           <div style={{ display: "flex", justifyContent: "center", gap: "1rem", flexWrap: "wrap", marginTop: "1rem" }}>
             <Link href="#map" className="brand-btn-glass solid-light">
               <MapPin size={18} /> Haritada Ara
+            </Link>
+
+            <Link href="/players" className="brand-btn-glass ghost-light" style={{ background: "rgba(255, 255, 255, 0.15)", border: "1px solid rgba(255, 255, 255, 0.4)" }}>
+              <Search size={18} /> Oyuncu Ara
             </Link>
 
             {!user && (
@@ -241,6 +267,8 @@ export default function Home() {
 
         </div>
       </section>
+
+
 
       {/* --- Öne Çıkan Sahalar --- */}
       <div className="relative z-10" style={{ padding: "48px 0 24px 0" }}>

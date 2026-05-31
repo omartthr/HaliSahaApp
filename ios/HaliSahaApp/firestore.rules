@@ -238,10 +238,10 @@ service cloud.firestore {
                     && request.resource.data.keys().hasAll(['userId', 'title', 'body', 'type'])
                     && request.resource.data.userId is string;
 
-      // Sadece bildirimin sahibi (okundu işareti) veya superAdmin güncelleyebilir.
+      // Sadece bildirimin sahibi (okundu işareti ve davet durumu) veya superAdmin güncelleyebilir.
       allow update: if isSignedIn()
                     && resource.data.userId == request.auth.uid
-                    && onlyChanged(['isRead', 'updatedAt']);
+                    && onlyChanged(['isRead', 'status', 'updatedAt']);
       allow update: if isSuperAdmin();
 
       allow delete: if isSignedIn()

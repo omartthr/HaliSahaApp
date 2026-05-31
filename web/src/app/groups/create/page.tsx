@@ -9,6 +9,8 @@ import { MapPin, Star, ChevronLeft, Check, ArrowRight, X, AlertCircle, CreditCar
 import { getFieldsRealtime, FieldRecord } from "@/backend/services/fieldService";
 import { createBooking } from "@/backend/services/bookingService";
 import { createMatchPost } from "@/backend/services/matchPostService";
+import { getAllPlayers, UserProfile } from "@/backend/services/userService";
+import { sendNotification } from "@/backend/services/notificationService";
 import { useAuth } from "@/frontend/context/AuthContext";
 import { toast } from "react-hot-toast";
 import { format } from "date-fns";
@@ -42,6 +44,8 @@ export default function MatchCreatePage() {
   const [selectedPitch, setSelectedPitch] = useState(mockPitches[0]);
   const [selectedDate, setSelectedDate] = useState(today);
   const [selectedSlots, setSelectedSlots] = useState<number[]>([]);
+  const [allPlayers, setAllPlayers] = useState<UserProfile[]>([]);
+  const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
   
   // Maç Detayları State
   const [matchForm, setMatchForm] = useState({
@@ -50,6 +54,7 @@ export default function MatchCreatePage() {
     maxPlayers: 10,
     currentPlayers: 1,
     skillLevel: "intermediate" as any,
+    preferredPositions: [] as string[],
   });
 
   const [showBookingModal, setShowBookingModal] = useState(false);
@@ -64,6 +69,7 @@ export default function MatchCreatePage() {
         setSelectedFacility(data[0]);
       }
     });
+    getAllPlayers().then((players) => setAllPlayers(players));
     return () => unsub();
   }, []);
 
@@ -100,7 +106,7 @@ export default function MatchCreatePage() {
       });
 
       // 2. Ardından MatchPost oluştur
-      await createMatchPost({
+      const matchPostRef = await createMatchPost({
         creatorId: user.uid,
         creatorName: user.displayName || userData?.firstName || "Kullanıcı",
         creatorProfileImage: user.photoURL || "",
@@ -117,11 +123,28 @@ export default function MatchCreatePage() {
         neededPlayers: matchForm.maxPlayers - matchForm.currentPlayers,
         currentPlayers: matchForm.currentPlayers,
         maxPlayers: matchForm.maxPlayers,
+        preferredPositions: matchForm.preferredPositions,
         skillLevel: matchForm.skillLevel,
         costPerPlayer: Math.round(totalPrice / matchForm.maxPlayers),
       });
 
-      toast.success("Maç ilanı başarıyla yayınlandı!");
+      // 3. Seçilen oyunculara anında davet gönder
+      if (selectedPlayerIds.length > 0) {
+        const promises = selectedPlayerIds.map((playerId) => 
+          sendNotification({
+            userId: playerId,
+            type: "invite",
+            title: "Yeni Maç Daveti!",
+            body: `${user.displayName || userData?.firstName || "Bir kullanıcı"} seni ${selectedFacility!.name} sahasındaki maça davet ediyor!`,
+            relatedId: matchPostRef.id,
+          })
+        );
+        await Promise.all(promises);
+        toast.success(`Maç kuruldu ve ${selectedPlayerIds.length} oyuncuya davet gönderildi!`);
+      } else {
+        toast.success("Maç ilanı başarıyla yayınlandı!");
+      }
+      
       router.push("/groups");
     } catch (error: any) {
       toast.error(error.message || "Maç kurulurken bir hata oluştu.");
@@ -267,6 +290,90 @@ export default function MatchCreatePage() {
                 />
               </div>
             </div>
+
+            {matchForm.maxPlayers > matchForm.currentPlayers && (
+              <div>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 8 }}>Eksik Mevkiler (Çoklu Seçim Yapabilirsiniz)</label>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {["Kaleci", "Defans", "Orta Saha", "Forvet"].map((pos) => {
+                    const isSelected = matchForm.preferredPositions.includes(pos);
+                    return (
+                      <button
+                        key={pos}
+                        onClick={() => {
+                          setMatchForm(prev => ({
+                            ...prev,
+                            preferredPositions: isSelected 
+                              ? prev.preferredPositions.filter(p => p !== pos)
+                              : [...prev.preferredPositions, pos]
+                          }));
+                        }}
+                        style={{
+                          background: isSelected ? "#2E7D32" : "#f3f4f6",
+                          color: isSelected ? "white" : "#4b5563",
+                          border: isSelected ? "1px solid #2E7D32" : "1px solid #e5e7eb",
+                          borderRadius: 20,
+                          padding: "6px 16px",
+                          fontSize: 13,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          transition: "all 0.2s"
+                        }}
+                      >
+                        {pos}
+                      </button>
+                    )
+                  })}
+                </div>
+                <div style={{ marginTop: 12, padding: "10px 14px", background: "#f3f4f6", borderRadius: 8, fontSize: 13, color: "#4b5563", display: "flex", alignItems: "center", gap: 8 }}>
+                  <AlertCircle size={16} /> 
+                  Aşağıdan oyuncu seçmezseniz ilanınız genel olarak yayınlanır. Maçı kurduktan sonra seçili oyunculara otomatik davet gidecektir.
+                </div>
+                
+                {matchForm.preferredPositions.length > 0 && (
+                  <div style={{ marginTop: 16 }}>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 8 }}>Uygun Oyuncular ({allPlayers.filter(p => p.id !== user?.uid && matchForm.preferredPositions.includes(p.position || "")).length})</p>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12, maxHeight: 250, overflowY: "auto", paddingRight: 4 }}>
+                      {allPlayers
+                        .filter(p => p.id !== user?.uid && matchForm.preferredPositions.includes(p.position || ""))
+                        .map(player => {
+                          const isSelected = selectedPlayerIds.includes(player.id);
+                          return (
+                            <div 
+                              key={player.id} 
+                              onClick={() => {
+                                setSelectedPlayerIds(prev => 
+                                  isSelected ? prev.filter(id => id !== player.id) : [...prev, player.id]
+                                )
+                              }}
+                              style={{
+                                display: "flex", alignItems: "center", gap: 10, padding: 12,
+                                borderRadius: 12, cursor: "pointer", transition: "all 0.2s",
+                                border: isSelected ? "2px solid #2E7D32" : "1px solid #e5e7eb",
+                                background: isSelected ? "#E8F5E9" : "white",
+                              }}
+                            >
+                              <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>
+                                👤
+                              </div>
+                              <div style={{ flex: 1 }}>
+                                <p style={{ fontSize: 14, fontWeight: 600, color: "#111827", margin: 0 }}>{player.firstName} {player.lastName}</p>
+                                <p style={{ fontSize: 12, color: "#6b7280", margin: 0 }}>{player.position || "Mevki Yok"} • ⭐ {(player.averageRating || 0).toFixed(1)}</p>
+                              </div>
+                              <div style={{ width: 20, height: 20, borderRadius: "50%", border: isSelected ? "none" : "1px solid #d1d5db", background: isSelected ? "#2E7D32" : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                {isSelected && <Check size={14} color="white" />}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      {allPlayers.filter(p => p.id !== user?.uid && matchForm.preferredPositions.includes(p.position || "")).length === 0 && (
+                        <p style={{ fontSize: 13, color: "#9ca3af" }}>Bu mevkilerde şu an uygun oyuncu bulunmuyor.</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

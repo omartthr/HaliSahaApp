@@ -1,4 +1,7 @@
 {
+  "firestore": {
+    "rules": "ios/HaliSahaApp/firestore.rules"
+  },
   "functions": [
     {
       "source": "functions",

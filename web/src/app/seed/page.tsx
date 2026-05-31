@@ -39,7 +39,65 @@ const SeedPage = () => {
       for (const field of fields) {
         await addDoc(collection(db, "facilities"), field);
       }
-      toast.success("Veriler başarıyla eklendi!");
+      toast.success("Halı sahalar başarıyla eklendi!");
+    } catch (error) {
+      toast.error("Hata oluştu: " + error);
+    }
+  };
+
+  const seedMatchPosts = async () => {
+    const dummyPosts = [
+      {
+        creatorId: "user1",
+        creatorName: "Ahmet Yılmaz",
+        bookingId: "booking1",
+        facilityId: "field1",
+        facilityName: "Kadıköy Merkez Halı Saha",
+        facilityAddress: "Kadıköy/İstanbul",
+        pitchName: "Saha 1",
+        matchDate: "2026-06-05",
+        startHour: 20,
+        endHour: 21,
+        title: "Eksik 2 Defans Aranıyor",
+        neededPlayers: 2,
+        currentPlayers: 12,
+        maxPlayers: 14,
+        preferredPositions: ["Defans", "Kaleci"],
+        skillLevel: "intermediate",
+        applicantIds: [],
+        acceptedIds: [],
+        rejectedIds: [],
+        status: "active",
+      },
+      {
+        creatorId: "user2",
+        creatorName: "Mehmet Kaya",
+        bookingId: "booking2",
+        facilityId: "field2",
+        facilityName: "Beşiktaş Vadi Saha",
+        facilityAddress: "Beşiktaş/İstanbul",
+        pitchName: "Saha 2",
+        matchDate: "2026-06-06",
+        startHour: 21,
+        endHour: 22,
+        title: "Orta Saha Lazım",
+        neededPlayers: 1,
+        currentPlayers: 13,
+        maxPlayers: 14,
+        preferredPositions: ["Orta Saha"],
+        skillLevel: "advanced",
+        applicantIds: [],
+        acceptedIds: [],
+        rejectedIds: [],
+        status: "active",
+      }
+    ];
+
+    try {
+      for (const post of dummyPosts) {
+        await addDoc(collection(db, "match_posts"), post);
+      }
+      toast.success("Maç ilanları başarıyla eklendi!");
     } catch (error) {
       toast.error("Hata oluştu: " + error);
     }
@@ -54,12 +112,20 @@ const SeedPage = () => {
           <p className="text-gray-600 mb-8">
             Haritada görünecek örnek halı saha verilerini eklemek için butona basın.
           </p>
-          <button
-            onClick={seedData}
-            className="bg-emerald-600 text-white px-8 py-3 rounded-lg font-bold hover:bg-emerald-700 transition"
-          >
-            Örnek Verileri Yükle
-          </button>
+          <div className="flex flex-col gap-4">
+            <button
+              onClick={seedData}
+              className="bg-emerald-600 text-white px-8 py-3 rounded-lg font-bold hover:bg-emerald-700 transition"
+            >
+              Halı Sahaları Yükle
+            </button>
+            <button
+              onClick={seedMatchPosts}
+              className="bg-[#2E7D32] text-white px-8 py-3 rounded-lg font-bold hover:bg-[#1B5E20] transition"
+            >
+              Örnek Maç İlanları Yükle
+            </button>
+          </div>
         </div>
       </div>
     </div>
