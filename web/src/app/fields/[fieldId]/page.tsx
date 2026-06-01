@@ -24,12 +24,12 @@ const mockField = {
   isIndoor: false,
   hasParking: true,
   features: [
-    { icon: "🚿", name: "Duş" },
-    { icon: "🅿️", name: "Otopark" },
-    { icon: "🍔", name: "Kantin" },
-    { icon: "💡", name: "Aydınlatma" },
-    { icon: "🌀", name: "Klima" },
-    { icon: "📶", name: "Wi-Fi" },
+    { icon: "shower", name: "Duş" },
+    { icon: "parking", name: "Otopark" },
+    { icon: "utensils", name: "Kantin" },
+    { icon: "lightbulb", name: "Aydınlatma" },
+    { icon: "wind", name: "Klima" },
+    { icon: "wifi", name: "Wi-Fi" },
   ],
   pitches: [
     { id: "p1", name: "5v5 Saha A", size: "5'e 5", price: 350, nightPrice: 450 },
@@ -49,7 +49,6 @@ const timeSlots = Array.from({ length: 14 }, (_, i) => ({
   hour: 8 + i,
   label: `${8 + i}:00`,
   available: ![11, 12, 15].includes(8 + i),
-  price: 8 + i >= 18 ? 450 : 350,
 }));
 
 export default function FieldDetailPage({ params }: { params: Promise<{ fieldId: string }> }) {
@@ -117,7 +116,8 @@ export default function FieldDetailPage({ params }: { params: Promise<{ fieldId:
     );
   };
 
-  const totalPrice = selectedSlots.length * selectedPitch.price;
+  const pricePerHour = currentField.price || selectedPitch.price || 350;
+  const totalPrice = selectedSlots.length * pricePerHour;
   const canBook = selectedSlots.length > 0;
 
   const dayNames = ["Paz", "Pzt", "Sal", "Çrş", "Per", "Cum", "Cmt"];
@@ -140,9 +140,9 @@ export default function FieldDetailPage({ params }: { params: Promise<{ fieldId:
           justifyContent: "center",
         }}
       >
-        <div style={{ position: "absolute", top: 16, left: 16 }}>
-          <Link
-            href="/"
+        <div style={{ position: "absolute", top: 80, left: 16 }}>
+          <button
+            onClick={() => router.back()}
             style={{
               display: "flex",
               alignItems: "center",
@@ -157,16 +157,16 @@ export default function FieldDetailPage({ params }: { params: Promise<{ fieldId:
             }}
           >
             <ChevronLeft size={20} />
-          </Link>
+          </button>
         </div>
 
-        <div style={{ position: "absolute", top: 16, right: 16, display: "flex", gap: 8 }}>
-          <button onClick={() => setIsFavorite(!isFavorite)}
+        <div style={{ position: "absolute", top: 80, right: 16, display: "flex", gap: 8 }}>
+          <button onClick={() => {
+            setIsFavorite(!isFavorite);
+            toast.success(isFavorite ? "Saha favorilerden çıkarıldı." : "Saha favorilere eklendi.");
+          }}
             style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 40, height: 40, borderRadius: "50%", background: "rgba(0,0,0,0.3)", backdropFilter: "blur(8px)", border: "none", cursor: "pointer" }}>
             <Heart size={18} style={{ color: isFavorite ? "#ef4444" : "white", fill: isFavorite ? "#ef4444" : "transparent" }} />
-          </button>
-          <button style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 40, height: 40, borderRadius: "50%", background: "rgba(0,0,0,0.3)", backdropFilter: "blur(8px)", border: "none", cursor: "pointer" }}>
-            <Share2 size={18} style={{ color: "white" }} />
           </button>
         </div>
 
@@ -231,8 +231,10 @@ export default function FieldDetailPage({ params }: { params: Promise<{ fieldId:
 
           {/* Tags */}
           <div style={{ display: "flex", gap: 8, marginTop: 20, flexWrap: "wrap" }}>
-            <span className="pill pill-primary" style={{ padding: "6px 14px" }}>{(currentField.amenities?.isIndoor ?? currentField.isIndoor) ? "🏠 Kapalı Alan" : "☀️ Açık Alan"}</span>
-            {(currentField.amenities?.hasParking ?? currentField.hasParking) && <span className="pill pill-outline" style={{ padding: "6px 14px", background: "white" }}>🚗 Otopark</span>}
+            <span className="pill pill-primary" style={{ padding: "6px 14px", display: "inline-flex", alignItems: "center", gap: 6 }}>
+              {(currentField.amenities?.isIndoor ?? currentField.isIndoor) ? <><Wind size={13} /> Kapalı Alan</> : <><Lightbulb size={13} /> Açık Alan</>}
+            </span>
+            {(currentField.amenities?.hasParking ?? currentField.hasParking) && <span className="pill pill-outline" style={{ padding: "6px 14px", background: "white", display: "inline-flex", alignItems: "center", gap: 6 }}><Car size={13} /> Otopark</span>}
           </div>
         </div>
 
@@ -262,7 +264,7 @@ export default function FieldDetailPage({ params }: { params: Promise<{ fieldId:
                         {isSelected && <Check size={18} style={{ color: "#2E7D32" }} />}
                       </div>
                       <p style={{ fontSize: 13, color: "#9ca3af" }}>{pitch.size}</p>
-                      <p style={{ fontSize: 20, fontWeight: 800, color: "#2E7D32", marginTop: 8 }}>₺{pitch.price}<span style={{ fontSize: 13, fontWeight: 600 }}>/saat</span></p>
+                      <p style={{ fontSize: 20, fontWeight: 800, color: "#2E7D32", marginTop: 8 }}>₺{currentField.price || pitch.price}<span style={{ fontSize: 13, fontWeight: 600 }}>/saat</span></p>
                     </button>
                   );
                 })}
@@ -273,12 +275,22 @@ export default function FieldDetailPage({ params }: { params: Promise<{ fieldId:
             <div className="auth-dynamo-glass match-dynamo-card" style={{ padding: 24, borderRadius: 24 }}>
               <h2 style={{ fontSize: 18, fontWeight: 700, color: "#111827", marginBottom: 16 }}>Özellikler</h2>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-                {(currentField.features || mockField.features).map((f: any) => (
-                  <div key={f.name} style={{ background: "rgba(255,255,255,0.5)", border: "1px solid rgba(0,0,0,0.04)", borderRadius: 16, padding: "16px 8px", textAlign: "center" }}>
-                    <div style={{ fontSize: 24, marginBottom: 6 }}>{f.icon || "⚽"}</div>
-                    <div style={{ fontSize: 12, color: "#4b5563", fontWeight: 700 }}>{f.name}</div>
-                  </div>
-                ))}
+                {(currentField.features || mockField.features).map((f: any) => {
+                  const iconMap: Record<string, React.ReactNode> = {
+                    shower: <Droplets size={20} strokeWidth={2} />,
+                    parking: <Car size={20} strokeWidth={2} />,
+                    utensils: <Utensils size={20} strokeWidth={2} />,
+                    lightbulb: <Lightbulb size={20} strokeWidth={2} />,
+                    wind: <Wind size={20} strokeWidth={2} />,
+                    wifi: <Wifi size={20} strokeWidth={2} />,
+                  };
+                  return (
+                    <div key={f.name} style={{ background: "rgba(255,255,255,0.5)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 16, padding: "16px 8px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+                      <div style={{ color: "#2E7D32" }}>{iconMap[f.icon] ?? <Wifi size={20} />}</div>
+                      <div style={{ fontSize: 12, color: "#4b5563", fontWeight: 700 }}>{f.name}</div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -322,7 +334,7 @@ export default function FieldDetailPage({ params }: { params: Promise<{ fieldId:
                   return (
                     <button key={slot.hour} className={cls} onClick={() => toggleSlot(slot.hour)} style={{ height: 54, borderRadius: 12, fontSize: 14 }}>
                       <div style={{ fontWeight: 800 }}>{slot.label}</div>
-                      <div style={{ fontSize: 11, opacity: 0.8 }}>₺{slot.price}</div>
+                      <div style={{ fontSize: 11, opacity: 0.8 }}>₺{pricePerHour}</div>
                     </button>
                   );
                 })}

@@ -5,8 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { loginWithEmailPassword } from "@/backend/services/authService";
 import { toast } from "react-hot-toast";
-import { Mail, Lock, ArrowRight } from "lucide-react";
+import { Mail, Lock, ArrowRight, Shield } from "lucide-react";
 import Aurora from "@/frontend/components/ui/Aurora/Aurora";
+import GradientText from "@/frontend/components/ui/GradientText/GradientText";
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
@@ -67,16 +68,20 @@ const LoginPage = () => {
       >
         <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
           <span style={{ fontSize: 18, fontWeight: 900, color: "#111827" }}>
-            ALO <span style={{ color: "#2E7D32" }}>Halısaha</span>
+            ALO <GradientText
+                  colors={["#1A754E", "#4CAF50", "#065F46", "#1A754E"]}
+                  animationSpeed={4}
+                  showBorder={false}
+                  className="inline-block"
+                >
+                  Halısaha
+                </GradientText>
           </span>
         </Link>
 
         <div className="auth-topbar-links" style={{ display: "flex", alignItems: "center", gap: 28, marginLeft: "auto" }}>
           <Link href="/" className="auth-topbar-link" style={{ fontSize: 15, fontWeight: 700, color: "#374151", textDecoration: "none", padding: "6px 10px", borderRadius: 10 }}>
             Ana Sayfa
-          </Link>
-          <Link href="/groups" className="auth-topbar-link" style={{ fontSize: 15, fontWeight: 700, color: "#374151", textDecoration: "none", padding: "6px 10px", borderRadius: 10 }}>
-            Gruplar
           </Link>
         </div>
       </div>
@@ -85,8 +90,8 @@ const LoginPage = () => {
         <div className="auth-card auth-dynamo-glass">
           {/* Header */}
           <div style={{ textAlign: "center", marginBottom: 32 }}>
-            <div style={{ width: 64, height: 64, background: "#E8F5E9", borderRadius: 20, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", fontSize: 28 }}>
-              ⚽
+            <div style={{ width: 64, height: 64, background: "#E8F5E9", borderRadius: 20, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+              <Shield size={30} style={{ color: "#2E7D32" }} />
             </div>
             <h1 style={{ fontSize: 26, fontWeight: 900, color: "#111827", marginBottom: 6 }}>Tekrar Hoş Geldin!</h1>
             <p style={{ color: "#9ca3af", fontSize: 15 }}>Devam etmek için giriş yapın.</p>

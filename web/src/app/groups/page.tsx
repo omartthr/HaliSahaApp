@@ -155,9 +155,9 @@ export default function GroupsPage() {
           justifyContent: "center",
         }}
       >
-        <div style={{ position: "absolute", top: 16, left: 16 }}>
-          <Link
-            href="/"
+        <div style={{ position: "absolute", top: 80, left: 16 }}>
+          <button
+            onClick={() => window.history.back()}
             style={{
               display: "flex",
               alignItems: "center",
@@ -172,7 +172,7 @@ export default function GroupsPage() {
             }}
           >
             <ChevronLeft size={20} />
-          </Link>
+          </button>
         </div>
 
         <div

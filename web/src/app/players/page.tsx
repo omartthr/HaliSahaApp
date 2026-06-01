@@ -8,6 +8,7 @@ import { useAuth } from "@/frontend/context/AuthContext";
 import { Search, Filter, Star, Trophy, MapPin, Send, ChevronLeft, UserPlus, Check } from "lucide-react";
 import { toast } from "react-hot-toast";
 import Link from "next/link";
+import CustomSelect from "@/frontend/components/common/CustomSelect";
 
 export default function PlayersPage() {
   const { user } = useAuth();
@@ -151,20 +152,19 @@ export default function PlayersPage() {
               </div>
               
               <div style={{ position: "relative", minWidth: 160 }}>
-                <Filter style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} size={18} />
-                <select 
+                <CustomSelect 
                   value={positionFilter}
-                  onChange={(e) => setPositionFilter(e.target.value)}
-                  className="input-field"
-                  style={{ width: "100%", padding: "12px 36px 12px 40px", borderRadius: 16, border: "1px solid rgba(0,0,0,0.1)", outline: "none", backgroundColor: "rgba(255,255,255,0.9)", fontSize: 14, appearance: "none", cursor: "pointer" }}
-                >
-                  <option value="all">Tüm Mevkiler</option>
-                  <option value="Kaleci">Kaleci</option>
-                  <option value="Defans">Defans</option>
-                  <option value="Orta Saha">Orta Saha</option>
-                  <option value="Forvet">Forvet</option>
-                </select>
-                <div style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: "5px solid #9ca3af" }}></div>
+                  onChange={(val) => setPositionFilter(val)}
+                  icon={<Filter size={18} />}
+                  options={[
+                    { value: "all", label: "Tüm Mevkiler" },
+                    { value: "Kaleci", label: "Kaleci" },
+                    { value: "Defans", label: "Defans" },
+                    { value: "Orta Saha", label: "Orta Saha" },
+                    { value: "Forvet", label: "Forvet" },
+                  ]}
+                  className="input-field-override" // To override border if needed, but it comes with its own border
+                />
               </div>
             </div>
           </div>

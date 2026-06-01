@@ -94,7 +94,7 @@ export default function Chatbot() {
         style={{
           position: "fixed",
           bottom: 28,
-          right: 28,
+          left: 28,
           width: 60,
           height: 60,
           borderRadius: "50%",
@@ -137,7 +137,7 @@ export default function Chatbot() {
         style={{
           position: "fixed",
           bottom: 100,
-          right: 28,
+          left: 28,
           width: 370,
           maxWidth: "calc(100vw - 32px)",
           height: 520,

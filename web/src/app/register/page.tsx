@@ -6,8 +6,10 @@ import { useRouter } from "next/navigation";
 import { createAdminProfile, createUserProfile } from "@/backend/services/adminService";
 import { registerAuthUser, signOutCurrentUser } from "@/backend/services/authService";
 import { toast } from "react-hot-toast";
-import { Mail, Lock, User, AtSign, ArrowRight, Check, Building2, Phone, FileText } from "lucide-react";
+import { Mail, Lock, User, AtSign, ArrowRight, Check, Building2, Phone, FileText, AlertTriangle, Trophy, Warehouse, UserRound } from "lucide-react";
 import Aurora from "@/frontend/components/ui/Aurora/Aurora";
+import CustomSelect from "@/frontend/components/common/CustomSelect";
+import GradientText from "@/frontend/components/ui/GradientText/GradientText";
 
 const RegisterPage = () => {
   const [tab, setTab] = useState<"user" | "admin">("user");
@@ -125,16 +127,20 @@ const RegisterPage = () => {
       >
         <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
           <span style={{ fontSize: 18, fontWeight: 900, color: "#111827" }}>
-            ALO <span style={{ color: "#2E7D32" }}>Halısaha</span>
+            ALO <GradientText
+                  colors={["#1A754E", "#4CAF50", "#065F46", "#1A754E"]}
+                  animationSpeed={4}
+                  showBorder={false}
+                  className="inline-block"
+                >
+                  Halısaha
+                </GradientText>
           </span>
         </Link>
 
         <div className="auth-topbar-links" style={{ display: "flex", alignItems: "center", gap: 28, marginLeft: "auto" }}>
           <Link href="/" className="auth-topbar-link" style={{ fontSize: 15, fontWeight: 700, color: "#374151", textDecoration: "none", padding: "6px 10px", borderRadius: 10 }}>
             Ana Sayfa
-          </Link>
-          <Link href="/groups" className="auth-topbar-link" style={{ fontSize: 15, fontWeight: 700, color: "#374151", textDecoration: "none", padding: "6px 10px", borderRadius: 10 }}>
-            Gruplar
           </Link>
         </div>
       </div>
@@ -143,8 +149,8 @@ const RegisterPage = () => {
         <div className="auth-card auth-dynamo-glass auth-register-wide" style={{ margin: "auto", maxWidth: 800, width: "100%", padding: "24px 32px" }}>
           {/* Header */}
           <div style={{ textAlign: "center", marginBottom: 12 }}>
-            <div style={{ width: tab === "admin" ? 48 : 52, height: tab === "admin" ? 48 : 52, background: "#E8F5E9", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 8px", fontSize: tab === "admin" ? 22 : 26 }}>
-              {tab === "user" ? "🏆" : "🏟️"}
+            <div style={{ width: tab === "admin" ? 48 : 52, height: tab === "admin" ? 48 : 52, background: "#E8F5E9", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 8px" }}>
+              {tab === "user" ? <Trophy size={26} style={{ color: "#2E7D32" }} /> : <Warehouse size={22} style={{ color: "#2E7D32" }} />}
             </div>
             <h1 style={{ fontSize: 24, fontWeight: 900, color: "#111827", marginBottom: 4 }}>Hesap Oluştur</h1>
             <p style={{ color: "#9ca3af", fontSize: 14, lineHeight: 1.25 }}>
@@ -160,12 +166,13 @@ const RegisterPage = () => {
               style={{
                 flex: 1, padding: "9px 0", borderRadius: 11, border: "none", cursor: "pointer",
                 fontSize: 14, fontWeight: 700, transition: "all 0.2s",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                 background: tab === "user" ? "#fff" : "transparent",
                 color: tab === "user" ? "#2E7D32" : "#6b7280",
                 boxShadow: tab === "user" ? "0 2px 8px rgba(0,0,0,0.08)" : "none",
               }}
             >
-              👤 Normal Kullanıcı
+              <UserRound size={15} /> Normal Kullanıcı
             </button>
             <button
               type="button"
@@ -173,12 +180,13 @@ const RegisterPage = () => {
               style={{
                 flex: 1, padding: "9px 0", borderRadius: 11, border: "none", cursor: "pointer",
                 fontSize: 14, fontWeight: 700, transition: "all 0.2s",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                 background: tab === "admin" ? "#fff" : "transparent",
                 color: tab === "admin" ? "#2E7D32" : "#6b7280",
                 boxShadow: tab === "admin" ? "0 2px 8px rgba(0,0,0,0.08)" : "none",
               }}
             >
-              🏟️ Admin / İşletme
+              <Warehouse size={15} /> Admin / İşletme
             </button>
           </div>
 
@@ -233,14 +241,16 @@ const RegisterPage = () => {
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Mevki</label>
-                  <select name="position" required value={userForm.position} onChange={handleUserChange}
-                    className="input-field" style={{ paddingLeft: 12, fontSize: 14, height: 42 }}>
-                    <option value="">Seçiniz...</option>
-                    <option value="Kaleci">🧤 Kaleci</option>
-                    <option value="Defans">🛡️ Defans</option>
-                    <option value="Orta Saha">⚽ Orta Saha</option>
-                    <option value="Forvet">🎯 Forvet</option>
-                  </select>
+                  <CustomSelect 
+                    value={userForm.position} 
+                    onChange={(val) => setUserForm({...userForm, position: val})}
+                    options={[
+                      { value: "Kaleci", label: "Kaleci" },
+                      { value: "Defans", label: "Defans" },
+                      { value: "Orta Saha", label: "Orta Saha" },
+                      { value: "Forvet", label: "Forvet" },
+                    ]}
+                  />
                 </div>
               </div>
 
@@ -327,8 +337,8 @@ const RegisterPage = () => {
                 </div>
               </div>
 
-              <div style={{ background: "#FFF8E1", border: "1px solid #FFE082", borderRadius: 10, padding: "8px 12px", fontSize: 11, color: "#B45309", fontWeight: 600, lineHeight: 1.2 }}>
-                ⚠️ Admin kaydı yönetici onayına tabidir. Onaylandıktan sonra giriş yapabilirsiniz.
+              <div style={{ background: "#FFF8E1", border: "1px solid #FFE082", borderRadius: 10, padding: "8px 12px", fontSize: 11, color: "#B45309", fontWeight: 600, lineHeight: 1.2, display: "flex", alignItems: "center", gap: 6 }}>
+                <AlertTriangle size={13} /> Admin kaydı yönetici onayına tabidir. Onaylandıktan sonra giriş yapabilirsiniz.
               </div>
 
               <button type="submit" disabled={loading} className="btn-primary"

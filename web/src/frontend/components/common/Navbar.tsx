@@ -9,6 +9,8 @@ import { signOut } from "firebase/auth";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { toast } from "react-hot-toast";
 import { LogOut, User, Menu, X } from "lucide-react";
+import GradientText from "@/frontend/components/ui/GradientText/GradientText";
+import NotificationMenu from "@/frontend/components/common/NotificationMenu";
 
 const Navbar = () => {
   const { user, loading, isAdmin } = useAuth();
@@ -61,15 +63,22 @@ const Navbar = () => {
 
   return (
     <nav style={{
-      position: "fixed", top: 0, left: 0, right: 0, zIndex: 50,
-      transition: "all 0.4s ease",
-      background: scrolled ? "rgba(255,255,255,0.95)" : "transparent",
-      backdropFilter: scrolled ? "blur(20px)" : "none",
-      WebkitBackdropFilter: scrolled ? "blur(20px)" : "none",
-      borderBottom: scrolled ? "1px solid rgba(0,0,0,0.06)" : "none",
-      boxShadow: scrolled ? "0 4px 20px rgba(0,0,0,0.06)" : "none",
+      position: "fixed", 
+      top: 12, 
+      left: "2%", 
+      right: "2%", 
+      maxWidth: 1400,
+      margin: "0 auto",
+      zIndex: 50,
+      transition: "all 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
+      background: scrolled ? "rgba(255, 255, 255, 0.65)" : "transparent",
+      backdropFilter: scrolled ? "blur(24px)" : "none",
+      WebkitBackdropFilter: scrolled ? "blur(24px)" : "none",
+      border: scrolled ? "1px solid rgba(255, 255, 255, 0.3)" : "1px solid transparent",
+      borderRadius: 24,
+      boxShadow: scrolled ? "0 10px 40px rgba(0, 0, 0, 0.08)" : "none",
     }}>
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 16px" }}>
+      <div style={{ padding: "0 24px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 64 }}>
 
           {/* Logo */}
@@ -79,7 +88,15 @@ const Navbar = () => {
             color: scrolled ? "#111827" : "white",
             transition: "color 0.4s",
           }}>
-            <span></span> ALO Halısaha
+            <span></span> ALO 
+            <GradientText
+              colors={["#1A754E", "#4CAF50", "#065F46", "#1A754E"]}
+              animationSpeed={4}
+              showBorder={false}
+              className="inline-block"
+            >
+              Halısaha
+            </GradientText>
           </Link>
 
           {/* Desktop Nav Links */}
@@ -99,15 +116,32 @@ const Navbar = () => {
               <>
                 {user ? (
                   <>
+                    <NotificationMenu scrolled={scrolled} />
                     <Link href={isAdmin ? "/admin/dashboard" : "/profile"} className="nav-text-link" style={{ color: scrolled ? "#374151" : "white" }}>
                       <User size={15} /> {isAdmin ? "Panelim" : "Profilim"}
                     </Link>
                     <button onClick={handleLogout} style={{
                       color: scrolled ? "#dc2626" : "rgba(255,200,200,1)",
-                      background: scrolled ? "#fef2f2" : "transparent",
-                      border: "none", fontWeight: 500, fontSize: 14,
+                      background: scrolled ? "rgba(254, 242, 242, 0.8)" : "transparent",
+                      border: scrolled ? "1px solid rgba(220, 38, 38, 0.2)" : "1px solid transparent",
+                      fontWeight: 600, fontSize: 14,
+                      padding: "6px 14px", borderRadius: 999,
                       cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
-                      transition: "all 0.3s",
+                      transition: "all 0.3s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      if(scrolled) {
+                        e.currentTarget.style.background = "#fee2e2";
+                      } else {
+                        e.currentTarget.style.background = "rgba(255,255,255,0.1)";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if(scrolled) {
+                        e.currentTarget.style.background = "rgba(254, 242, 242, 0.8)";
+                      } else {
+                        e.currentTarget.style.background = "transparent";
+                      }
                     }}>
                       <LogOut size={15} /> Çıkış
                     </button>
@@ -188,6 +222,9 @@ const Navbar = () => {
                 <>
                   {user ? (
                     <>
+                      <div style={{ padding: "0 10px" }}>
+                        <NotificationMenu scrolled={scrolled} />
+                      </div>
                       <Link href={isAdmin ? "/admin/dashboard" : "/profile"} className="nav-text-link" style={{ color: "#374151" }}>
                         <User size={15} /> {isAdmin ? "Panelim" : "Profilim"}
                       </Link>

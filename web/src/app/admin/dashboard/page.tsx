@@ -24,7 +24,7 @@ import {
 import { useRouter } from "next/navigation";
 
 type AdminTab = "dashboard" | "bookings" | "facilities" | "reports" | "settings";
-type ReservationStatus = "pending_payment" | "approved" | "cancelled" | "completed" | "no_show" | string;
+type ReservationStatus = "pending_payment" | "confirmed" | "approved" | "cancelled" | "completed" | "no_show" | string;
 type Reservation = {
   id: string; fieldId?: string; fieldName?: string; userId?: string;
   userName?: string; date?: string; timeSlot?: string;
@@ -32,9 +32,9 @@ type Reservation = {
 };
 type Facility = {
   id: string; name: string; address: string; phone: string;
-  rating?: number; features?: string[]; ownerId?: string;
+  rating?: number; features?: string[]; ownerId?: string; price?: number;
 };
-type BookingFilter = "all" | "pending_payment" | "approved" | "completed" | "cancelled" | "no_show";
+type BookingFilter = "all" | "pending_payment" | "confirmed" | "approved" | "completed" | "cancelled" | "no_show";
 
 const TABS: Array<{ id: AdminTab; label: string; icon: React.ReactNode }> = [
   { id: "dashboard", label: "Panel", icon: <LayoutGrid size={16} /> },
@@ -47,6 +47,7 @@ const TABS: Array<{ id: AdminTab; label: string; icon: React.ReactNode }> = [
 const BOOKING_FILTERS: Array<{ id: BookingFilter; label: string }> = [
   { id: "all", label: "Tümü" },
   { id: "pending_payment", label: "Bekleyen" },
+  { id: "confirmed", label: "Kapora Ödendi" },
   { id: "approved", label: "Onaylı" },
   { id: "completed", label: "Tamamlandı" },
   { id: "cancelled", label: "İptal" },
@@ -54,7 +55,8 @@ const BOOKING_FILTERS: Array<{ id: BookingFilter; label: string }> = [
 ];
 
 const statusLabel = (s?: ReservationStatus) => {
-  if (s === "pending_payment") return "Kapora Bekliyor";
+  if (s === "pending_payment") return "Bekliyor";
+  if (s === "confirmed") return "Kapora Ödendi";
   if (s === "approved") return "Onaylandı";
   if (s === "cancelled") return "İptal";
   if (s === "completed") return "Tamamlandı";
@@ -64,6 +66,7 @@ const statusLabel = (s?: ReservationStatus) => {
 
 const statusStyle = (s?: ReservationStatus): React.CSSProperties => {
   if (s === "pending_payment") return { background: "#FFF3E0", color: "#E65100" };
+  if (s === "confirmed") return { background: "#E8F5E9", color: "#2E7D32" };
   if (s === "approved") return { background: "#E8F5E9", color: "#2E7D32" };
   if (s === "cancelled") return { background: "#FFEBEE", color: "#C62828" };
   if (s === "completed") return { background: "#E3F2FD", color: "#1565C0" };
@@ -101,6 +104,7 @@ const AdminDashboard = () => {
   const [facilityForm, setFacilityForm] = useState({
     name: "", address: "", phone: "", rating: "4.5",
     features: "Soyunma Odası, Otopark, Kantin",
+    price: "350",
   });
   const [editingFacilityId, setEditingFacilityId] = useState<string | null>(null);
   const [showFacilityForm, setShowFacilityForm] = useState(false);
@@ -132,7 +136,7 @@ const AdminDashboard = () => {
 
   const estimatedRevenue = useMemo(() =>
     sortedReservations
-      .filter((r) => r.status === "approved" || r.status === "completed")
+      .filter((r) => r.status === "approved" || r.status === "completed" || r.status === "confirmed")
       .reduce((sum, r) => sum + (r.totalPrice || r.depositAmount || 1200), 0),
     [sortedReservations]
   );
@@ -181,7 +185,7 @@ const AdminDashboard = () => {
   };
 
   const resetFacilityForm = () => {
-    setFacilityForm({ name: "", address: "", phone: "", rating: "4.5", features: "Soyunma Odası, Otopark, Kantin" });
+    setFacilityForm({ name: "", address: "", phone: "", rating: "4.5", features: "Soyunma Odası, Otopark, Kantin", price: "350" });
     setEditingFacilityId(null);
     setShowFacilityForm(false);
   };
@@ -193,6 +197,7 @@ const AdminDashboard = () => {
       name: facilityForm.name.trim(), address: facilityForm.address.trim(),
       phone: facilityForm.phone.trim(), rating: Number(facilityForm.rating || 0),
       features: facilityForm.features.split(",").map((f) => f.trim()).filter(Boolean),
+      price: Number(facilityForm.price || 350),
       ownerId: user.uid, updatedAt: serverTimestamp(),
     };
     try {
@@ -212,6 +217,7 @@ const AdminDashboard = () => {
     setFacilityForm({
       name: facility.name || "", address: facility.address || "", phone: facility.phone || "",
       rating: String(facility.rating ?? 4.5), features: (facility.features || []).join(", "),
+      price: String(facility.price || 350),
     });
     setShowFacilityForm(true);
   };
@@ -328,7 +334,7 @@ const AdminDashboard = () => {
         {[
           { label: "Toplam", val: sortedReservations.length, color: "#1565C0" },
           { label: "Bekleyen", val: pendingReservations.length, color: "#E65100" },
-          { label: "Onaylı", val: sortedReservations.filter((r) => r.status === "approved").length, color: "#2E7D32" },
+          { label: "Ödenmiş/Onaylı", val: sortedReservations.filter((r) => r.status === "approved" || r.status === "confirmed").length, color: "#2E7D32" },
           { label: "Tamamlandı", val: sortedReservations.filter((r) => r.status === "completed").length, color: "#00838F" },
         ].map((s) => (
           <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 20, background: "#fff", border: "1px solid #E5E7EB", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
@@ -439,6 +445,7 @@ const AdminDashboard = () => {
               { key: "phone", ph: "Telefon numarası", type: "tel" },
               { key: "rating", ph: "Puan (örn: 4.7)", type: "number" },
               { key: "features", ph: "Özellikler (virgülle ayırın)", type: "text" },
+              { key: "price", ph: "Saatlik Ücret (₺)", type: "number" },
             ].map((f) => (
               <input key={f.key} type={f.type} placeholder={f.ph}
                 value={facilityForm[f.key as keyof typeof facilityForm]}
@@ -485,7 +492,7 @@ const AdminDashboard = () => {
       { day: "Paz", rev: Math.round(estimatedRevenue * 0.09) },
     ];
     const maxRev = Math.max(...weekRevenue.map((d) => d.rev), 1);
-    const occupancy = Math.min(Math.round((sortedReservations.filter((r) => r.status === "completed" || r.status === "approved").length / total) * 100), 100);
+    const occupancy = Math.min(Math.round((sortedReservations.filter((r) => r.status === "completed" || r.status === "approved" || r.status === "confirmed").length / total) * 100), 100);
     const cancelRate = Math.min(Math.round((sortedReservations.filter((r) => r.status === "cancelled").length / total) * 100), 100);
 
     return (
@@ -909,9 +916,9 @@ function BookingCard({ res, onStatus, compact = false }: { res: Reservation; onS
           </span>
         ) : null}
       </div>
-      {(res.status === "pending_payment" || res.status === "approved") && (
+      {(res.status === "pending_payment" || res.status === "approved" || res.status === "confirmed") && (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {res.status === "pending_payment" && (
+          {(res.status === "pending_payment" || res.status === "confirmed") && (
             <>
               <button onClick={() => void onStatus(res.id, "approved")}
                 style={{ padding: "8px 16px", borderRadius: 10, background: "#2E7D32", color: "#fff", fontWeight: 700, fontSize: 13, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>

@@ -28,6 +28,15 @@ export async function sendInviteNotification(targetUserId: string, senderId: str
   });
 }
 
+export async function sendNotification(data: Partial<NotificationRecord> & { userId: string; type: string; title: string; body: string; relatedId?: string }) {
+  return addDoc(collection(db, "notifications"), {
+    ...data,
+    isRead: false,
+    status: data.type === "invite" ? "pending" : "unread",
+    createdAt: serverTimestamp()
+  });
+}
+
 export function getMyNotificationsRealtime(userId: string, callback: (notifs: NotificationRecord[]) => void) {
   const q = query(collection(db, "notifications"), where("userId", "==", userId));
   return onSnapshot(q, (snap) => {
