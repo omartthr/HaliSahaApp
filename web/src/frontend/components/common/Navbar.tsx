@@ -8,7 +8,7 @@ import { auth, db } from "@/database/firebase";
 import { signOut } from "firebase/auth";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { toast } from "react-hot-toast";
-import { LogOut, User, Menu, X } from "lucide-react";
+import { LogOut, User, Menu, X, MessageCircle } from "lucide-react";
 import GradientText from "@/frontend/components/ui/GradientText/GradientText";
 import NotificationMenu from "@/frontend/components/common/NotificationMenu";
 
@@ -107,6 +107,7 @@ const Navbar = () => {
                   Demo
                 </span>
               )}
+              {!loading && user && <NotificationMenu scrolled={scrolled} />}
               <Link href="/" className="nav-text-link" style={{ color: scrolled ? "#374151" : "white" }}>
                 Ana Sayfa
               </Link>
@@ -116,7 +117,11 @@ const Navbar = () => {
               <>
                 {user ? (
                   <>
-                    <NotificationMenu scrolled={scrolled} />
+                    {!isAdmin && (
+                      <Link href="/messages" className="nav-text-link" style={{ color: scrolled ? "#374151" : "white" }}>
+                        <MessageCircle size={15} /> Mesajlar
+                      </Link>
+                    )}
                     <Link href={isAdmin ? "/admin/dashboard" : "/profile"} className="nav-text-link" style={{ color: scrolled ? "#374151" : "white" }}>
                       <User size={15} /> {isAdmin ? "Panelim" : "Profilim"}
                     </Link>

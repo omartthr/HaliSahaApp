@@ -3,14 +3,14 @@
 import { useEffect, useState, useRef } from "react";
 import Navbar from "@/frontend/components/common/Navbar";
 import { useAuth } from "@/frontend/context/AuthContext";
-import { 
-  getMyGroupsRealtime, 
-  getGroupMessagesRealtime, 
-  sendGroupMessage, 
-  GroupRecord, 
-  GroupMessageRecord 
+import {
+  getMyGroupsRealtime,
+  getGroupMessagesRealtime,
+  sendGroupMessage,
+  GroupRecord,
+  GroupMessageRecord,
 } from "@/backend/services/groupService";
-import { Send, MessageCircle } from "lucide-react";
+import { Send, MessageCircle, Users, Hash, Search, ChevronLeft } from "lucide-react";
 import { toast } from "react-hot-toast";
 
 export default function MessagesPage() {
@@ -19,13 +19,12 @@ export default function MessagesPage() {
   const [selectedChat, setSelectedChat] = useState<GroupRecord | null>(null);
   const [messages, setMessages] = useState<GroupMessageRecord[]>([]);
   const [inputText, setInputText] = useState("");
+  const [search, setSearch] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!user) return;
-    const unsub = getMyGroupsRealtime(user.uid, (data) => {
-      setChats(data);
-    });
+    const unsub = getMyGroupsRealtime(user.uid, (data) => setChats(data));
     return () => unsub();
   }, [user]);
 
@@ -41,95 +40,275 @@ export default function MessagesPage() {
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim() || !user || !selectedChat) return;
-
     try {
       const text = inputText;
       setInputText("");
       await sendGroupMessage(selectedChat.id, {
         content: text,
         senderId: user.uid,
-        senderName: user.displayName || "Kullanıcı"
+        senderName: user.displayName || "Kullanıcı",
       });
-    } catch (error) {
+    } catch {
       toast.error("Mesaj gönderilemedi.");
     }
   };
 
   const getChatName = (chat: GroupRecord) => {
     if (chat.isDirectMessage) {
-      return chat.name?.toString().replace(user?.displayName || "Kullanıcı", "").replace("&", "").trim() || "Kullanıcı";
+      return (chat.name as string)
+        ?.replace(user?.displayName || "Kullanıcı", "")
+        .replace("&", "")
+        .trim() || "Kullanıcı";
     }
-    return chat.name || "Grup Sohbeti";
+    return (chat.name as string) || "Grup Sohbeti";
+  };
+
+  const filteredChats = chats.filter((c) =>
+    getChatName(c).toLowerCase().includes(search.toLowerCase())
+  );
+
+  const formatTime = (ts: any) => {
+    if (!ts?.toDate) return "";
+    return (ts.toDate() as Date).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
   };
 
   return (
-    <div className="page-wrapper min-h-screen bg-[#F6F8F6] flex flex-col">
+    <div className="page-wrapper">
       <Navbar />
 
-      <div className="content-container flex-1 flex flex-col pt-6 pb-6 h-[calc(100vh-80px)]">
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 flex overflow-hidden flex-1">
-          
-          {/* Sol Panel: Sohbet Listesi */}
-          <div className="w-1/3 border-r border-gray-100 flex flex-col">
-            <div className="p-6 border-b border-gray-100">
-              <h2 className="text-xl font-black text-gray-900">Sohbetler</h2>
+      {/* ── Hero — aynı Maç Kur stili ── */}
+      <div
+        className="match-hero"
+        style={{
+          height: 280,
+          background: "linear-gradient(180deg, #114B32 0%, #1A754E 100%)",
+          position: "relative",
+          zIndex: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <div style={{ position: "absolute", top: 80, left: 16 }}>
+          <button
+            onClick={() => window.history.back()}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "center",
+              width: 40, height: 40, borderRadius: "50%",
+              background: "rgba(0,0,0,0.3)", backdropFilter: "blur(8px)",
+              border: "none", color: "white", cursor: "pointer",
+            }}
+          >
+            <ChevronLeft size={20} />
+          </button>
+        </div>
+
+        <div style={{ textAlign: "center", color: "white", zIndex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 6 }}>
+            <MessageCircle size={26} />
+            <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0 }}>Mesajlar</h1>
+          </div>
+          <p style={{ fontSize: 13, opacity: 0.7, margin: 0 }}>Grup ve direkt sohbetleriniz</p>
+        </div>
+
+        {/* Wave — birebir Maç Kur ile aynı */}
+        <div style={{ position: "absolute", bottom: -118, left: 0, width: "100%", lineHeight: 0, zIndex: 0, pointerEvents: "none" }}>
+          <svg
+            data-name="Layer 1"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 1200 120"
+            preserveAspectRatio="none"
+            style={{ display: "block", width: "calc(100% + 1.3px)", height: 120, overflow: "visible" }}
+          >
+            <defs>
+              <filter id="msg-wave-soft-shadow" x="-8%" y="-8%" width="116%" height="180%">
+                <feGaussianBlur stdDeviation="7" />
+              </filter>
+            </defs>
+            <path
+              d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z"
+              fill="rgba(0,0,0,0.22)"
+              transform="translate(0, 14)"
+              filter="url(#msg-wave-soft-shadow)"
+            />
+            <path
+              d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z"
+              fill="#1A754E"
+            />
+          </svg>
+        </div>
+      </div>
+
+      {/* ── Messenger Panel ── */}
+      <div
+        className="content-container match-main-content"
+        style={{
+          position: "relative",
+          zIndex: 2,
+          marginTop: -220,
+          paddingTop: 24,
+          paddingBottom: 60,
+          maxWidth: 1200,
+          width: "95%",
+        }}
+      >
+        <div
+          className="auth-dynamo-glass match-dynamo-card match-card"
+          style={{
+            padding: 0,
+            borderRadius: 24,
+            overflow: "hidden",
+            display: "flex",
+            height: "calc(100vh - 160px)",
+            minHeight: 540,
+          }}
+        >
+          {/* ── Sidebar ── */}
+          <aside
+            style={{
+              width: 300,
+              minWidth: 260,
+              display: "flex",
+              flexDirection: "column",
+              borderRight: "1px solid rgba(0,0,0,0.07)",
+              background: "rgba(255,255,255,0.72)",
+            }}
+          >
+            <div style={{ padding: "20px 18px 14px", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                <h2 style={{ fontSize: 16, fontWeight: 800, color: "#111827", margin: 0 }}>Sohbetler</h2>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#16a34a", background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "2px 8px", borderRadius: 20 }}>
+                  {chats.length}
+                </span>
+              </div>
+              <div style={{ position: "relative" }}>
+                <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#9ca3af", pointerEvents: "none" }} />
+                <input
+                  type="text"
+                  placeholder="Ara..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  style={{
+                    width: "100%", padding: "8px 12px 8px 30px",
+                    borderRadius: 10, border: "1px solid rgba(0,0,0,0.08)",
+                    background: "rgba(255,255,255,0.8)", fontSize: 13,
+                    outline: "none", boxSizing: "border-box", color: "#111827",
+                  }}
+                />
+              </div>
             </div>
-            <div className="overflow-y-auto flex-1 p-3">
-              {chats.length === 0 ? (
-                <div className="text-center py-10 text-gray-400">
-                  <MessageCircle size={32} className="mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">Henüz mesajınız yok.</p>
+
+            <div style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
+              {filteredChats.length === 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: 160, color: "#9ca3af", gap: 8 }}>
+                  <MessageCircle size={28} style={{ opacity: 0.3 }} />
+                  <p style={{ fontSize: 13, margin: 0 }}>{search ? "Sonuç yok" : "Sohbet bulunmuyor"}</p>
                 </div>
               ) : (
-                chats.map(chat => (
-                  <button
-                    key={chat.id}
-                    onClick={() => setSelectedChat(chat)}
-                    className={`w-full text-left p-4 rounded-2xl flex items-center gap-4 transition-colors mb-2 ${
-                      selectedChat?.id === chat.id ? "bg-[#E8F5E9]" : "hover:bg-gray-50"
-                    }`}
-                  >
-                    <div className="w-12 h-12 rounded-full bg-[#2E7D32] text-white flex items-center justify-center font-bold text-lg flex-shrink-0">
-                      {getChatName(chat).substring(0, 2).toUpperCase()}
-                    </div>
-                    <div className="flex-1 overflow-hidden">
-                      <h3 className={`font-bold truncate ${selectedChat?.id === chat.id ? "text-[#1B5E20]" : "text-gray-900"}`}>
-                        {getChatName(chat)}
-                      </h3>
-                      {chat.lastMessage && (
-                        <p className="text-sm text-gray-500 truncate">
-                          {(chat.lastMessage as any).content || "Sohbet başladı"}
+                filteredChats.map((chat) => {
+                  const name = getChatName(chat);
+                  const isSelected = selectedChat?.id === chat.id;
+                  const isDM = !!chat.isDirectMessage;
+
+                  return (
+                    <button
+                      key={chat.id}
+                      onClick={() => setSelectedChat(chat)}
+                      style={{
+                        width: "100%", display: "flex", alignItems: "center", gap: 12,
+                        padding: "11px 12px", borderRadius: 14, border: "none",
+                        background: isSelected ? "rgba(22,163,74,0.1)" : "transparent",
+                        boxShadow: isSelected ? "inset 0 0 0 1.5px rgba(22,163,74,0.3)" : "none",
+                        cursor: "pointer", textAlign: "left", marginBottom: 3, transition: "all 0.15s",
+                      }}
+                      onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = "rgba(0,0,0,0.04)"; }}
+                      onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}
+                    >
+                      <div style={{
+                        width: 44, height: 44, borderRadius: "50%", flexShrink: 0,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontWeight: 800, fontSize: 14,
+                        color: isSelected ? "#fff" : "#065f46",
+                        background: isSelected ? "linear-gradient(135deg, #16a34a, #15803d)" : "linear-gradient(135deg, #bbf7d0, #86efac)",
+                        transition: "all 0.15s",
+                      }}>
+                        {isDM ? name.substring(0, 2).toUpperCase() : <Hash size={17} />}
+                      </div>
+
+                      <div style={{ flex: 1, overflow: "hidden" }}>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: isSelected ? "#15803d" : "#111827", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {name}
                         </p>
-                      )}
-                    </div>
-                  </button>
-                ))
+                        <p style={{ fontSize: 11, color: "#9ca3af", margin: "2px 0 0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {(chat.lastMessage as any)?.content || (isDM ? "Direkt mesaj" : "Grup sohbeti")}
+                        </p>
+                      </div>
+
+                      {!isDM && <Users size={12} style={{ color: "#9ca3af", flexShrink: 0 }} />}
+                    </button>
+                  );
+                })
               )}
             </div>
-          </div>
+          </aside>
 
-          {/* Sağ Panel: Aktif Sohbet */}
-          <div className="flex-1 flex flex-col bg-gray-50/50">
+          {/* ── Chat Area ── */}
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
             {selectedChat ? (
               <>
-                <div className="p-6 border-b border-gray-100 bg-white">
-                  <h2 className="text-xl font-bold text-gray-900">{getChatName(selectedChat)}</h2>
+                {/* Topbar */}
+                <div style={{
+                  padding: "0 20px", height: 62,
+                  borderBottom: "1px solid rgba(0,0,0,0.07)",
+                  display: "flex", alignItems: "center", gap: 12,
+                  background: "rgba(255,255,255,0.8)", backdropFilter: "blur(8px)", flexShrink: 0,
+                }}>
+                  <div style={{ width: 38, height: 38, borderRadius: "50%", background: "linear-gradient(135deg, #16a34a, #15803d)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 12, color: "white" }}>
+                    {selectedChat.isDirectMessage ? getChatName(selectedChat).substring(0, 2).toUpperCase() : <Hash size={15} />}
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: "#111827", margin: 0 }}>{getChatName(selectedChat)}</p>
+                    <p style={{ fontSize: 11, color: "#9ca3af", margin: 0 }}>{selectedChat.isDirectMessage ? "Direkt mesaj" : "Grup sohbeti"}</p>
+                  </div>
                 </div>
-                
-                <div className="flex-1 p-6 overflow-y-auto flex flex-col gap-4">
-                  {messages.map(msg => {
+
+                {/* Messages */}
+                <div style={{
+                  flex: 1, overflowY: "auto", padding: "20px 32px",
+                  display: "flex", flexDirection: "column", gap: 4,
+                  background: "#efeae2",
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.025'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+                }}>
+                  {messages.length === 0 && (
+                    <div style={{ margin: "auto", background: "rgba(255,255,255,0.85)", borderRadius: 14, padding: "12px 20px", color: "#6b7280", fontSize: 13, boxShadow: "0 1px 4px rgba(0,0,0,0.1)" }}>
+                      Henüz mesaj yok. İlk mesajı gönderin!
+                    </div>
+                  )}
+                  {messages.map((msg, i) => {
                     const isMine = msg.senderId === user?.uid;
+                    const showName = !isMine && !selectedChat.isDirectMessage &&
+                      (i === 0 || messages[i - 1]?.senderId !== msg.senderId);
                     return (
-                      <div key={msg.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
-                        <div className={`max-w-[70%] rounded-2xl p-4 ${
-                          isMine 
-                            ? "bg-[#2E7D32] text-white rounded-tr-sm" 
-                            : "bg-white border border-gray-100 text-gray-800 rounded-tl-sm shadow-sm"
-                        }`}>
-                          {!isMine && !selectedChat.isDirectMessage && (
-                            <p className="text-xs font-bold mb-1 opacity-60">{msg.senderName}</p>
+                      <div key={msg.id} style={{ display: "flex", justifyContent: isMine ? "flex-end" : "flex-start", marginTop: showName ? 10 : 0 }}>
+                        <div style={{ maxWidth: "62%", minWidth: 80 }}>
+                          {showName && (
+                            <p style={{ fontSize: 11, fontWeight: 700, color: "#16a34a", margin: "0 0 3px 12px" }}>
+                              {msg.senderName}
+                            </p>
                           )}
-                          <p className="leading-relaxed">{msg.content}</p>
+                          <div style={{
+                            padding: "8px 12px 10px",
+                            borderRadius: isMine ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
+                            background: isMine ? "#dcf8c6" : "#ffffff",
+                            boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
+                          }}>
+                            <p style={{ fontSize: 13.5, color: "#111827", margin: 0, lineHeight: 1.5, wordBreak: "break-word" }}>
+                              {msg.content}
+                            </p>
+                            <p style={{ fontSize: 10, color: "#9ca3af", margin: "3px 0 0", textAlign: "right" }}>
+                              {formatTime(msg.createdAt)}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     );
@@ -137,34 +316,46 @@ export default function MessagesPage() {
                   <div ref={messagesEndRef} />
                 </div>
 
-                <div className="p-4 bg-white border-t border-gray-100">
-                  <form onSubmit={handleSend} className="flex gap-3">
+                {/* Input */}
+                <div style={{ padding: "10px 16px", background: "rgba(255,255,255,0.9)", borderTop: "1px solid rgba(0,0,0,0.07)", flexShrink: 0 }}>
+                  <form onSubmit={handleSend} style={{ display: "flex", alignItems: "center", gap: 10, background: "#f3f4f6", borderRadius: 24, padding: "5px 5px 5px 18px", border: "1px solid rgba(0,0,0,0.07)" }}>
                     <input
                       type="text"
                       value={inputText}
-                      onChange={e => setInputText(e.target.value)}
+                      onChange={(e) => setInputText(e.target.value)}
                       placeholder="Bir mesaj yazın..."
-                      className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-[#2E7D32] transition-colors"
+                      style={{ flex: 1, border: "none", outline: "none", fontSize: 13.5, color: "#111827", background: "transparent", padding: "6px 0" }}
                     />
-                    <button 
+                    <button
                       type="submit"
                       disabled={!inputText.trim()}
-                      className="bg-[#2E7D32] hover:bg-[#1B5E20] disabled:opacity-50 text-white rounded-xl px-5 flex items-center justify-center transition-colors"
+                      style={{
+                        width: 40, height: 40, borderRadius: "50%", border: "none",
+                        background: inputText.trim() ? "linear-gradient(135deg, #2E7D32, #1A754E)" : "#e5e7eb",
+                        color: inputText.trim() ? "#fff" : "#9ca3af",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        cursor: inputText.trim() ? "pointer" : "default",
+                        transition: "all 0.2s", flexShrink: 0,
+                        boxShadow: inputText.trim() ? "0 4px 10px rgba(46,125,50,0.35)" : "none",
+                      }}
                     >
-                      <Send size={20} />
+                      <Send size={16} />
                     </button>
                   </form>
                 </div>
               </>
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
-                <MessageCircle size={48} className="mb-4 opacity-50" />
-                <h3 className="text-lg font-bold text-gray-600 mb-2">Sohbet Seçin</h3>
-                <p>Mesajlaşmaya başlamak için soldaki menüden bir sohbet seçin.</p>
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "rgba(249,250,251,0.6)", gap: 14 }}>
+                <div style={{ width: 72, height: 72, borderRadius: "50%", background: "linear-gradient(135deg, #bbf7d0, #6ee7b7)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <MessageCircle size={32} style={{ color: "#065f46" }} />
+                </div>
+                <div style={{ textAlign: "center" }}>
+                  <h2 style={{ fontSize: 18, fontWeight: 800, color: "#111827", margin: "0 0 6px" }}>Sohbet Seçin</h2>
+                  <p style={{ fontSize: 13, color: "#9ca3af", margin: 0 }}>Sol panelden bir sohbet seçerek başlayın.</p>
+                </div>
               </div>
             )}
           </div>
-
         </div>
       </div>
     </div>

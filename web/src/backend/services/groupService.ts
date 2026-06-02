@@ -4,9 +4,11 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
   addDoc,
   onSnapshot,
   query,
+  where,
   orderBy,
   limit,
   serverTimestamp,
@@ -68,7 +70,6 @@ export async function createGroup(data: object) {
 }
 
 /** Birebir (DM) sohbet getir veya oluştur */
-import { getDocs } from "firebase/firestore";
 export async function getOrCreateDirectChat(uid1: string, uid2: string, userName1: string, userName2: string) {
   const q = query(
     collection(db, "groups"),
