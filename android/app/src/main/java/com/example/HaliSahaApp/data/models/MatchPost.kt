@@ -121,19 +121,19 @@ data class MatchPost(
 // MARK: - Enums & Secondary Models
 
 enum class MatchPostStatus(val rawValue: String, val displayName: String, val color: String) {
-    active("active", "Aktif", "green"),
-    full("full", "Kadro Tamamlandı", "blue"),
-    completed("completed", "Tamamlandı", "gray"),
-    cancelled("cancelled", "İptal Edildi", "red"),
-    expired("expired", "Süresi Doldu", "gray");
+    @com.google.firebase.firestore.PropertyName("active") active("active", "Aktif", "green"),
+    @com.google.firebase.firestore.PropertyName("full") full("full", "Kadro Tamamlandı", "blue"),
+    @com.google.firebase.firestore.PropertyName("completed") completed("completed", "Tamamlandı", "gray"),
+    @com.google.firebase.firestore.PropertyName("cancelled") cancelled("cancelled", "İptal Edildi", "red"),
+    @com.google.firebase.firestore.PropertyName("expired") expired("expired", "Süresi Doldu", "gray");
 }
 
 enum class SkillLevel(val rawValue: String, val displayName: String, val icon: String) {
-    beginner("beginner", "Başlangıç", "⭐"),
-    intermediate("intermediate", "Orta Seviye", "⭐⭐"),
-    advanced("advanced", "İleri Seviye", "⭐⭐⭐"),
-    professional("professional", "Profesyonel", "🏆"),
-    any("any", "Farketmez", "🎯");
+    @com.google.firebase.firestore.PropertyName("beginner") beginner("beginner", "Başlangıç", "⭐"),
+    @com.google.firebase.firestore.PropertyName("intermediate") intermediate("intermediate", "Orta Seviye", "⭐⭐"),
+    @com.google.firebase.firestore.PropertyName("advanced") advanced("advanced", "İleri Seviye", "⭐⭐⭐"),
+    @com.google.firebase.firestore.PropertyName("professional") professional("professional", "Profesyonel", "🏆"),
+    @com.google.firebase.firestore.PropertyName("any") any("any", "Farketmez", "🎯");
 }
 
 data class AgeRange(
@@ -166,8 +166,8 @@ data class MatchPostApplication(
 )
 
 enum class ApplicationStatus(val rawValue: String, val displayName: String) {
-    pending("pending", "Bekliyor"),
-    accepted("accepted", "Kabul Edildi"),
-    rejected("rejected", "Reddedildi"),
-    withdrawn("withdrawn", "Geri Çekildi");
+    @com.google.firebase.firestore.PropertyName("pending") pending("pending", "Bekliyor"),
+    @com.google.firebase.firestore.PropertyName("accepted") accepted("accepted", "Kabul Edildi"),
+    @com.google.firebase.firestore.PropertyName("rejected") rejected("rejected", "Reddedildi"),
+    @com.google.firebase.firestore.PropertyName("withdrawn") withdrawn("withdrawn", "Geri Çekildi");
 }

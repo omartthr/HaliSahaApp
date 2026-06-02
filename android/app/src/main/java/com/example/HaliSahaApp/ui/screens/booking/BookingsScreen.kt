@@ -55,7 +55,8 @@ fun BookingsScreen(
                 )
             )
         },
-        containerColor = AppColors.Background
+        containerColor = AppColors.Background,
+        contentWindowInsets = WindowInsets(0.dp)
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
             // Filter Tabs

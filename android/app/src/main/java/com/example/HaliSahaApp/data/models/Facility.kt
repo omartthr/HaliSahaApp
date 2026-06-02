@@ -71,10 +71,10 @@ data class Facility(
 
 // MARK: - Facility Status
 enum class FacilityStatus(val rawValue: String, val displayName: String, val color: String) {
-    pending("pending", "Onay Bekliyor", "orange"),
-    approved("approved", "Aktif", "green"),
-    rejected("rejected", "Reddedildi", "red"),
-    suspended("suspended", "Askıya Alındı", "gray");
+    @com.google.firebase.firestore.PropertyName("pending") pending("pending", "Onay Bekliyor", "orange"),
+    @com.google.firebase.firestore.PropertyName("approved") approved("approved", "Aktif", "green"),
+    @com.google.firebase.firestore.PropertyName("rejected") rejected("rejected", "Reddedildi", "red"),
+    @com.google.firebase.firestore.PropertyName("suspended") suspended("suspended", "Askıya Alındı", "gray");
 }
 
 // MARK: - Facility Amenities (Özellikler)

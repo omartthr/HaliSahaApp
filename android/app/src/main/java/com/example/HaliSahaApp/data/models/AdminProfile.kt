@@ -5,10 +5,10 @@ import java.util.Date
 
 // MARK: - Admin Approval Status
 enum class AdminApprovalStatus(val rawValue: String, val displayName: String) {
-    PENDING("pending", "Onay Bekliyor"),
-    APPROVED("approved", "Onaylandı"),
-    REJECTED("rejected", "Reddedildi"),
-    SUSPENDED("suspended", "Askıya Alındı");
+    @com.google.firebase.firestore.PropertyName("pending") PENDING("pending", "Onay Bekliyor"),
+    @com.google.firebase.firestore.PropertyName("approved") APPROVED("approved", "Onaylandı"),
+    @com.google.firebase.firestore.PropertyName("rejected") REJECTED("rejected", "Reddedildi"),
+    @com.google.firebase.firestore.PropertyName("suspended") SUSPENDED("suspended", "Askıya Alındı");
     
     val isActive: Boolean
         get() = this == APPROVED
@@ -16,11 +16,11 @@ enum class AdminApprovalStatus(val rawValue: String, val displayName: String) {
 
 // MARK: - Verification Document Type
 enum class AdminDocumentType(val rawValue: String, val displayName: String) {
-    TAX_CERTIFICATE("taxCertificate", "Vergi Levhası"),
-    BUSINESS_LICENSE("businessLicense", "İşyeri Ruhsatı"),
-    ID_FRONT("idFront", "Kimlik Ön Yüz"),
-    ID_BACK("idBack", "Kimlik Arka Yüz"),
-    FACILITY_PHOTO("facilityPhoto", "Saha Fotoğrafı");
+    @com.google.firebase.firestore.PropertyName("taxCertificate") TAX_CERTIFICATE("taxCertificate", "Vergi Levhası"),
+    @com.google.firebase.firestore.PropertyName("businessLicense") BUSINESS_LICENSE("businessLicense", "İşyeri Ruhsatı"),
+    @com.google.firebase.firestore.PropertyName("idFront") ID_FRONT("idFront", "Kimlik Ön Yüz"),
+    @com.google.firebase.firestore.PropertyName("idBack") ID_BACK("idBack", "Kimlik Arka Yüz"),
+    @com.google.firebase.firestore.PropertyName("facilityPhoto") FACILITY_PHOTO("facilityPhoto", "Saha Fotoğrafı");
 }
 
 // MARK: - Verification Documents

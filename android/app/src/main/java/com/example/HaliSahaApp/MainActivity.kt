@@ -2,7 +2,9 @@ package com.example.HaliSahaApp
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.*
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
@@ -30,6 +32,9 @@ import com.example.HaliSahaApp.ui.theme.HaliSahaAppTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Edge-to-edge modunu etkinleştir (Android 15+ zorunlu)
+        // Edge-to-edge modunu etkinleştir
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
             HaliSahaAppTheme {

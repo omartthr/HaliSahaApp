@@ -169,20 +169,20 @@ data class AppNotification(
 
 // MARK: - Notification Type Enum
 enum class NotificationType(val rawValue: String, val icon: String, val color: String) {
-    BOOKING_CONFIRMED("bookingConfirmed", "check_circle", "green"),
-    BOOKING_CANCELLED("bookingCancelled", "cancel", "red"),
-    BOOKING_REMINDER("bookingReminder", "notifications_active", "orange"),
-    MATCH_INVITE("matchInvite", "sports_soccer", "blue"),
-    JOIN_REQUEST("joinRequest", "person_add", "blue"),
-    JOIN_REQUEST_ACCEPTED("joinRequestAccepted", "verified", "green"),
-    JOIN_REQUEST_REJECTED("joinRequestRejected", "block", "red"),
-    NEW_MESSAGE("newMessage", "chat", "purple"),
-    NEW_FOLLOWER("newFollower", "person_add_alt", "pink"),
-    FACILITY_APPROVED("facilityApproved", "business", "green"),
-    FACILITY_REJECTED("facilityRejected", "domain_disabled", "red"),
-    REVIEW_RECEIVED("reviewReceived", "grade", "yellow"),
-    PROMOTIONAL("promotional", "redeem", "indigo"),
-    SYSTEM("system", "notifications", "gray");
+    @com.google.firebase.firestore.PropertyName("bookingConfirmed") BOOKING_CONFIRMED("bookingConfirmed", "check_circle", "green"),
+    @com.google.firebase.firestore.PropertyName("bookingCancelled") BOOKING_CANCELLED("bookingCancelled", "cancel", "red"),
+    @com.google.firebase.firestore.PropertyName("bookingReminder") BOOKING_REMINDER("bookingReminder", "notifications_active", "orange"),
+    @com.google.firebase.firestore.PropertyName("matchInvite") MATCH_INVITE("matchInvite", "sports_soccer", "blue"),
+    @com.google.firebase.firestore.PropertyName("joinRequest") JOIN_REQUEST("joinRequest", "person_add", "blue"),
+    @com.google.firebase.firestore.PropertyName("joinRequestAccepted") JOIN_REQUEST_ACCEPTED("joinRequestAccepted", "verified", "green"),
+    @com.google.firebase.firestore.PropertyName("joinRequestRejected") JOIN_REQUEST_REJECTED("joinRequestRejected", "block", "red"),
+    @com.google.firebase.firestore.PropertyName("newMessage") NEW_MESSAGE("newMessage", "chat", "purple"),
+    @com.google.firebase.firestore.PropertyName("newFollower") NEW_FOLLOWER("newFollower", "person_add_alt", "pink"),
+    @com.google.firebase.firestore.PropertyName("facilityApproved") FACILITY_APPROVED("facilityApproved", "business", "green"),
+    @com.google.firebase.firestore.PropertyName("facilityRejected") FACILITY_REJECTED("facilityRejected", "domain_disabled", "red"),
+    @com.google.firebase.firestore.PropertyName("reviewReceived") REVIEW_RECEIVED("reviewReceived", "grade", "yellow"),
+    @com.google.firebase.firestore.PropertyName("promotional") PROMOTIONAL("promotional", "redeem", "indigo"),
+    @com.google.firebase.firestore.PropertyName("system") SYSTEM("system", "notifications", "gray");
 
     val category: NotificationCategory
         get() = when (this) {
@@ -194,9 +194,9 @@ enum class NotificationType(val rawValue: String, val icon: String, val color: S
 
 // MARK: - Notification Category Enum
 enum class NotificationCategory(val rawValue: String, val displayName: String) {
-    BOOKING("booking", "Rezervasyonlar"),
-    SOCIAL("social", "Sosyal"),
-    SYSTEM("system", "Sistem");
+    @com.google.firebase.firestore.PropertyName("booking") BOOKING("booking", "Rezervasyonlar"),
+    @com.google.firebase.firestore.PropertyName("social") SOCIAL("social", "Sosyal"),
+    @com.google.firebase.firestore.PropertyName("system") SYSTEM("system", "Sistem");
 }
 
 // MARK: - Notification Data

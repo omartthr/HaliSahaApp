@@ -66,7 +66,8 @@ fun HomeScreen(
                 onNotificationClick = { navController.navigate(Screen.NotificationsList.route) }
             )
         },
-        containerColor = AppColors.Background
+        containerColor = AppColors.Background,
+        contentWindowInsets = WindowInsets(0.dp)
     ) { paddingValues ->
 
         // YENİ YAPI: PullToRefreshBox
@@ -127,7 +128,7 @@ fun HomeScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(80.dp)) // Bottom Bar boşluğu
+                Spacer(modifier = Modifier.height(16.dp)) // Sadece standart bir içerik alt boşluğu
             }
         }
     }

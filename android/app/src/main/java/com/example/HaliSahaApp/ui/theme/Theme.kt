@@ -11,10 +11,10 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+import com.example.HaliSahaApp.utils.AppColors
 
 private val DarkColorScheme = darkColorScheme(
     primary = Purple80,
@@ -45,15 +45,41 @@ fun HaliSahaAppTheme(
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = LightColorScheme
+    com.example.HaliSahaApp.utils.AppColors.updateColors(darkTheme)
+
+    val colorScheme = if (darkTheme) {
+        darkColorScheme(
+            primary = AppColors.Primary,
+            secondary = AppColors.Secondary,
+            tertiary = AppColors.Accent,
+            background = AppColors.Background,
+            surface = AppColors.Surface,
+            onPrimary = Color.White,
+            onSecondary = Color.White,
+            onTertiary = Color.White,
+            onBackground = AppColors.TextPrimary,
+            onSurface = AppColors.TextPrimary
+        )
+    } else {
+        lightColorScheme(
+            primary = AppColors.Primary,
+            secondary = AppColors.Secondary,
+            tertiary = AppColors.Accent,
+            background = AppColors.Background,
+            surface = AppColors.Surface,
+            onPrimary = Color.White,
+            onSecondary = Color.White,
+            onTertiary = Color.White,
+            onBackground = AppColors.TextPrimary,
+            onSurface = AppColors.TextPrimary
+        )
+    }
 
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            // Status bar beyaz arka plan, koyu ikonlar
-            window.statusBarColor = Color.White.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = true
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }
 

@@ -47,7 +47,8 @@ fun ChatListScreen(
                 )
             )
         },
-        containerColor = AppColors.Background
+        containerColor = AppColors.Background,
+        contentWindowInsets = WindowInsets(0.dp)
     ) { innerPadding ->
         Box(
             modifier = Modifier

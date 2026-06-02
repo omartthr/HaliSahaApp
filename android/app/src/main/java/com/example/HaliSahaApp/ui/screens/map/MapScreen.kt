@@ -74,17 +74,20 @@ fun MapScreen(
         }
     }
 
-    LaunchedEffect(cameraPositionState.isMoving) {
-        if (!cameraPositionState.isMoving) {
-            val position = cameraPositionState.position.target
-            viewModel.onMapIdle(position.latitude, position.longitude)
-            // Harita kaydırıldıysa ve yüklenmiyorsa "Bu Alanda Ara" butonunu göster
-            if (!uiState.isLoading) {
-                showSearchThisArea = true
+    LaunchedEffect(cameraPositionState) {
+        androidx.compose.runtime.snapshotFlow { cameraPositionState.isMoving }
+            .collect { isMoving ->
+                if (!isMoving) {
+                    val position = cameraPositionState.position.target
+                    viewModel.onMapIdle(position.latitude, position.longitude)
+                    // Harita kaydırıldıysa ve yüklenmiyorsa "Bu Alanda Ara" butonunu göster
+                    if (!uiState.isLoading) {
+                        showSearchThisArea = true
+                    }
+                } else {
+                    showSearchThisArea = false
+                }
             }
-        } else {
-            showSearchThisArea = false
-        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -97,17 +100,22 @@ fun MapScreen(
         ) {
             // Pinler (Marker)
             uiState.filteredFacilities.forEach { facility ->
-                val isSelected = uiState.selectedFacility?.id == facility.id
+                androidx.compose.runtime.key(facility.id) {
+                    val isSelected = uiState.selectedFacility?.id == facility.id
+                    val markerState = com.google.maps.android.compose.rememberMarkerState(
+                        position = LatLng(facility.latitude, facility.longitude)
+                    )
 
-                MarkerComposable(
-                    state = MarkerState(position = LatLng(facility.latitude, facility.longitude)),
-                    title = facility.name,
-                    onClick = {
-                        viewModel.selectFacility(facility)
-                        true
+                    MarkerComposable(
+                        state = markerState,
+                        title = facility.name,
+                        onClick = {
+                            viewModel.selectFacility(facility)
+                            true
+                        }
+                    ) {
+                        FacilityMapPin(isSelected = isSelected)
                     }
-                ) {
-                    FacilityMapPin(isSelected = isSelected)
                 }
             }
         }

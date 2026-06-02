@@ -81,10 +81,10 @@ data class User(
 
 // MARK: - User Type Enum
 enum class UserType(val rawValue: String, val displayName: String) {
-    PLAYER("player", "Oyuncu"),
-    ADMIN("admin", "Saha Sahibi"),
-    SUPER_ADMIN("superAdmin", "Yönetici"),
-    GUEST("guest", "Misafir");
+    @com.google.firebase.firestore.PropertyName("player") PLAYER("player", "Oyuncu"),
+    @com.google.firebase.firestore.PropertyName("admin") ADMIN("admin", "Saha Sahibi"),
+    @com.google.firebase.firestore.PropertyName("superAdmin") SUPER_ADMIN("superAdmin", "Yönetici"),
+    @com.google.firebase.firestore.PropertyName("guest") GUEST("guest", "Misafir");
 
     companion object {
         fun fromString(value: String) = entries.find { it.rawValue == value } ?: PLAYER
@@ -93,11 +93,11 @@ enum class UserType(val rawValue: String, val displayName: String) {
 
 // MARK: - Player Position Enum
 enum class PlayerPosition(val rawValue: String, val displayName: String, val icon: String) {
-    GOALKEEPER("goalkeeper", "Kaleci", "🧤"),
-    DEFENDER("defender", "Defans", "🛡️"),
-    MIDFIELDER("midfielder", "Orta Saha", "⚙️"),
-    FORWARD("forward", "Forvet", "⚽"),
-    UNSPECIFIED("unspecified", "Belirtilmemiş", "👤");
+    @com.google.firebase.firestore.PropertyName("goalkeeper") GOALKEEPER("goalkeeper", "Kaleci", "🧤"),
+    @com.google.firebase.firestore.PropertyName("defender") DEFENDER("defender", "Defans", "🛡️"),
+    @com.google.firebase.firestore.PropertyName("midfielder") MIDFIELDER("midfielder", "Orta Saha", "⚙️"),
+    @com.google.firebase.firestore.PropertyName("forward") FORWARD("forward", "Forvet", "⚽"),
+    @com.google.firebase.firestore.PropertyName("unspecified") UNSPECIFIED("unspecified", "Belirtilmemiş", "👤");
 
     companion object {
         fun fromString(value: String) = entries.find { it.rawValue == value } ?: UNSPECIFIED

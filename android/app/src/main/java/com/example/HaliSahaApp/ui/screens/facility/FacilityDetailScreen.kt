@@ -117,7 +117,7 @@ fun FacilityDetailScreen(
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = AppColors.Background, // Arkaplan Rengi (Açık Gri)
+                    containerColor = Color.Transparent, // Şeffaf arkaplan
                     scrolledContainerColor = AppColors.Surface
                 ),
                 scrollBehavior = scrollBehavior
@@ -136,7 +136,7 @@ fun FacilityDetailScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues),
+                .padding(bottom = paddingValues.calculateBottomPadding()), // Sadece bottom padding
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             // 1. Hero Image
@@ -220,7 +220,7 @@ fun HeroSection(facility: Facility) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(250.dp)
+            .height(300.dp) // Edge to edge olacağı için biraz daha yüksek
     ) {
         if (facility.images.isNotEmpty()) {
             val pagerState = androidx.compose.foundation.pager.rememberPagerState(

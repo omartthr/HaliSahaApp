@@ -73,7 +73,8 @@ fun ProfileScreen(
                     containerColor = AppColors.Background
                 )
             )
-        }
+        },
+        contentWindowInsets = WindowInsets(0.dp)
     ) { innerPadding ->
         Column(
             modifier = Modifier

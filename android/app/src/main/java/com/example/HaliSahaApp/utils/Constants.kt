@@ -46,6 +46,9 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
@@ -129,23 +132,47 @@ object UIConstants {
 object AppColors {
 
     // MARK: - Fallback Colors (Hex)
-    val Primary = Color(0xFF2E7D32)      // Yeşil
-    val Secondary = Color(0xFF1565C0)    // Mavi
-    val Accent = Color(0xFFFF6F00)       // Turuncu
-    val Background = Color(0xFFF5F5F5)   // Açık gri
-    val Surface = Color.White
-    val CardBackground = Color.White
+    var Primary by mutableStateOf(Color(0xFF2E7D32))      // Yeşil
+    var Secondary by mutableStateOf(Color(0xFF1565C0))    // Mavi
+    var Accent by mutableStateOf(Color(0xFFFF6F00))       // Turuncu
+    var Background by mutableStateOf(Color(0xFFF5F5F5))   // Açık gri
+    var Surface by mutableStateOf(Color.White)
+    var CardBackground by mutableStateOf(Color.White)
 
     // MARK: - Text Colors
-    val TextPrimary = Color(0xFF212121)
-    val TextSecondary = Color(0xFF757575)
-    val TextTertiary = Color(0xFFBDBDBD)
+    var TextPrimary by mutableStateOf(Color(0xFF212121))
+    var TextSecondary by mutableStateOf(Color(0xFF757575))
+    var TextTertiary by mutableStateOf(Color(0xFFBDBDBD))
 
     // MARK: - Status Colors
-    val Success = Color(0xFF4CAF50)
-    val Warning = Color(0xFFFF9800)
-    val Error = Color(0xFFF44336)
-    val Info = Color(0xFF2196F3)
+    var Success by mutableStateOf(Color(0xFF4CAF50))
+    var Warning by mutableStateOf(Color(0xFFFF9800))
+    var Error by mutableStateOf(Color(0xFFF44336))
+    var Info by mutableStateOf(Color(0xFF2196F3))
+
+    fun updateColors(isDark: Boolean) {
+        if (isDark) {
+            Primary = Color(0xFF2E7D32)
+            Secondary = Color(0xFF1565C0)
+            Accent = Color(0xFFFF6F00)
+            Background = Color(0xFF000000)
+            Surface = Color(0xFF1C1C1E)
+            CardBackground = Color(0xFF1C1C1E)
+            TextPrimary = Color(0xFFFFFFFF)
+            TextSecondary = Color(0xFFA0A0A5)
+            TextTertiary = Color(0xFF48484A)
+        } else {
+            Primary = Color(0xFF2E7D32)
+            Secondary = Color(0xFF1565C0)
+            Accent = Color(0xFFFF6F00)
+            Background = Color(0xFFF5F5F5)
+            Surface = Color.White
+            CardBackground = Color.White
+            TextPrimary = Color(0xFF212121)
+            TextSecondary = Color(0xFF757575)
+            TextTertiary = Color(0xFFBDBDBD)
+        }
+    }
 
     // Hex String to Color Helper
     fun fromHex(hex: String): Color {

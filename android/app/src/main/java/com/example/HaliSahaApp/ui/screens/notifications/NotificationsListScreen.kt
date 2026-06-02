@@ -54,11 +54,11 @@ fun NotificationsListScreen(
         }
     ) { padding ->
         if (isLoading && notifications.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
         } else if (notifications.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(AppIcons.Notification, contentDescription = null, modifier = Modifier.size(64.dp), tint = AppColors.TextSecondary)
                     Spacer(modifier = Modifier.height(16.dp))

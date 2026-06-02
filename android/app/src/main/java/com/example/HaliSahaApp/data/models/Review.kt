@@ -138,9 +138,9 @@ data class ReviewSummary(
 
 // MARK: - Rating Category
 enum class RatingCategory(val rawValue: String, val displayName: String, val icon: String) {
-    CLEANLINESS("cleanliness", "Temizlik", "auto_awesome"), // sparkles
-    SURFACE("surface", "Zemin Kalitesi", "grass"),          // leaf.fill
-    SERVICE("service", "Hizmet", "person"),                // person.fill
-    FACILITIES("facilities", "Tesisler", "apartment"),     // building.2.fill
-    VALUE_FOR_MONEY("valueForMoney", "Fiyat/Performans", "payments"); // lirasign
+    @com.google.firebase.firestore.PropertyName("cleanliness") CLEANLINESS("cleanliness", "Temizlik", "auto_awesome"), // sparkles
+    @com.google.firebase.firestore.PropertyName("surface") SURFACE("surface", "Zemin Kalitesi", "grass"),          // leaf.fill
+    @com.google.firebase.firestore.PropertyName("service") SERVICE("service", "Hizmet", "person"),                // person.fill
+    @com.google.firebase.firestore.PropertyName("facilities") FACILITIES("facilities", "Tesisler", "apartment"),     // building.2.fill
+    @com.google.firebase.firestore.PropertyName("valueForMoney") VALUE_FOR_MONEY("valueForMoney", "Fiyat/Performans", "payments"); // lirasign
 }
