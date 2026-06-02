@@ -5,38 +5,15 @@ import Navbar from "@/frontend/components/common/Navbar";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { MapPin, Phone, Star, Heart, Share2, ChevronLeft, ChevronRight, Check, Car, Droplets, Utensils, Lightbulb, Wifi, Wind, ArrowRight, X, AlertCircle, CreditCard } from "lucide-react";
+import { MapPin, Phone, Star, Heart, Share2, ChevronLeft, ChevronRight, Check, Car, Droplets, Utensils, Lightbulb, Wifi, Wind, ArrowRight, X, AlertCircle, CreditCard, Coffee } from "lucide-react";
 import { getFieldAverageRating, getFieldReviews, rateField, hasRatedField } from "@/backend/services/ratingService";
 import { getField } from "@/backend/services/fieldService";
 import { createBooking } from "@/backend/services/bookingService";
 import { useAuth } from "@/frontend/context/AuthContext";
 import { toast } from "react-hot-toast";
+import GoogleLocationMap from "@/frontend/components/map/GoogleLocationMap";
 
-// Mock data — Firebase bağlandığında gerçek data gelecek
-const mockField = {
-  id: "1",
-  name: "Kadıköy Merkez Halı Saha",
-  address: "Zühtüpaşa, Şükrü Saracoğlu Stadı Yanı, Kadıköy / İstanbul",
-  phone: "0216 123 45 67",
-  description: "İstanbul'un kalbinde, modern tesislerle donatılmış halı saha kompleksi. 5v5 ve 7v7 sahaları, soyunma odaları ve kafeterya ile eksiksiz bir spor deneyimi sunuyoruz.",
-  rating: 4.8,
-  reviewCount: 124,
-  isIndoor: false,
-  hasParking: true,
-  features: [
-    { icon: "shower", name: "Duş" },
-    { icon: "parking", name: "Otopark" },
-    { icon: "utensils", name: "Kantin" },
-    { icon: "lightbulb", name: "Aydınlatma" },
-    { icon: "wind", name: "Klima" },
-    { icon: "wifi", name: "Wi-Fi" },
-  ],
-  pitches: [
-    { id: "p1", name: "5v5 Saha A", size: "5'e 5", price: 350, nightPrice: 450 },
-    { id: "p2", name: "5v5 Saha B", size: "5'e 5", price: 350, nightPrice: 450 },
-    { id: "p3", name: "7v7 Büyük Saha", size: "7'ye 7", price: 500, nightPrice: 650 },
-  ],
-};
+
 
 const today = new Date();
 const getDates = () => Array.from({ length: 14 }, (_, i) => {
@@ -57,9 +34,9 @@ export default function FieldDetailPage({ params }: { params: Promise<{ fieldId:
   const { user } = useAuth();
   const router = useRouter();
   const [realField, setRealField] = useState<any>(null);
-  const currentField = realField || mockField;
+  const [loading, setLoading] = useState(true);
   
-  const [selectedPitch, setSelectedPitch] = useState(mockField.pitches[0]);
+  const [selectedPitch, setSelectedPitch] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState(today);
   const [selectedSlots, setSelectedSlots] = useState<number[]>([]);
   const [isFavorite, setIsFavorite] = useState(false);
@@ -83,7 +60,7 @@ export default function FieldDetailPage({ params }: { params: Promise<{ fieldId:
         const slotLabel = timeSlots.find(s => s.hour === slotHour)?.label;
         await createBooking({
           fieldId,
-          fieldName: currentField.name,
+          fieldName: realField.name,
           userId: user.uid,
           userName: user.displayName || "Kullanıcı",
           date: format(selectedDate, "yyyy-MM-dd"),
@@ -103,7 +80,13 @@ export default function FieldDetailPage({ params }: { params: Promise<{ fieldId:
   const dates = getDates();
 
   useEffect(() => {
-    getField(fieldId).then(setRealField);
+    getField(fieldId).then((data) => {
+      setRealField(data);
+      if (data && data.pitches && data.pitches.length > 0) {
+        setSelectedPitch(data.pitches[0]);
+      }
+      setLoading(false);
+    });
     getFieldAverageRating(fieldId).then(setFieldRating);
     getFieldReviews(fieldId).then(setReviews);
   }, [fieldId]);
@@ -116,9 +99,27 @@ export default function FieldDetailPage({ params }: { params: Promise<{ fieldId:
     );
   };
 
-  const pricePerHour = currentField.price || selectedPitch.price || 350;
+  const pricePerHour = selectedPitch?.pricing?.daytimePrice || selectedPitch?.price || realField?.price || 0;
   const totalPrice = selectedSlots.length * pricePerHour;
-  const canBook = selectedSlots.length > 0;
+  const canBook = selectedSlots.length > 0 && selectedPitch;
+
+  if (loading) {
+    return (
+      <div className="page-wrapper" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
+        <Navbar />
+        <div style={{ color: "#2E7D32", fontWeight: 700, fontSize: 18 }}>Yükleniyor...</div>
+      </div>
+    );
+  }
+
+  if (!realField) {
+    return (
+      <div className="page-wrapper" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
+        <Navbar />
+        <div style={{ color: "#ef4444", fontWeight: 700, fontSize: 18 }}>Saha bulunamadı.</div>
+      </div>
+    );
+  }
 
   const dayNames = ["Paz", "Pzt", "Sal", "Çrş", "Per", "Cum", "Cmt"];
   const monthNames = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
@@ -203,27 +204,27 @@ export default function FieldDetailPage({ params }: { params: Promise<{ fieldId:
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
             <div>
               <p style={{ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: "#2E7D32", fontWeight: 700, marginBottom: 4 }}>SAHA DETAYI</p>
-              <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111827", marginBottom: 8 }}>{currentField.name}</h1>
+              <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111827", marginBottom: 8 }}>{realField.name}</h1>
             </div>
             <div style={{ background: "#F59E0B", color: "white", borderRadius: 12, padding: "8px 12px", display: "flex", alignItems: "center", gap: 6, boxShadow: "0 4px 12px rgba(245,158,11,0.2)" }}>
               <Star size={16} fill="white" />
-              <span style={{ fontWeight: 800, fontSize: 16 }}>{fieldRating > 0 ? fieldRating.toFixed(1) : (currentField.rating || "Yen")}</span>
+              <span style={{ fontWeight: 800, fontSize: 16 }}>{fieldRating > 0 ? fieldRating.toFixed(1) : "Yeni"}</span>
             </div>
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 20 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#6b7280", fontSize: 14 }}>
               <MapPin size={16} style={{ color: "#2E7D32" }} />
-              <span>{currentField.address}</span>
+              <span>{realField.address}</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#6b7280", fontSize: 14 }}>
               <Phone size={16} style={{ color: "#2E7D32" }} />
-              <a href={`tel:${currentField.phone}`} style={{ color: "#2E7D32", fontWeight: 700, textDecoration: "none" }}>{currentField.phone}</a>
+              <a href={`tel:${realField.phone}`} style={{ color: "#2E7D32", fontWeight: 700, textDecoration: "none" }}>{realField.phone}</a>
             </div>
           </div>
 
           <p style={{ fontSize: 15, color: "#4b5563", lineHeight: 1.6, display: showFullDesc ? "block" : "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-            {currentField.description}
+            {realField.description}
           </p>
           <button onClick={() => setShowFullDesc(!showFullDesc)} style={{ background: "none", border: "none", color: "#2E7D32", fontSize: 14, fontWeight: 700, cursor: "pointer", marginTop: 8, padding: 0 }}>
             {showFullDesc ? "Daha az" : "Devamını oku"}
@@ -232,71 +233,81 @@ export default function FieldDetailPage({ params }: { params: Promise<{ fieldId:
           {/* Tags */}
           <div style={{ display: "flex", gap: 8, marginTop: 20, flexWrap: "wrap" }}>
             <span className="pill pill-primary" style={{ padding: "6px 14px", display: "inline-flex", alignItems: "center", gap: 6 }}>
-              {(currentField.amenities?.isIndoor ?? currentField.isIndoor) ? <><Wind size={13} /> Kapalı Alan</> : <><Lightbulb size={13} /> Açık Alan</>}
+              {(realField.amenities?.isIndoor ?? realField.isIndoor) ? <><Wind size={13} /> Kapalı Alan</> : <><Lightbulb size={13} /> Açık Alan</>}
             </span>
-            {(currentField.amenities?.hasParking ?? currentField.hasParking) && <span className="pill pill-outline" style={{ padding: "6px 14px", background: "white", display: "inline-flex", alignItems: "center", gap: 6 }}><Car size={13} /> Otopark</span>}
+            {(realField.amenities?.hasParking ?? realField.hasParking) && <span className="pill pill-outline" style={{ padding: "6px 14px", background: "white", display: "inline-flex", alignItems: "center", gap: 6 }}><Car size={13} /> Otopark</span>}
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 16 }}>
-          {/* Left Column */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 16, alignItems: "stretch" }}>
+          {/* Sol Kolon */}
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {/* Pitch Selection */}
+            {/* Sahalar */}
             <div className="auth-dynamo-glass match-dynamo-card" style={{ padding: 24, borderRadius: 24 }}>
               <h2 style={{ fontSize: 18, fontWeight: 700, color: "#111827", marginBottom: 16 }}>Sahalar</h2>
               <div style={{ display: "grid", gap: 10 }}>
-                {(currentField.pitches || mockField.pitches).map((pitch: any) => {
-                  const isSelected = selectedPitch.id === pitch.id;
-                  return (
-                    <button key={pitch.id} onClick={() => setSelectedPitch(pitch)}
-                      style={{ 
-                        width: "100%", 
-                        padding: "16px", 
-                        borderRadius: 16, 
-                        border: `2px solid ${isSelected ? "#2E7D32" : "rgba(15,23,42,0.08)"}`, 
-                        background: isSelected ? "rgba(232,245,233,0.85)" : "rgba(255,255,255,0.5)", 
-                        cursor: "pointer", 
-                        textAlign: "left", 
-                        transition: "all 0.2s" 
-                      }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                        <span style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>{pitch.name}</span>
-                        {isSelected && <Check size={18} style={{ color: "#2E7D32" }} />}
-                      </div>
-                      <p style={{ fontSize: 13, color: "#9ca3af" }}>{pitch.size}</p>
-                      <p style={{ fontSize: 20, fontWeight: 800, color: "#2E7D32", marginTop: 8 }}>₺{currentField.price || pitch.price}<span style={{ fontSize: 13, fontWeight: 600 }}>/saat</span></p>
-                    </button>
-                  );
-                })}
+                {(realField.pitches && realField.pitches.length > 0) ? (
+                  realField.pitches.map((pitch: any) => {
+                    const isSelected = selectedPitch?.id === pitch.id;
+                    return (
+                      <button key={pitch.id} onClick={() => setSelectedPitch(pitch)}
+                        style={{ 
+                          width: "100%", 
+                          padding: "16px", 
+                          borderRadius: 16, 
+                          border: `2px solid ${isSelected ? "#2E7D32" : "rgba(15,23,42,0.08)"}`, 
+                          background: isSelected ? "rgba(232,245,233,0.85)" : "rgba(255,255,255,0.5)", 
+                          cursor: "pointer", 
+                          textAlign: "left", 
+                          transition: "all 0.2s" 
+                        }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                          <span style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>{pitch.name}</span>
+                          {isSelected && <Check size={18} style={{ color: "#2E7D32" }} />}
+                        </div>
+                        <p style={{ fontSize: 13, color: "#9ca3af" }}>{pitch.size}</p>
+                        <p style={{ fontSize: 20, fontWeight: 800, color: "#2E7D32", marginTop: 8 }}>₺{pitch.pricing?.daytimePrice || pitch.price || realField.price || 0}<span style={{ fontSize: 13, fontWeight: 600 }}>/saat</span></p>
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div style={{ padding: 16, textAlign: "center", color: "#6b7280", fontSize: 14 }}>Bu tesise ait saha bilgisi bulunamadı.</div>
+                )}
               </div>
             </div>
 
             {/* Amenities */}
             <div className="auth-dynamo-glass match-dynamo-card" style={{ padding: 24, borderRadius: 24 }}>
               <h2 style={{ fontSize: 18, fontWeight: 700, color: "#111827", marginBottom: 16 }}>Özellikler</h2>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-                {(currentField.features || mockField.features).map((f: any) => {
-                  const iconMap: Record<string, React.ReactNode> = {
-                    shower: <Droplets size={20} strokeWidth={2} />,
-                    parking: <Car size={20} strokeWidth={2} />,
-                    utensils: <Utensils size={20} strokeWidth={2} />,
-                    lightbulb: <Lightbulb size={20} strokeWidth={2} />,
-                    wind: <Wind size={20} strokeWidth={2} />,
-                    wifi: <Wifi size={20} strokeWidth={2} />,
-                  };
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {(realField.features || []).map((f: any, index: number) => {
+                  const featureName = typeof f === 'string' ? f : f.name;
+                  const key = featureName || `feature-${index}`;
+
+                  let Icon = <Check size={14} strokeWidth={2.5} />;
+                  const lowerName = featureName.toLowerCase();
+                  if (lowerName.includes("duş") || lowerName.includes("dus") || lowerName.includes("soyunma")) {
+                    Icon = <Droplets size={14} strokeWidth={2.5} />;
+                  } else if (lowerName.includes("otopark") || lowerName.includes("park")) {
+                    Icon = <Car size={14} strokeWidth={2.5} />;
+                  } else if (lowerName.includes("kaf") || lowerName.includes("kantin")) {
+                    Icon = <Coffee size={14} strokeWidth={2.5} />;
+                  } else if (lowerName.includes("aydinlatma") || lowerName.includes("ışık") || lowerName.includes("isik")) {
+                    Icon = <Lightbulb size={14} strokeWidth={2.5} />;
+                  }
+
                   return (
-                    <div key={f.name} style={{ background: "rgba(255,255,255,0.5)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 16, padding: "16px 8px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-                      <div style={{ color: "#2E7D32" }}>{iconMap[f.icon] ?? <Wifi size={20} />}</div>
-                      <div style={{ fontSize: 12, color: "#4b5563", fontWeight: 700 }}>{f.name}</div>
-                    </div>
+                    <span key={key} style={{ padding: "6px 12px", background: "#E8F5E9", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#2E7D32", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      {Icon} {featureName}
+                    </span>
                   );
                 })}
               </div>
             </div>
           </div>
 
-          {/* Right Column */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Sağ Kolon */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 16, height: "100%" }}>
             {/* Date Selection */}
             <div className="auth-dynamo-glass match-dynamo-card" style={{ padding: 24, borderRadius: 24 }}>
               <h2 style={{ fontSize: 18, fontWeight: 700, color: "#111827", marginBottom: 16 }}>Tarih Seçin</h2>
@@ -318,7 +329,7 @@ export default function FieldDetailPage({ params }: { params: Promise<{ fieldId:
             </div>
 
             {/* Time Slots */}
-            <div className="auth-dynamo-glass match-dynamo-card" style={{ padding: 24, borderRadius: 24 }}>
+            <div className="auth-dynamo-glass match-dynamo-card" style={{ padding: 24, borderRadius: 24, flex: 1, display: "flex", flexDirection: "column" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                 <h2 style={{ fontSize: 18, fontWeight: 700, color: "#111827" }}>Saat Seçin</h2>
                 {selectedSlots.length > 0 && (
@@ -340,7 +351,7 @@ export default function FieldDetailPage({ params }: { params: Promise<{ fieldId:
                 })}
               </div>
               {/* Legend */}
-              <div style={{ display: "flex", gap: 16, marginTop: 16, padding: "12px", background: "rgba(0,0,0,0.02)", borderRadius: 12 }}>
+              <div style={{ display: "flex", gap: 16, marginTop: "auto", padding: "12px", background: "rgba(0,0,0,0.02)", borderRadius: 12 }}>
                 {[{ color: "#2E7D32", label: "Seçili" }, { color: "rgba(255,255,255,0.6)", label: "Müsait" }, { color: "rgba(0,0,0,0.1)", label: "Dolu" }].map(l => (
                   <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#6b7280", fontWeight: 600 }}>
                     <div style={{ width: 10, height: 10, borderRadius: "50%", background: l.color }} />
@@ -351,6 +362,19 @@ export default function FieldDetailPage({ params }: { params: Promise<{ fieldId:
             </div>
           </div>
         </div>
+
+        {realField.latitude && realField.longitude && (
+          <div className="auth-dynamo-glass match-dynamo-card" style={{ padding: 24, marginTop: 16, borderRadius: 24 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: "#111827", marginBottom: 16 }}>Konum</h2>
+            <div style={{ height: "300px" }}>
+              <GoogleLocationMap position={[realField.latitude, realField.longitude]} readOnly={true} />
+            </div>
+            <p style={{ fontSize: 13, color: "#6b7280", marginTop: 12, display: "flex", alignItems: "center", gap: 6 }}>
+              <MapPin size={14} style={{ color: "#2E7D32" }} />
+              {realField.address}
+            </p>
+          </div>
+        )}
 
         {/* Reviews */}
         <div className="auth-dynamo-glass match-dynamo-card" style={{ padding: 24, marginTop: 16, borderRadius: 24 }}>
@@ -407,18 +431,8 @@ export default function FieldDetailPage({ params }: { params: Promise<{ fieldId:
         </div>
       </div>
 
-      {/* Bottom Bar — Maç Kur stilinde */}
-      <div className="match-booking-bar">
-        <div style={{ marginRight: "auto", display: "flex", flexDirection: "column", background: "rgba(255,255,255,0.8)", padding: "10px 20px", borderRadius: 16, backdropFilter: "blur(10px)", border: "1px solid white", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
-          {canBook ? (
-            <>
-              <p style={{ fontSize: 24, fontWeight: 900, color: "#111827", lineHeight: 1 }}>₺{totalPrice}</p>
-              <p style={{ fontSize: 12, color: "#2E7D32", fontWeight: 700 }}>{selectedSlots.length} saat seçildi</p>
-            </>
-          ) : (
-            <p style={{ fontSize: 14, color: "#94a3b8", fontWeight: 600 }}>Henüz saat seçilmedi</p>
-          )}
-        </div>
+      {/* Bottom Bar — Sadece Rezervasyon Butonu */}
+      <div className="match-booking-bar" style={{ display: "flex", justifyContent: "flex-end" }}>
         <button
           className={`match-booking-button ${canBook ? "is-active" : "is-disabled"}`}
           onClick={() => {

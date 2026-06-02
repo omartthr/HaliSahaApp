@@ -15,13 +15,13 @@ import { db } from "@/database/firebase";
 
 export type AdminRecord = {
   id: string;
-  status?: string;
+  approvalStatus?: string;
   [key: string]: unknown;
 };
 
 /** Onay bekleyen adminleri realtime dinle */
 export function getPendingAdminsRealtime(callback: (admins: AdminRecord[]) => void) {
-  const q = query(collection(db, "admins"), where("status", "==", "pending"));
+  const q = query(collection(db, "admins"), where("approvalStatus", "==", "pending"));
   return onSnapshot(q, (snap) => {
     const admins = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     callback(admins);
@@ -31,7 +31,7 @@ export function getPendingAdminsRealtime(callback: (admins: AdminRecord[]) => vo
 /** Admin onayla */
 export async function approveAdmin(adminId: string) {
   return updateDoc(doc(db, "admins", adminId), {
-    status: "approved",
+    approvalStatus: "approved",
     approvedAt: serverTimestamp(),
   });
 }
@@ -39,7 +39,7 @@ export async function approveAdmin(adminId: string) {
 /** Admin reddet */
 export async function rejectAdmin(adminId: string) {
   return updateDoc(doc(db, "admins", adminId), {
-    status: "rejected",
+    approvalStatus: "rejected",
     rejectedAt: serverTimestamp(),
   });
 }

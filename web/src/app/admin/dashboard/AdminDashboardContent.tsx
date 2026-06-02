@@ -19,20 +19,27 @@ import { toast } from "react-hot-toast";
 import {
   BarChart3, Bell, Building2, CalendarClock, CheckCircle2,
   ChevronRight, Clock3, LayoutGrid, LogOut, MapPin, Plus,
-  Settings, Star, Trash2, TrendingUp, XCircle, AlertCircle, Activity,
+  Settings, Star, Trash2, TrendingUp, XCircle, AlertCircle, Activity, X
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import GoogleLocationMap from "@/frontend/components/map/GoogleLocationMap";
 
 type AdminTab = "dashboard" | "bookings" | "facilities" | "reports" | "settings";
 type ReservationStatus = "pending_payment" | "confirmed" | "approved" | "cancelled" | "completed" | "no_show" | string;
 type Reservation = {
-  id: string; fieldId?: string; fieldName?: string; userId?: string;
-  userName?: string; date?: string; timeSlot?: string;
+  id: string; facilityId?: string; pitchId?: string; fieldId?: string; fieldName?: string; userId?: string;
+  userFullName?: string; userName?: string; pitchName?: string; facilityName?: string;
+  date?: string | any; startHour?: number; endHour?: number; timeSlot?: string;
   status?: ReservationStatus; totalPrice?: number; depositAmount?: number;
 };
 type Facility = {
   id: string; name: string; address: string; phone: string;
-  rating?: number; features?: string[]; ownerId?: string; price?: number;
+  averageRating?: number; totalReviews?: number; features?: string[]; ownerId?: string; price?: number;
+};
+type Pitch = {
+  id: string; facilityId: string; name: string; description?: string;
+  pitchType: string; surfaceType: string; size: string; capacity: number;
+  pricing: { daytimePrice: number; eveningPrice: number }; isActive?: boolean;
 };
 type BookingFilter = "all" | "pending_payment" | "confirmed" | "approved" | "completed" | "cancelled" | "no_show";
 
@@ -79,6 +86,28 @@ const todayFormatted = () =>
     weekday: "long", year: "numeric", month: "long", day: "numeric",
   });
 
+const formatDateForSort = (d: any): string => {
+  if (!d) return "";
+  if (typeof d === "string") return d;
+  if (d.toDate) {
+    const dt = d.toDate();
+    // Use local timezone format to match date picker, yyyy-mm-dd
+    return dt.toLocaleDateString('en-CA'); 
+  }
+  if (d.seconds) {
+    return new Date(d.seconds * 1000).toLocaleDateString('en-CA');
+  }
+  return "";
+};
+
+const formatDateForUI = (d: any): string => {
+  if (!d) return "-";
+  if (typeof d === "string") return d;
+  if (d.toDate) return d.toDate().toLocaleDateString("tr-TR");
+  if (d.seconds) return new Date(d.seconds * 1000).toLocaleDateString("tr-TR");
+  return "-";
+};
+
 const cardStyle: React.CSSProperties = {
   background: "rgba(255, 255, 255, 0.78)", borderRadius: 20, padding: 20,
   boxShadow: "0 14px 34px rgba(17, 24, 39, 0.06)", border: "1px solid rgba(255, 255, 255, 0.84)",
@@ -102,23 +131,38 @@ export default function AdminDashboardContent() {
   const [isFallbackFacilityMode, setIsFallbackFacilityMode] = useState(false);
   const [bookingFilter, setBookingFilter] = useState<BookingFilter>("all");
   const [facilityForm, setFacilityForm] = useState({
-    name: "", address: "", phone: "", rating: "4.5",
+    name: "", address: "", phone: "",
     features: "Soyunma Odası, Otopark, Kantin",
     price: "350",
+    latitude: 41.0082,
+    longitude: 28.9784,
   });
   const [editingFacilityId, setEditingFacilityId] = useState<string | null>(null);
   const [showFacilityForm, setShowFacilityForm] = useState(false);
+  const [adminProfile, setAdminProfile] = useState<any>(null);
+
+  const [pitches, setPitches] = useState<Pitch[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [showPitchForm, setShowPitchForm] = useState(false);
+  const [showSupportModal, setShowSupportModal] = useState(false);
+  const [supportMessage, setSupportMessage] = useState("");
+  const [isSendingSupport, setIsSendingSupport] = useState(false);
+  const [activeFacilityIdForPitch, setActiveFacilityIdForPitch] = useState<string | null>(null);
+  const [pitchForm, setPitchForm] = useState({
+    name: "", pitchType: "outdoor", surfaceType: "syntheticGrass", size: "7v7",
+    capacity: "14", daytimePrice: "500", eveningPrice: "700"
+  });
 
   const facilityIds = useMemo(() => facilities.map((f) => f.id), [facilities]);
 
   const reservations = useMemo(
-    () => allReservations.filter((r) => !!r.fieldId && facilityIds.includes(r.fieldId)),
+    () => allReservations.filter((r) => (r.facilityId && facilityIds.includes(r.facilityId)) || (r.fieldId && facilityIds.includes(r.fieldId))),
     [allReservations, facilityIds]
   );
 
   const sortedReservations = useMemo(
     () => [...reservations].sort((a, b) =>
-      `${b.date || ""} ${b.timeSlot || ""}`.localeCompare(`${a.date || ""} ${a.timeSlot || ""}`)
+      `${formatDateForSort(b.date)} ${b.timeSlot || ""}`.localeCompare(`${formatDateForSort(a.date)} ${a.timeSlot || ""}`)
     ),
     [reservations]
   );
@@ -128,9 +172,9 @@ export default function AdminDashboardContent() {
     [sortedReservations]
   );
 
-  const todayISO = new Date().toISOString().slice(0, 10);
+  const todayISO = new Date().toLocaleDateString('en-CA');
   const todayReservations = useMemo(
-    () => sortedReservations.filter((r) => r.date === todayISO),
+    () => sortedReservations.filter((r) => formatDateForSort(r.date) === todayISO),
     [sortedReservations, todayISO]
   );
 
@@ -143,7 +187,7 @@ export default function AdminDashboardContent() {
 
   const avgRating = useMemo(() => {
     if (!facilities.length) return "0.0";
-    const sum = facilities.reduce((s, f) => s + (f.rating || 0), 0);
+    const sum = facilities.reduce((s, f) => s + (f.averageRating || 0), 0);
     return (sum / facilities.length).toFixed(1);
   }, [facilities]);
 
@@ -166,16 +210,39 @@ export default function AdminDashboardContent() {
     const unsubFields = onSnapshot(collection(db, "facilities"), (snap) => {
       const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Facility, "id">) }));
       const owned = list.filter((f) => f.ownerId === user.uid);
-      if (owned.length > 0) { setFacilities(owned); setIsFallbackFacilityMode(false); }
-      else { setFacilities(list.slice(0, 1)); setIsFallbackFacilityMode(true); }
+      setFacilities(owned);
+      setIsFallbackFacilityMode(false);
       setLoading(false);
     });
     const unsubRes = onSnapshot(collection(db, "bookings"), (snap) => {
       setAllReservations(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Reservation, "id">) })));
       setLoading(false);
     });
-    return () => { unsubFields(); unsubRes(); };
+    const unsubAdmin = onSnapshot(doc(db, "admins", user.uid), (docSnap) => {
+      if (docSnap.exists()) setAdminProfile(docSnap.data());
+    });
+    return () => { unsubFields(); unsubRes(); unsubAdmin(); };
   }, [user]);
+
+  useEffect(() => {
+    if (!facilities.length) {
+      setPitches([]);
+      return;
+    }
+    const unsubs: (() => void)[] = [];
+    const pitchesMap = new Map<string, Pitch[]>();
+    
+    facilities.forEach(f => {
+      const u = onSnapshot(collection(db, "facilities", f.id, "pitches"), (snap) => {
+        pitchesMap.set(f.id, snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Pitch, "id">) })));
+        const allPitches: Pitch[] = [];
+        pitchesMap.forEach(ps => allPitches.push(...ps));
+        setPitches(allPitches);
+      });
+      unsubs.push(u);
+    });
+    return () => unsubs.forEach(u => u());
+  }, [facilities]);
 
   const handleStatusUpdate = async (resId: string, newStatus: ReservationStatus) => {
     try {
@@ -185,7 +252,10 @@ export default function AdminDashboardContent() {
   };
 
   const resetFacilityForm = () => {
-    setFacilityForm({ name: "", address: "", phone: "", rating: "4.5", features: "Soyunma Odası, Otopark, Kantin", price: "350" });
+    setFacilityForm({ 
+      name: "", address: "", phone: "", features: "Soyunma Odası, Otopark, Kantin", price: "350",
+      latitude: 41.0082, longitude: 28.9784 
+    });
     setEditingFacilityId(null);
     setShowFacilityForm(false);
   };
@@ -193,19 +263,29 @@ export default function AdminDashboardContent() {
   const handleFacilitySave = async () => {
     if (!user) return;
     if (!facilityForm.name.trim() || !facilityForm.address.trim()) { toast.error("Tesis adı ve adres zorunlu."); return; }
-    const payload = {
+    
+    // For updates, we don't send rating/reviews to avoid overwriting them
+    const basePayload = {
       name: facilityForm.name.trim(), address: facilityForm.address.trim(),
-      phone: facilityForm.phone.trim(), rating: Number(facilityForm.rating || 0),
+      phone: facilityForm.phone.trim(),
       features: facilityForm.features.split(",").map((f) => f.trim()).filter(Boolean),
       price: Number(facilityForm.price || 350),
+      latitude: facilityForm.latitude,
+      longitude: facilityForm.longitude,
       ownerId: user.uid, updatedAt: serverTimestamp(),
     };
+
     try {
       if (editingFacilityId) {
-        await updateDoc(doc(db, "facilities", editingFacilityId), payload);
+        await updateDoc(doc(db, "facilities", editingFacilityId), basePayload);
         toast.success("Tesis güncellendi.");
       } else {
-        await addDoc(collection(db, "facilities"), { ...payload, createdAt: serverTimestamp() });
+        await addDoc(collection(db, "facilities"), { 
+          ...basePayload, 
+          averageRating: 0,
+          totalReviews: 0,
+          createdAt: serverTimestamp() 
+        });
         toast.success("Yeni tesis eklendi.");
       }
       resetFacilityForm();
@@ -216,8 +296,10 @@ export default function AdminDashboardContent() {
     setEditingFacilityId(facility.id);
     setFacilityForm({
       name: facility.name || "", address: facility.address || "", phone: facility.phone || "",
-      rating: String(facility.rating ?? 4.5), features: (facility.features || []).join(", "),
+      features: (facility.features || []).join(", "),
       price: String(facility.price || 350),
+      latitude: facility.latitude || 41.0082,
+      longitude: facility.longitude || 28.9784,
     });
     setShowFacilityForm(true);
   };
@@ -231,13 +313,78 @@ export default function AdminDashboardContent() {
     } catch (err) { toast.error("Tesis silinemedi: " + err); }
   };
 
+  const resetPitchForm = () => {
+    setActiveFacilityIdForPitch(null);
+    setPitchForm({ name: "", pitchType: "outdoor", surfaceType: "syntheticGrass", size: "7v7", capacity: "14", daytimePrice: "500", eveningPrice: "700" });
+    setShowPitchForm(false);
+  };
+
+  const startAddPitch = (facilityId: string) => {
+    setActiveFacilityIdForPitch(facilityId);
+    setPitchForm({ name: "", pitchType: "outdoor", surfaceType: "syntheticGrass", size: "7v7", capacity: "14", daytimePrice: "500", eveningPrice: "700" });
+    setShowPitchForm(true);
+  };
+
+  const handlePitchSave = async () => {
+    if (!activeFacilityIdForPitch) return;
+    if (!pitchForm.name.trim()) { toast.error("Saha adı zorunlu."); return; }
+    try {
+      await addDoc(collection(db, "facilities", activeFacilityIdForPitch, "pitches"), {
+        facilityId: activeFacilityIdForPitch,
+        name: pitchForm.name.trim(),
+        pitchType: pitchForm.pitchType,
+        surfaceType: pitchForm.surfaceType,
+        size: pitchForm.size,
+        capacity: Number(pitchForm.capacity || 10),
+        pricing: {
+          daytimePrice: Number(pitchForm.daytimePrice || 500),
+          eveningPrice: Number(pitchForm.eveningPrice || 700),
+        },
+        isActive: true,
+        createdAt: serverTimestamp(),
+      });
+      toast.success("Alt Saha eklendi.");
+      resetPitchForm();
+    } catch (err) { toast.error("Saha kaydedilemedi: " + err); }
+  };
+
+  const handleDeletePitch = async (facilityId: string, pitchId: string) => {
+    if (!window.confirm("Bu sahayı silmek istediğine emin misin?")) return;
+    try {
+      await deleteDoc(doc(db, "facilities", facilityId, "pitches", pitchId));
+      toast.success("Saha silindi.");
+    } catch (err) { toast.error("Saha silinemedi: " + err); }
+  };
+
   const handleLogout = async () => {
     await signOut(auth);
     toast.success("Çıkış yapıldı.");
     router.push("/login");
   };
 
+  const handleSendSupport = async () => {
+    if (!user || !supportMessage.trim()) return;
+    setIsSendingSupport(true);
+    try {
+      await addDoc(collection(db, "supportTickets"), {
+        userId: user.uid,
+        userEmail: user.email || "Email yok",
+        message: supportMessage.trim(),
+        status: "open",
+        createdAt: serverTimestamp()
+      });
+      toast.success("Destek talebiniz başarıyla gönderildi!");
+      setSupportMessage("");
+      setShowSupportModal(false);
+    } catch (error) {
+      toast.error("Talep gönderilemedi. Lütfen bağlantınızı kontrol edin.");
+    } finally {
+      setIsSendingSupport(false);
+    }
+  };
+
   // ── DASHBOARD TAB ────────────────────────────────────────────────────────
+
   const renderDashboard = () => (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       {/* Stats */}
@@ -256,8 +403,10 @@ export default function AdminDashboardContent() {
       <section style={cardStyle}>
         <h2 style={sectionTitle}>Hızlı İşlemler</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 12, marginTop: 14 }}>
-          <QuickBtn label="Yeni Tesis" icon={<Plus size={20} color="#2E7D32" />} bg="#E8F5E9"
+          <QuickBtn label="Yeni Tesis" icon={<Building2 size={20} color="#2E7D32" />} bg="#E8F5E9"
             onClick={() => { setSelectedTab("facilities"); setShowFacilityForm(true); }} />
+          <QuickBtn label="Yeni Saha" icon={<Plus size={20} color="#2E7D32" />} bg="#E8F5E9"
+            onClick={() => { setSelectedTab("facilities"); }} />
           <QuickBtn label="Rezervasyonlar" icon={<CalendarClock size={20} color="#1565C0" />} bg="#E3F2FD"
             onClick={() => setSelectedTab("bookings")} />
           <QuickBtn label="Raporlar" icon={<BarChart3 size={20} color="#6A1B9A" />} bg="#F3E5F5"
@@ -308,12 +457,17 @@ export default function AdminDashboardContent() {
                     <MapPin size={12} /> {f.address || "Adres yok"}
                   </p>
                 </div>
-                {f.rating ? (
+                {f.averageRating !== undefined && f.averageRating > 0 ? (
                   <div style={{ display: "flex", alignItems: "center", gap: 4, background: "#FFF9C4", borderRadius: 8, padding: "4px 8px" }}>
                     <Star size={12} color="#F9A825" fill="#F9A825" />
-                    <span style={{ fontSize: 12, fontWeight: 700, color: "#795548" }}>{f.rating}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "#795548" }}>{f.averageRating.toFixed(1)}</span>
                   </div>
-                ) : null}
+                ) : (
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, background: "#F3F4F6", borderRadius: 8, padding: "4px 8px" }}>
+                    <Star size={12} color="#9CA3AF" />
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "#6B7280" }}>Yeni Tesis</span>
+                  </div>
+                )}
                 <ChevronRight size={16} color="#9CA3AF" />
               </div>
             ))}
@@ -413,12 +567,18 @@ export default function AdminDashboardContent() {
                   <p style={{ fontSize: 13, color: "#6B7280", margin: "2px 0 0" }}>
                     ☎ {facility.phone || "Telefon yok"}
                   </p>
-                  {facility.rating ? (
+                  {facility.averageRating !== undefined && facility.averageRating > 0 ? (
                     <div style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 6, background: "#FFF9C4", borderRadius: 8, padding: "3px 8px" }}>
                       <Star size={12} color="#F9A825" fill="#F9A825" />
-                      <span style={{ fontSize: 12, fontWeight: 700, color: "#795548" }}>{facility.rating}</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: "#795548" }}>{facility.averageRating.toFixed(1)}</span>
+                      <span style={{ fontSize: 10, color: "#9CA3AF", marginLeft: 2 }}>({facility.totalReviews || 0})</span>
                     </div>
-                  ) : null}
+                  ) : (
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 6, background: "#F3F4F6", borderRadius: 8, padding: "3px 8px" }}>
+                      <Star size={12} color="#9CA3AF" />
+                      <span style={{ fontSize: 12, fontWeight: 600, color: "#6B7280" }}>Yeni Tesis</span>
+                    </div>
+                  )}
                   {facility.features?.length ? (
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
                       {facility.features.map((feat) => (
@@ -426,6 +586,34 @@ export default function AdminDashboardContent() {
                       ))}
                     </div>
                   ) : null}
+
+                  {/* Pitches List */}
+                  <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #E5E7EB" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <h4 style={{ fontSize: 14, fontWeight: 700, color: "#374151", margin: 0 }}>
+                        Alt Sahalar ({pitches.filter(p => p.facilityId === facility.id).length})
+                      </h4>
+                      <button onClick={() => startAddPitch(facility.id)}
+                        style={{ color: "#2E7D32", fontSize: 13, fontWeight: 600, background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+                        <Plus size={14} /> Saha Ekle
+                      </button>
+                    </div>
+                    {pitches.filter(p => p.facilityId === facility.id).map(pitch => (
+                      <div key={pitch.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: "#FAFAFA", borderRadius: 10, marginTop: 8 }}>
+                        <div>
+                          <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "#111827" }}>{pitch.name}</p>
+                          <p style={{ margin: 0, fontSize: 12, color: "#6B7280" }}>
+                            {pitch.size} • Kapasite: {pitch.capacity} Kişi • {pitch.pitchType === 'indoor' ? 'Kapalı' : 'Açık'}
+                          </p>
+                        </div>
+                        <button onClick={() => handleDeletePitch(facility.id, pitch.id)}
+                          style={{ color: "#EF4444", background: "none", border: "none", cursor: "pointer", padding: 4 }}>
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
                 </div>
               </div>
             </div>
@@ -441,22 +629,35 @@ export default function AdminDashboardContent() {
       {showFacilityForm && (
         <div style={cardStyle}>
           <h3 style={{ ...sectionTitle, marginBottom: 16 }}>{editingFacilityId ? "Tesisi Düzenle" : "Yeni Tesis Ekle"}</h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {[
-              { key: "name", ph: "Tesis adı *", type: "text" },
-              { key: "phone", ph: "Telefon numarası", type: "tel" },
-              { key: "rating", ph: "Puan (örn: 4.7)", type: "number" },
-              { key: "features", ph: "Özellikler (virgülle ayırın)", type: "text" },
-              { key: "price", ph: "Saatlik Ücret (₺)", type: "number" },
-            ].map((f) => (
-              <input key={f.key} type={f.type} placeholder={f.ph}
-                value={facilityForm[f.key as keyof typeof facilityForm]}
-                onChange={(e) => setFacilityForm((s) => ({ ...s, [f.key]: e.target.value }))}
-                style={inputStyle} />
-            ))}
-            <textarea value={facilityForm.address} rows={3} placeholder="Adres *"
-              onChange={(e) => setFacilityForm((s) => ({ ...s, address: e.target.value }))}
-              style={{ ...inputStyle, resize: "vertical" }} />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+            {/* Sol Taraf: Girdiler */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {[
+                { key: "name", ph: "Tesis adı *", type: "text" },
+                { key: "phone", ph: "Telefon numarası", type: "tel" },
+                { key: "features", ph: "Özellikler (virgülle ayırın)", type: "text" },
+                { key: "price", ph: "Saatlik Ücret (₺)", type: "number" },
+              ].map((f) => (
+                <input key={f.key} type={f.type} placeholder={f.ph}
+                  value={facilityForm[f.key as keyof typeof facilityForm]}
+                  onChange={(e) => setFacilityForm((s) => ({ ...s, [f.key]: e.target.value }))}
+                  style={inputStyle} />
+              ))}
+              <textarea value={facilityForm.address} rows={3} placeholder="Adres *"
+                onChange={(e) => setFacilityForm((s) => ({ ...s, address: e.target.value }))}
+                style={{ ...inputStyle, resize: "vertical" }} />
+            </div>
+            
+            {/* Sağ Taraf: Harita */}
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 8 }}>Harita Konumu (Zorunlu değil, ama önerilir)</p>
+              <div style={{ flex: 1, minHeight: "250px" }}>
+                <GoogleLocationMap 
+                  position={[facilityForm.latitude, facilityForm.longitude]} 
+                  onChange={([lat, lng]) => setFacilityForm(s => ({ ...s, latitude: lat, longitude: lng }))}
+                />
+              </div>
+            </div>
           </div>
           <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
             <button onClick={handleFacilitySave}
@@ -465,6 +666,41 @@ export default function AdminDashboardContent() {
             </button>
             <button onClick={resetFacilityForm}
               style={{ padding: "12px 20px", borderRadius: 12, border: "1px solid #E5E7EB", background: "#fff", color: "#374151", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
+              Vazgeç
+            </button>
+          </div>
+        </div>
+      )}
+      {showPitchForm && (
+        <div style={cardStyle}>
+          <h3 style={{ ...sectionTitle, marginBottom: 16 }}>Yeni Saha Ekle</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <input type="text" placeholder="Saha adı (örn: Saha A) *" value={pitchForm.name} onChange={e => setPitchForm(s => ({...s, name: e.target.value}))} style={inputStyle} />
+            <select value={pitchForm.pitchType} onChange={e => setPitchForm(s => ({...s, pitchType: e.target.value}))} style={inputStyle}>
+              <option value="outdoor">Açık Saha</option>
+              <option value="indoor">Kapalı Saha</option>
+              <option value="covered">Yarı Kapalı Saha</option>
+            </select>
+            <select value={pitchForm.surfaceType} onChange={e => setPitchForm(s => ({...s, surfaceType: e.target.value}))} style={inputStyle}>
+              <option value="syntheticGrass">Sentetik Çim</option>
+              <option value="naturalGrass">Doğal Çim</option>
+              <option value="hybrid">Hibrit</option>
+              <option value="artificial">Yapay Zemin</option>
+            </select>
+            <div style={{ display: "flex", gap: 10 }}>
+              <input type="text" placeholder="Boyut (örn: 7v7)" value={pitchForm.size} onChange={e => setPitchForm(s => ({...s, size: e.target.value}))} style={{...inputStyle, flex: 1}} />
+              <input type="number" placeholder="Kapasite (Kişi)" value={pitchForm.capacity} onChange={e => setPitchForm(s => ({...s, capacity: e.target.value}))} style={{...inputStyle, flex: 1}} />
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <input type="number" placeholder="Gündüz Ücreti (₺)" value={pitchForm.daytimePrice} onChange={e => setPitchForm(s => ({...s, daytimePrice: e.target.value}))} style={{...inputStyle, flex: 1}} />
+              <input type="number" placeholder="Akşam Ücreti (₺)" value={pitchForm.eveningPrice} onChange={e => setPitchForm(s => ({...s, eveningPrice: e.target.value}))} style={{...inputStyle, flex: 1}} />
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+            <button onClick={handlePitchSave} style={{ flex: 1, padding: 12, borderRadius: 12, background: "#2E7D32", color: "#fff", fontWeight: 700, fontSize: 15, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <Plus size={18} /> Ekle
+            </button>
+            <button onClick={resetPitchForm} style={{ padding: "12px 20px", borderRadius: 12, border: "1px solid #E5E7EB", background: "#fff", color: "#374151", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
               Vazgeç
             </button>
           </div>
@@ -668,18 +904,28 @@ export default function AdminDashboardContent() {
             <h3 style={{ ...sectionTitle, marginBottom: 14 }}>Tercih Seçenekleri</h3>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
               {[
-                { label: "Bildirimler", active: true },
-                { label: "E-posta Özeti", active: true },
-                { label: "Rapor Hatırlatma", active: false },
-                { label: "Destek Mesajları", active: true },
-              ].map((item) => (
+                { key: "pushNotificationsEnabled", label: "Bildirimler" },
+                { key: "emailNotificationsEnabled", label: "E-posta Özeti" },
+                { key: "autoConfirmBookings", label: "Otomatik Onay" },
+              ].map((item) => {
+                const active = adminProfile?.[item.key] ?? false;
+                return (
                 <button key={item.label}
+                  onClick={async () => {
+                    if(!user) return;
+                    try {
+                      await updateDoc(doc(db, "admins", user.uid), { [item.key]: !active, updatedAt: serverTimestamp() });
+                      toast.success(`${item.label} güncellendi.`);
+                    } catch (e) {
+                      toast.error("Hata: Güncellenemedi.");
+                    }
+                  }}
                   style={{
                     borderRadius: 12,
                     border: "none",
                     cursor: "pointer",
-                    background: item.active ? "#2E7D32" : "#E5E7EB",
-                    color: item.active ? "#fff" : "#6B7280",
+                    background: active ? "#2E7D32" : "#E5E7EB",
+                    color: active ? "#fff" : "#6B7280",
                     padding: "10px 12px",
                     fontSize: 13,
                     fontWeight: 700,
@@ -687,7 +933,7 @@ export default function AdminDashboardContent() {
                   }}>
                   {item.label}
                 </button>
-              ))}
+              )})}
             </div>
             <div style={{ display: "flex", gap: 20, marginTop: 14 }}>
               {[
@@ -706,12 +952,11 @@ export default function AdminDashboardContent() {
             <h3 style={{ ...sectionTitle, marginBottom: 14 }}>Ayar Kartları</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {[
-                { icon: <Bell size={18} color="#1565C0" />, title: "Bildirimler", sub: "Rezervasyon bildirimleri" },
-                { icon: <AlertCircle size={18} color="#2E7D32" />, title: "Profili Düzenle", sub: "Ad ve iletişim bilgileri" },
-                { icon: <BarChart3 size={18} color="#6A1B9A" />, title: "Raporlar", sub: "Gelir ve doluluk raporları" },
-                { icon: <Activity size={18} color="#E65100" />, title: "Destek", sub: "Yardım ve iletişim" },
+                { icon: <AlertCircle size={18} color="#2E7D32" />, title: "Tesisleri Düzenle", sub: "Tesis bilgilerini güncelle", action: () => setSelectedTab("facilities") },
+                { icon: <BarChart3 size={18} color="#6A1B9A" />, title: "Raporlar", sub: "Gelir ve doluluk raporları", action: () => setSelectedTab("reports") },
+                { icon: <Activity size={18} color="#E65100" />, title: "Destek", sub: "Bize ulaşın ve geri bildirim verin", action: () => setShowSupportModal(true) },
               ].map((item) => (
-                <div key={item.title} style={{ display: "flex", alignItems: "center", gap: 12, borderRadius: 12, padding: "12px 10px", background: "rgba(255,255,255,0.6)", border: "1px solid #E5E7EB" }}>
+                <div key={item.title} onClick={item.action} style={{ display: "flex", alignItems: "center", gap: 12, borderRadius: 12, padding: "12px 10px", background: "rgba(255,255,255,0.6)", border: "1px solid #E5E7EB", cursor: "pointer", transition: "all 0.2s" }}>
                   <div style={{ width: 38, height: 38, borderRadius: 10, background: "#F3F4F6", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     {item.icon}
                   </div>
@@ -816,6 +1061,39 @@ export default function AdminDashboardContent() {
           {selectedTab === "settings" && renderSettings()}
         </div>
       </div>
+
+      {/* Support Modal Overlay */}
+      {showSupportModal && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ ...cardStyle, width: "90%", maxWidth: 400, position: "relative" }}>
+            <button onClick={() => setShowSupportModal(false)}
+              style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", cursor: "pointer", color: "#9CA3AF" }}>
+              <X size={20} />
+            </button>
+            <h3 style={{ ...sectionTitle, marginBottom: 8 }}>Destek Talebi</h3>
+            <p style={{ fontSize: 13, color: "#6B7280", marginBottom: 16, lineHeight: 1.4 }}>
+              Karşılaştığınız bir sorunu veya önerinizi bize iletebilirsiniz. Ekibimiz en kısa sürede değerlendirecektir.
+            </p>
+            <textarea
+              value={supportMessage}
+              onChange={(e) => setSupportMessage(e.target.value)}
+              placeholder="Mesajınızı buraya yazın..."
+              rows={4}
+              style={{ ...inputStyle, resize: "vertical", marginBottom: 16 }}
+            />
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setShowSupportModal(false)}
+                style={{ flex: 1, padding: "10px", borderRadius: 12, border: "1px solid #E5E7EB", background: "#fff", color: "#374151", fontWeight: 600, cursor: "pointer" }}>
+                İptal
+              </button>
+              <button onClick={handleSendSupport} disabled={isSendingSupport || !supportMessage.trim()}
+                style={{ flex: 1, padding: "10px", borderRadius: 12, border: "none", background: supportMessage.trim() ? "#2E7D32" : "#A5D6A7", color: "#fff", fontWeight: 700, cursor: supportMessage.trim() ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {isSendingSupport ? "Gönderiliyor..." : "Gönder"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
@@ -875,9 +1153,10 @@ function BookingCard({ res, onStatus, compact = false }: { res: Reservation; onS
             </span>
           </div>
           <p style={{ fontSize: 13, color: "#6B7280", margin: "4px 0 0", display: "flex", alignItems: "center", gap: 5 }}>
-            <Clock3 size={13} /> {res.date || "-"} • {res.timeSlot || "-"}
+            <Clock3 size={13} /> {formatDateForUI(res.date)} • {res.timeSlot || "-"}
           </p>
-          {!compact && <p style={{ fontSize: 12, color: "#9CA3AF", margin: "2px 0 0" }}>Tesis: {res.fieldName || "Belirsiz"}</p>}
+          {!compact && <p style={{ fontSize: 12, color: "#9CA3AF", margin: "2px 0 0" }}>Tesis: {res.fieldName || res.facilityName || "Belirsiz"}</p>}
+          {!compact && res.pitchName && <p style={{ fontSize: 12, color: "#9CA3AF", margin: "2px 0 0" }}>Saha: {res.pitchName}</p>}
         </div>
         {(res.totalPrice || res.depositAmount) ? (
           <span style={{ fontSize: 15, fontWeight: 800, color: "#2E7D32" }}>

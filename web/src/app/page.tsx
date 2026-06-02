@@ -48,7 +48,7 @@ const nearbyFields = [
 
 export default function Home() {
   const [fieldSearch, setFieldSearch] = useState("");
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, loading } = useAuth();
   const [realFields, setRealFields] = useState<FieldRecord[]>([]);
   const [matchPosts, setMatchPosts] = useState<MatchPost[]>([]);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -96,6 +96,21 @@ export default function Home() {
   const handleSearchChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     setFieldSearch(event.target.value);
   }, []);
+
+  if (loading) {
+    return (
+      <div className="page-wrapper" style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+        <Navbar />
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ width: 40, height: 40, border: "3px solid #E8F5E9", borderTopColor: "#2E7D32", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
+            <p style={{ color: "#9CA3AF", fontWeight: 600 }}>Yükleniyor...</p>
+          </div>
+        </div>
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      </div>
+    );
+  }
 
   return (
     <div className="page-wrapper">

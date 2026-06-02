@@ -13,7 +13,7 @@ export async function loginWithEmailPassword(email: string, password: string) {
   const uid = credential.user.uid;
   const admin = await getAdminByUid(uid);
 
-  if (admin && admin.status !== "approved") {
+  if (admin && admin.approvalStatus !== "approved" && admin.status !== "approved") {
     await signOut(auth);
     throw new Error("admin_not_approved");
   }
@@ -39,7 +39,7 @@ export async function loginWithGoogle() {
   const uid = credential.user.uid;
   const admin = await getAdminByUid(uid);
 
-  if (admin && admin.status !== "approved") {
+  if (admin && admin.approvalStatus !== "approved" && admin.status !== "approved") {
     await signOut(auth);
     throw new Error("admin_not_approved");
   }

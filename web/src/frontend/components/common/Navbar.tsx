@@ -8,7 +8,7 @@ import { auth, db } from "@/database/firebase";
 import { signOut } from "firebase/auth";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { toast } from "react-hot-toast";
-import { LogOut, User, Menu, X, MessageCircle } from "lucide-react";
+import { LogOut, User, Menu, X, MessageCircle, Shield } from "lucide-react";
 import GradientText from "@/frontend/components/ui/GradientText/GradientText";
 import NotificationMenu from "@/frontend/components/common/NotificationMenu";
 
@@ -107,10 +107,17 @@ const Navbar = () => {
                   Demo
                 </span>
               )}
+              {isAdmin && (
+                <span style={{ fontSize: 12, color: "#2E7D32", background: "#E8F5E9", border: "1px solid #A5D6A7", padding: "4px 10px", borderRadius: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
+                  <Shield size={14} /> İşletme Paneli
+                </span>
+              )}
               {!loading && user && <NotificationMenu scrolled={scrolled} />}
-              <Link href="/" className="nav-text-link" style={{ color: scrolled ? "#374151" : "white" }}>
-                Ana Sayfa
-              </Link>
+              {!isAdmin && (
+                <Link href="/" className="nav-text-link" style={{ color: scrolled ? "#374151" : "white" }}>
+                  Ana Sayfa
+                </Link>
+              )}
             </div>
 
             {!loading && (
@@ -118,13 +125,15 @@ const Navbar = () => {
                 {user ? (
                   <>
                     {!isAdmin && (
-                      <Link href="/messages" className="nav-text-link" style={{ color: scrolled ? "#374151" : "white" }}>
-                        <MessageCircle size={15} /> Mesajlar
-                      </Link>
+                      <>
+                        <Link href="/messages" className="nav-text-link" style={{ color: scrolled ? "#374151" : "white" }}>
+                          <MessageCircle size={15} /> Mesajlar
+                        </Link>
+                        <Link href="/profile" className="nav-text-link" style={{ color: scrolled ? "#374151" : "white" }}>
+                          <User size={15} /> Profilim
+                        </Link>
+                      </>
                     )}
-                    <Link href={isAdmin ? "/admin/dashboard" : "/profile"} className="nav-text-link" style={{ color: scrolled ? "#374151" : "white" }}>
-                      <User size={15} /> {isAdmin ? "Panelim" : "Profilim"}
-                    </Link>
                     <button onClick={handleLogout} style={{
                       color: scrolled ? "#dc2626" : "rgba(255,200,200,1)",
                       background: scrolled ? "rgba(254, 242, 242, 0.8)" : "transparent",
@@ -218,9 +227,16 @@ const Navbar = () => {
                     Demo
                   </span>
                 )}
-                <Link href="/" className="nav-text-link" style={{ color: "#374151" }}>
-                  Ana Sayfa
-                </Link>
+                {isAdmin && (
+                  <span style={{ fontSize: 12, color: "#2E7D32", background: "#E8F5E9", border: "1px solid #A5D6A7", padding: "4px 10px", borderRadius: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
+                    <Shield size={14} /> İşletme Paneli
+                  </span>
+                )}
+                {!isAdmin && (
+                  <Link href="/" className="nav-text-link" style={{ color: "#374151" }}>
+                    Ana Sayfa
+                  </Link>
+                )}
               </div>
 
               {!loading && (
@@ -230,9 +246,16 @@ const Navbar = () => {
                       <div style={{ padding: "0 10px" }}>
                         <NotificationMenu scrolled={scrolled} />
                       </div>
-                      <Link href={isAdmin ? "/admin/dashboard" : "/profile"} className="nav-text-link" style={{ color: "#374151" }}>
-                        <User size={15} /> {isAdmin ? "Panelim" : "Profilim"}
-                      </Link>
+                      {!isAdmin && (
+                        <>
+                          <Link href="/messages" className="nav-text-link" style={{ color: "#374151" }}>
+                            <MessageCircle size={15} /> Mesajlar
+                          </Link>
+                          <Link href="/profile" className="nav-text-link" style={{ color: "#374151" }}>
+                            <User size={15} /> Profilim
+                          </Link>
+                        </>
+                      )}
                       <button
                         onClick={handleLogout}
                         style={{
