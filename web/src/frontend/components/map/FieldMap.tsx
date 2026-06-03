@@ -57,7 +57,9 @@ const FieldMap = ({ onSelectField }: { onSelectField: (field: Field) => void }) 
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         
-        {fields.map((field) => (
+        {fields
+          .filter(field => typeof field.latitude === 'number' && typeof field.longitude === 'number')
+          .map((field) => (
           <Marker 
             key={field.id} 
             position={[field.latitude, field.longitude]}

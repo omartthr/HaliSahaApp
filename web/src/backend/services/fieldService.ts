@@ -45,7 +45,14 @@ export async function getField(fieldId: string) {
   const ref = doc(db, COLLECTION, fieldId);
   const snap = await getDoc(ref);
   if (!snap.exists()) return null;
-  return { id: snap.id, ...snap.data() };
+  
+  const fieldData = { id: snap.id, ...snap.data() };
+  
+  // Alt sahaları (pitches) çek
+  const pitchesSnap = await getDocs(collection(db, COLLECTION, fieldId, "pitches"));
+  const pitches = pitchesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  
+  return { ...fieldData, pitches };
 }
 
 /** Yeni saha ekle */

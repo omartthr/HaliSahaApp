@@ -60,6 +60,8 @@ const BookingPage = () => {
         date: format(selectedDate, "yyyy-MM-dd"),
         timeSlot: selectedSlot,
         status: "pending_payment",
+        totalPrice: pricePerHour,
+        depositAmount: deposit,
       });
       toast.success("Randevu talebi oluşturuldu!");
       router.push("/profile");
@@ -98,7 +100,7 @@ const BookingPage = () => {
     );
   }
 
-  const pricePerHour = 1200;
+  const pricePerHour = field.price || 350;
   const deposit = Math.round(pricePerHour * 0.2);
 
   return (
@@ -118,7 +120,7 @@ const BookingPage = () => {
           justifyContent: "center",
         }}
       >
-        <div style={{ position: "absolute", top: 16, left: 16 }}>
+        <div style={{ position: "absolute", top: 80, left: 16 }}>
           <button
             onClick={() => router.back()}
             style={{

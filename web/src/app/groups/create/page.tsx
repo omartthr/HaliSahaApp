@@ -5,7 +5,7 @@ import Navbar from "@/frontend/components/common/Navbar";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Carousel from "@/frontend/components/Carousel";
-import { MapPin, Star, ChevronLeft, Check, ArrowRight, X, AlertCircle, CreditCard } from "lucide-react";
+import { MapPin, Star, ChevronLeft, Check, ArrowRight, X, AlertCircle, CreditCard, Droplets, Car, Utensils, Wind, Lightbulb, Coffee, LogIn, UserPlus } from "lucide-react";
 import { getFieldsRealtime, FieldRecord } from "@/backend/services/fieldService";
 import { createBooking } from "@/backend/services/bookingService";
 import { createMatchPost } from "@/backend/services/matchPostService";
@@ -14,6 +14,7 @@ import { sendNotification } from "@/backend/services/notificationService";
 import { useAuth } from "@/frontend/context/AuthContext";
 import { toast } from "react-hot-toast";
 import { format } from "date-fns";
+import CustomSelect from "@/frontend/components/common/CustomSelect";
 
 const mockPitches = [
   { id: "p1", name: "5v5 Saha A", size: "5'e 5", price: 350, nightPrice: 450 },
@@ -33,7 +34,6 @@ const timeSlots = Array.from({ length: 14 }, (_, i) => ({
   hour: 8 + i,
   label: `${8 + i}:00`,
   available: ![11, 12, 15].includes(8 + i),
-  price: 8 + i >= 18 ? 450 : 350,
 }));
 
 export default function MatchCreatePage() {
@@ -59,19 +59,24 @@ export default function MatchCreatePage() {
 
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   const dates = getDates();
 
   useEffect(() => {
+    // facilities herkese açık — girişşart değil
     const unsub = getFieldsRealtime((data) => {
       setFields(data);
       if (data.length > 0 && !selectedFacility) {
         setSelectedFacility(data[0]);
       }
     });
-    getAllPlayers().then((players) => setAllPlayers(players));
+    // Oyuncu listesi sadece giriş yapılmışsa çekilir
+    if (user) {
+      getAllPlayers().then((players) => setAllPlayers(players));
+    }
     return () => unsub();
-  }, []);
+  }, [user]);
 
   const toggleSlot = (hour: number) => {
     const slot = timeSlots.find((s) => s.hour === hour);
@@ -83,12 +88,13 @@ export default function MatchCreatePage() {
     );
   };
 
-  const totalPrice = selectedSlots.length * (selectedPitch.price || 350);
+  const pricePerHour = (selectedFacility?.price as number) || selectedPitch.price || 350;
+  const totalPrice = selectedSlots.length * pricePerHour;
   const canBook = selectedSlots.length > 0 && matchForm.title.trim() !== "" && selectedFacility;
 
   const handleCreateMatch = async () => {
     if (!user) {
-      toast.error("Maç kurmak için giriş yapmalısınız.");
+      setShowAuthModal(true);
       return;
     }
     setIsSubmitting(true);
@@ -102,7 +108,9 @@ export default function MatchCreatePage() {
         userName: user.displayName || userData?.firstName || "Kullanıcı",
         date: format(selectedDate, "yyyy-MM-dd"),
         timeSlot: slotLabel,
-        status: "confirmed" // Kapora ödendi simülasyonu
+        status: "confirmed", // Kapora ödendi simülasyonu
+        totalPrice: totalPrice,
+        depositAmount: Math.round(totalPrice * 0.2)
       });
 
       // 2. Ardından MatchPost oluştur
@@ -173,9 +181,9 @@ export default function MatchCreatePage() {
           justifyContent: "center",
         }}
       >
-        <div style={{ position: "absolute", top: 16, left: 16 }}>
-          <Link
-            href="/groups"
+        <div style={{ position: "absolute", top: 80, left: 16 }}>
+          <button
+            onClick={() => window.history.back()}
             style={{
               display: "flex",
               alignItems: "center",
@@ -190,7 +198,7 @@ export default function MatchCreatePage() {
             }}
           >
             <ChevronLeft size={20} />
-          </Link>
+          </button>
         </div>
 
         <div style={{ position: "absolute", bottom: -118, left: 0, width: "100%", lineHeight: 0, zIndex: 0, pointerEvents: "none" }}>
@@ -241,43 +249,37 @@ export default function MatchCreatePage() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
               <div>
                 <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Toplam Oyuncu Sayısı</label>
-                <select 
+                <CustomSelect 
                   value={matchForm.maxPlayers} 
-                  onChange={(e) => setMatchForm({...matchForm, maxPlayers: Number(e.target.value)})}
-                  className="input-field" 
-                  style={{ height: 44, paddingLeft: 12 }}>
-                  <option value={10}>10 Kişi (5v5)</option>
-                  <option value={12}>12 Kişi (6v6)</option>
-                  <option value={14}>14 Kişi (7v7)</option>
-                </select>
+                  onChange={(val) => setMatchForm({...matchForm, maxPlayers: Number(val)})}
+                  options={[
+                    { value: 10, label: "10 Kişi (5v5)" },
+                    { value: 12, label: "12 Kişi (6v6)" },
+                    { value: 14, label: "14 Kişi (7v7)" },
+                  ]}
+                />
               </div>
               <div>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Seninle Beraber Kaç Kişisiniz?</label>
-                <input 
-                  type="number" 
-                  min={1} 
-                  max={matchForm.maxPlayers} 
-                  value={matchForm.currentPlayers} 
-                  onChange={(e) => setMatchForm({...matchForm, currentPlayers: Number(e.target.value)})}
-                  className="input-field" 
-                  style={{ height: 44 }} 
-                />
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Kişi Başı Ortalama Maliyet</label>
+                <div style={{ height: 44, display: "flex", alignItems: "center", paddingLeft: 12, background: "#E8F5E9", borderRadius: 8, fontSize: 14, fontWeight: 700, color: "#2E7D32" }}>
+                  {selectedFacility ? `₺${Math.round(pricePerHour / matchForm.maxPlayers)} / kişi` : "Saha seçildiğinde hesaplanır"}
+                </div>
               </div>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
               <div>
                 <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Seviye</label>
-                <select 
+                <CustomSelect 
                   value={matchForm.skillLevel} 
-                  onChange={(e) => setMatchForm({...matchForm, skillLevel: e.target.value})}
-                  className="input-field" 
-                  style={{ height: 44, paddingLeft: 12 }}>
-                  <option value="any">Fark Etmez</option>
-                  <option value="beginner">Başlangıç</option>
-                  <option value="intermediate">Orta Seviye</option>
-                  <option value="advanced">İleri Seviye</option>
-                </select>
+                  onChange={(val) => setMatchForm({...matchForm, skillLevel: val})}
+                  options={[
+                    { value: "any", label: "Fark Etmez" },
+                    { value: "beginner", label: "Başlangıç" },
+                    { value: "intermediate", label: "Orta Seviye" },
+                    { value: "advanced", label: "İleri Seviye" },
+                  ]}
+                />
               </div>
               <div>
                 <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Açıklama</label>
@@ -381,7 +383,9 @@ export default function MatchCreatePage() {
         <div className="auth-dynamo-glass match-dynamo-card match-card" style={{ padding: 24, marginBottom: 16, borderRadius: 24 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, gap: 12, flexWrap: "wrap" }}>
             <h2 style={{ fontSize: 18, fontWeight: 700, color: "#111827" }}>Saha ve Oyun Tipi Seçimi</h2>
-            <span className="pill pill-outline">{(selectedFacility?.isIndoor) ? "🏠 Kapalı Alan" : "☀️ Açık Alan"}</span>
+            <span className="pill pill-outline" style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+              {(selectedFacility?.isIndoor) ? <><Wind size={12} /> Kapalı Alan</> : <><Lightbulb size={12} /> Açık Alan</>}
+            </span>
           </div>
 
           <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
@@ -423,31 +427,32 @@ export default function MatchCreatePage() {
             </div>
 
             <div>
-              <p style={{ fontSize: 13, color: "#6b7280", fontWeight: 600, marginBottom: 10 }}>Pitches (Oyun Alanı)</p>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10 }}>
-                {/* Firebase'de pitch datası varsa onu, yoksa mockPitches kullan */}
-                {((selectedFacility?.pitches as any[] | undefined)?.length ? (selectedFacility!.pitches as any[]) : mockPitches).map((pitch: any) => (
-                  <button
-                    key={pitch.id}
-                    onClick={() => setSelectedPitch(pitch)}
-                    style={{
-                      padding: "12px 14px",
-                      borderRadius: 14,
-                      border: `2px solid ${selectedPitch.id === pitch.id ? "#2E7D32" : "#e5e7eb"}`,
-                      background: selectedPitch.id === pitch.id ? "rgba(232,245,233,0.8)" : "rgba(255,255,255,0.58)",
-                      cursor: "pointer",
-                      textAlign: "left",
-                      transition: "all 0.2s",
-                    }}
-                  >
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, gap: 8 }}>
-                      <span style={{ fontWeight: 700, fontSize: 14, color: "#111827" }}>{pitch.name}</span>
-                      {selectedPitch.id === pitch.id && <Check size={16} style={{ color: "#2E7D32" }} />}
+              <p style={{ fontSize: 13, color: "#6b7280", fontWeight: 600, marginBottom: 10 }}>Saha Özellikleri & Fiyat</p>
+              <div style={{ padding: 16, borderRadius: 16, border: "1px solid #e5e7eb", background: "rgba(255,255,255,0.56)", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                {selectedFacility ? (
+                  <>
+                    <p style={{ fontSize: 15, fontWeight: 700, color: "#111827", marginBottom: 12 }}>{selectedFacility.name as string}</p>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+                      {selectedFacility.features?.length ? selectedFacility.features.map((feat: string, idx: number) => (
+                        <span key={idx} style={{ padding: "6px 12px", background: "#E8F5E9", borderRadius: 8, fontSize: 12, fontWeight: 600, color: "#2E7D32" }}>{feat}</span>
+                      )) : (
+                        <>
+                          <span style={{ padding: "6px 12px", background: "#E8F5E9", borderRadius: 8, fontSize: 12, fontWeight: 600, color: "#2E7D32", display: "inline-flex", alignItems: "center", gap: 5 }}><Droplets size={12} /> Duş</span>
+                          <span style={{ padding: "6px 12px", background: "#E8F5E9", borderRadius: 8, fontSize: 12, fontWeight: 600, color: "#2E7D32", display: "inline-flex", alignItems: "center", gap: 5 }}><Car size={12} /> Otopark</span>
+                          <span style={{ padding: "6px 12px", background: "#E8F5E9", borderRadius: 8, fontSize: 12, fontWeight: 600, color: "#2E7D32", display: "inline-flex", alignItems: "center", gap: 5 }}><Coffee size={12} /> Kafeterya</span>
+                        </>
+                      )}
                     </div>
-                    <p style={{ fontSize: 13, color: "#9ca3af" }}>{pitch.size || "Saha Boyutu"}</p>
-                    <p style={{ fontSize: 22, lineHeight: 1.1, fontWeight: 700, color: "#2E7D32", marginTop: 8 }}>₺{pitch.price || 350}<span style={{ fontSize: 13 }}>/saat</span></p>
-                  </button>
-                ))}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 16, borderTop: "1px solid #e5e7eb", marginTop: "auto" }}>
+                      <span style={{ fontSize: 13, color: "#6b7280", fontWeight: 600 }}>Saha Ücreti</span>
+                      <span style={{ fontSize: 22, fontWeight: 800, color: "#111827" }}>₺{pricePerHour}<span style={{ fontSize: 13, fontWeight: 500, color: "#6b7280" }}>/saat</span></span>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af", fontSize: 13, textAlign: "center", minHeight: 120 }}>
+                    Lütfen fiyat ve özellikleri görmek için sol taraftan bir saha seçin.
+                  </div>
+                )}
               </div>
 
               <div style={{ marginTop: 16 }}>
@@ -503,7 +508,7 @@ export default function MatchCreatePage() {
               return (
                 <button key={slot.hour} className={cls} onClick={() => toggleSlot(slot.hour)}>
                   <div style={{ fontWeight: 700 }}>{slot.label}</div>
-                  <div style={{ fontSize: 11, opacity: 0.7 }}>₺{slot.price}</div>
+                  <div style={{ fontSize: 11, opacity: 0.7 }}>₺{pricePerHour}</div>
                 </button>
               );
             })}
@@ -526,8 +531,14 @@ export default function MatchCreatePage() {
             }
           }}
           disabled={!canBook}
+          style={{
+            opacity: canBook ? 1 : 0.4,
+            cursor: canBook ? "pointer" : "not-allowed",
+            transition: "all 0.3s ease",
+            boxShadow: canBook ? "0 4px 14px rgba(46, 125, 50, 0.4)" : "none"
+          }}
         >
-          Maçı Kur & Rezervasyon Yap <ArrowRight size={18} />
+          {canBook ? "Maçı Kur & Rezervasyon Yap" : "Lütfen Gerekli Alanları Doldurun"} <ArrowRight size={18} />
         </button>
       </div>
 
@@ -590,8 +601,83 @@ export default function MatchCreatePage() {
               disabled={isSubmitting}
               style={{ width: "100%", background: "#2E7D32", color: "white", padding: "16px", borderRadius: 16, border: "none", fontWeight: 800, fontSize: 16, cursor: isSubmitting ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all 0.2s", opacity: isSubmitting ? 0.7 : 1 }}
             >
-              {isSubmitting ? "İşleniyor..." : (<><CreditCard size={20} /> Kapora Öde & Maçı Kur</>)}
+              {isSubmitting ? "İşleniyor..." : (<><CreditCard size={20} /> Kapora Öde &amp; Maçı Kur</>)}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Auth Modal */}
+      {showAuthModal && (
+        <div
+          onClick={() => setShowAuthModal(false)}
+          style={{
+            position: "fixed", inset: 0, zIndex: 1000,
+            background: "rgba(0,0,0,0.55)",
+            backdropFilter: "blur(8px)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: 20,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "rgba(255,255,255,0.96)",
+              borderRadius: 28,
+              padding: "40px 36px",
+              maxWidth: 420,
+              width: "100%",
+              boxShadow: "0 32px 80px rgba(0,0,0,0.2)",
+              border: "1px solid rgba(255,255,255,1)",
+              textAlign: "center",
+              position: "relative",
+            }}
+          >
+            <button
+              onClick={() => setShowAuthModal(false)}
+              style={{ position: "absolute", top: 16, right: 16, background: "#f3f4f6", border: "none", borderRadius: "50%", width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#6b7280" }}
+            >
+              <X size={16} />
+            </button>
+
+            <div style={{ width: 72, height: 72, borderRadius: 20, background: "linear-gradient(135deg, #114B32, #1A754E)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+              <LogIn size={32} style={{ color: "white" }} />
+            </div>
+
+            <h2 style={{ fontSize: 24, fontWeight: 800, color: "#111827", marginBottom: 8 }}>
+              Devam etmek için giriş yap
+            </h2>
+            <p style={{ fontSize: 15, color: "#6b7280", lineHeight: 1.6, marginBottom: 28 }}>
+              Maç oluşturmak için hesabınıza giriş yapmanız gerekiyor. Hesabınız yoksa ücretsiz kayıt olabilirsiniz.
+            </p>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <Link
+                href="/login"
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  background: "linear-gradient(135deg, #114B32, #1A754E)",
+                  color: "white", textDecoration: "none",
+                  padding: "14px 24px", borderRadius: 14,
+                  fontWeight: 700, fontSize: 15,
+                  boxShadow: "0 4px 16px rgba(17,75,50,0.3)",
+                }}
+              >
+                <LogIn size={18} /> Giriş Yap
+              </Link>
+              <Link
+                href="/register"
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  background: "#f3f4f6",
+                  color: "#111827", textDecoration: "none",
+                  padding: "14px 24px", borderRadius: 14,
+                  fontWeight: 700, fontSize: 15,
+                }}
+              >
+                <UserPlus size={18} /> Ücretsiz Kayıt Ol
+              </Link>
+            </div>
           </div>
         </div>
       )}
@@ -599,4 +685,3 @@ export default function MatchCreatePage() {
     </div>
   );
 }
-

@@ -29,6 +29,8 @@ export async function createBooking(data: {
   date: string;
   timeSlot: string;
   status?: string;
+  totalPrice?: number;
+  depositAmount?: number;
 }) {
   return addDoc(collection(db, COLLECTION), {
     ...data,

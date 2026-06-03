@@ -33,7 +33,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const userDoc = await getDoc(doc(db, "users", user.uid));
         if (userDoc.exists()) {
           setUserData(userDoc.data());
-          setIsAdmin(userDoc.data().role === "admin" || userDoc.data().role === "superadmin");
+          const data = userDoc.data();
+          setIsAdmin(data.role === "admin" || data.role === "superadmin" || data.userType === "admin");
         } else {
           // Check if it's an admin
           const adminDoc = await getDoc(doc(db, "admins", user.uid));

@@ -1,17 +1,16 @@
 import type { Metadata } from "next";
-import { Poppins, Geist } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/frontend/context/AuthContext";
 import { Toaster } from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import Chatbot from "@/frontend/components/common/Chatbot";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
-
-const poppins = Poppins({
-  weight: ["400", "500", "600", "700", "900"],
+const jakarta = Plus_Jakarta_Sans({
+  weight: ["400", "500", "600", "700", "800"],
   subsets: ["latin"],
-  variable: "--font-poppins",
+  variable: "--font-jakarta",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -25,8 +24,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="tr" className={cn("font-sans", geist.variable)}>
-      <body className={`${poppins.variable} antialiased`} style={{ fontFamily: "var(--font-poppins), sans-serif" }}>
+    <html lang="tr" className={cn(jakarta.variable)}>
+      <body className={`${jakarta.variable} antialiased`} style={{ fontFamily: "var(--font-jakarta), 'Segoe UI', sans-serif" }}>
         <AuthProvider>
           {children}
           <Toaster position="top-right" />

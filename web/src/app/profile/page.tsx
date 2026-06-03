@@ -6,7 +6,7 @@ import { getUserBookingsRealtime } from "@/backend/services/bookingService";
 import { useAuth } from "@/frontend/context/AuthContext";
 import Navbar from "@/frontend/components/common/Navbar";
 import { toast } from "react-hot-toast";
-import { Trash2, Calendar, Clock, User as UserIcon, ChevronRight, Star, Trophy, Bell, Heart, Shield, X } from "lucide-react";
+import { Trash2, Calendar, Clock, User as UserIcon, ChevronRight, Star, Trophy, Bell, Heart, Shield, X, Shirt, CheckCircle2, XCircle, AlertTriangle, Timer } from "lucide-react";
 import { deleteUser } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -160,8 +160,8 @@ const ProfilePage = () => {
                   <p style={{ color: "#2E7D32", fontSize: 22, fontWeight: 700, marginBottom: 4 }}>@{userData?.username || "kullanici"}</p>
                   <p style={{ color: "#64748b", fontSize: 18, marginBottom: 6 }}>{user.email}</p>
                   {userData?.position && (
-                    <span style={{ display: "inline-block", background: "#E8F5E9", color: "#2E7D32", padding: "6px 14px", borderRadius: 12, fontSize: 14, fontWeight: 700, marginTop: 4 }}>
-                      ⚽ Mevki: {userData.position}
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#E8F5E9", color: "#2E7D32", padding: "6px 14px", borderRadius: 12, fontSize: 14, fontWeight: 700, marginTop: 4 }}>
+                      <Shirt size={14} /> {userData.position}
                     </span>
                   )}
                 </div>
@@ -252,7 +252,7 @@ const ProfilePage = () => {
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {reservations.length === 0 ? (
                   <div className="auth-dynamo-glass match-dynamo-card match-card" style={{ borderRadius: 20, padding: "56px 20px", textAlign: "center" }}>
-                    <div style={{ fontSize: 48, marginBottom: 16 }}>📅</div>
+                    <div style={{ display: "flex", justifyContent: "center", marginBottom: 16, color: "#9ca3af" }}><Calendar size={48} strokeWidth={1.2} /></div>
                     <p style={{ fontWeight: 700, color: "#374151", marginBottom: 8 }}>Henüz Randevun Yok</p>
                     <p style={{ color: "#9ca3af", fontSize: 14, marginBottom: 20 }}>İlk randevunu alarak başla!</p>
                     <Link href="#map" className="btn-primary" style={{ textDecoration: "none", display: "inline-flex" }}>
@@ -260,21 +260,38 @@ const ProfilePage = () => {
                     </Link>
                   </div>
                 ) : (
-                  reservations.map((res) => (
+                  reservations.map((res) => {
+                    const getStatusProps = (status: string) => {
+                      if (status === "completed") return { bg: "#E0F2F1", color: "#00695C", label: "Tamamlandı", icon: <CheckCircle2 size={12} /> };
+                      if (status === "approved") return { bg: "#E8F5E9", color: "#2E7D32", label: "Onaylandı", icon: <CheckCircle2 size={12} /> };
+                      if (status === "confirmed") return { bg: "#E8F5E9", color: "#2E7D32", label: "Kapora Ödendi", icon: <CheckCircle2 size={12} /> };
+                      if (status === "cancelled") return { bg: "#FFEBEE", color: "#C62828", label: "İptal", icon: <XCircle size={12} /> };
+                      return { bg: "#FFF3E0", color: "#E65100", label: "Bekliyor", icon: <Timer size={12} /> };
+                    };
+                    const s = getStatusProps(res.status);
+
+                    return (
                     <div key={res.id} className="auth-dynamo-glass match-dynamo-card match-card" style={{ borderRadius: 16, padding: "20px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
                         <h3 style={{ fontSize: 16, fontWeight: 700, color: "#111827" }}>{res.fieldName}</h3>
-                        <span style={{ fontSize: 11, fontWeight: 700, padding: "4px 12px", borderRadius: 20, background: res.status === "completed" ? "#E0F2F1" : res.status === "approved" ? "#E8F5E9" : "#FFF3E0", color: res.status === "completed" ? "#00695C" : res.status === "approved" ? "#2E7D32" : "#E65100" }}>
-                          {res.status === "completed" ? "✓ Tamamlandı" : res.status === "approved" ? "✓ Onaylandı" : "⏳ Bekliyor"}
+                        <span style={{ fontSize: 11, fontWeight: 700, padding: "4px 12px", borderRadius: 20, background: s.bg, color: s.color, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                          {s.icon} {s.label}
                         </span>
                       </div>
-                      <div style={{ display: "flex", gap: 16, color: "#9ca3af", fontSize: 13, marginBottom: 12 }}>
-                        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                          <Calendar size={13} /> {res.date}
-                        </span>
-                        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                          <Clock size={13} /> {res.timeSlot}
-                        </span>
+                      <div style={{ display: "flex", gap: 16, color: "#9ca3af", fontSize: 13, marginBottom: 12, justifyContent: "space-between" }}>
+                        <div style={{ display: "flex", gap: 16 }}>
+                          <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            <Calendar size={13} /> {res.date}
+                          </span>
+                          <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            <Clock size={13} /> {res.timeSlot}
+                          </span>
+                        </div>
+                        {(res.totalPrice || res.depositAmount) && (
+                          <span style={{ fontWeight: 800, color: "#2E7D32", fontSize: 14 }}>
+                            ₺{(res.totalPrice || res.depositAmount).toLocaleString("tr-TR")}
+                          </span>
+                        )}
                       </div>
                       {res.status === "completed" && (
                         <button
@@ -285,7 +302,8 @@ const ProfilePage = () => {
                         </button>
                       )}
                     </div>
-                  ))
+                  );
+                })
                 )}
               </div>
             )}
