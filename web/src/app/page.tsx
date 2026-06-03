@@ -268,7 +268,8 @@ export default function Home() {
       <section className="relative z-10 home-map-section reveal" style={{ padding: "2rem 5% 3rem 5%" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
           <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "#111827", display: "flex", alignItems: "center", gap: 8 }}>
-            <MapPin size={22} style={{ color: "#2E7D32" }} /> Yakındaki Sahalar
+            <MapPin size={22} style={{ color: "#2E7D32" }} />
+            <span className="hidden-mobile">Yakındaki Sahalar</span>
           </h2>
         </div>
 

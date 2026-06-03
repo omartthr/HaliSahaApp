@@ -8,6 +8,7 @@ import { getField } from "@/backend/services/fieldService";
 import { toast } from "react-hot-toast";
 import Navbar from "@/frontend/components/common/Navbar";
 import { Calendar, Clock, CreditCard, ChevronLeft, MapPin, Check, AlertCircle } from "lucide-react";
+import BookingPaymentModal from "@/frontend/components/common/BookingPaymentModal";
 import { format, addDays } from "date-fns";
 import { tr } from "date-fns/locale";
 import Link from "next/link";
@@ -20,7 +21,7 @@ const BookingPage = () => {
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [occupiedSlots, setOccupiedSlots] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [booking, setBooking] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   const timeSlots = Array.from({ length: 17 }, (_, i) => {
     const hour = i + 8;
@@ -45,31 +46,22 @@ const BookingPage = () => {
     return () => unsubscribe();
   }, [fieldId, selectedDate]);
 
-  const handleBooking = async () => {
+  const createBookingForPayment = async (): Promise<string> => {
     const user = auth.currentUser;
-    if (!user) { toast.error("Randevu için giriş yapmalısınız."); return; }
-    if (!selectedSlot) return;
-
-    setBooking(true);
-    try {
-      await createBooking({
-        fieldId: fieldId as string,
-        fieldName: field.name,
-        userId: user.uid,
-        userName: user.displayName || "Kullanıcı",
-        date: format(selectedDate, "yyyy-MM-dd"),
-        timeSlot: selectedSlot,
-        status: "pending_payment",
-        totalPrice: pricePerHour,
-        depositAmount: deposit,
-      });
-      toast.success("Randevu talebi oluşturuldu!");
-      router.push("/profile");
-    } catch {
-      toast.error("Randevu oluşturulurken hata oluştu.");
-    } finally {
-      setBooking(false);
-    }
+    if (!user) throw new Error("Giriş yapmalısınız.");
+    if (!selectedSlot) throw new Error("Saat seçiniz.");
+    const ref = await createBooking({
+      fieldId: fieldId as string,
+      fieldName: field.name,
+      userId: user.uid,
+      userName: user.displayName || "Kullanıcı",
+      date: format(selectedDate, "yyyy-MM-dd"),
+      timeSlot: selectedSlot,
+      status: "pending_payment",
+      totalPrice: pricePerHour,
+      depositAmount: deposit,
+    });
+    return ref.id;
   };
 
   if (loading) {
@@ -262,10 +254,25 @@ const BookingPage = () => {
           </div>
 
           {/* Book Button */}
-          <button disabled={!selectedSlot || booking} onClick={handleBooking}
+          <button
+            disabled={!selectedSlot || booking}
+            onClick={() => {
+              if (!auth.currentUser) { toast.error("Randevu için giriş yapmalısınız."); return; }
+              setShowPaymentModal(true);
+            }}
             style={{ width: "100%", background: !selectedSlot ? "#e5e7eb" : "#2E7D32", color: !selectedSlot ? "#9ca3af" : "white", padding: "18px", borderRadius: "16px", border: "none", fontWeight: 800, fontSize: 16, cursor: !selectedSlot ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, boxShadow: selectedSlot ? "0 6px 20px rgba(46,125,50,0.3)" : "none", transition: "all 0.2s" }}>
-            {booking ? "İşleniyor..." : (<><CreditCard size={22} /> Randevu Talebi &amp; Kapora Öde</>)}
+            <CreditCard size={22} /> Randevu Talebi &amp; Kapora Öde
           </button>
+
+          <BookingPaymentModal
+            isOpen={showPaymentModal}
+            onClose={() => setShowPaymentModal(false)}
+            fieldName={field.name}
+            date={format(selectedDate, "dd.MM.yyyy")}
+            timeSlots={selectedSlot ?? ""}
+            totalPrice={pricePerHour}
+            onCreateBooking={createBookingForPayment}
+          />
         </div>
       </div>
     </div>

@@ -15,6 +15,7 @@ import { useAuth } from "@/frontend/context/AuthContext";
 import { toast } from "react-hot-toast";
 import { format } from "date-fns";
 import CustomSelect from "@/frontend/components/common/CustomSelect";
+import BookingPaymentModal from "@/frontend/components/common/BookingPaymentModal";
 
 const mockPitches = [
   { id: "p1", name: "5v5 Saha A", size: "5'e 5", price: 350, nightPrice: 450 },
@@ -58,7 +59,6 @@ export default function MatchCreatePage() {
   });
 
   const [showBookingModal, setShowBookingModal] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   const dates = getDates();
@@ -92,74 +92,57 @@ export default function MatchCreatePage() {
   const totalPrice = selectedSlots.length * pricePerHour;
   const canBook = selectedSlots.length > 0 && matchForm.title.trim() !== "" && selectedFacility;
 
-  const handleCreateMatch = async () => {
-    if (!user) {
-      setShowAuthModal(true);
-      return;
-    }
-    setIsSubmitting(true);
-    try {
-      // 1. Önce kaporayı öde ve rezervasyonu oluştur
-      const slotLabel = timeSlots.find(s => s.hour === selectedSlots[0])?.label || "";
-      const bookingRef = await createBooking({
-        fieldId: selectedFacility!.id!,
-        fieldName: (selectedFacility!.name as string) || "Bilinmeyen Saha",
-        userId: user.uid,
-        userName: user.displayName || userData?.firstName || "Kullanıcı",
-        date: format(selectedDate, "yyyy-MM-dd"),
-        timeSlot: slotLabel,
-        status: "confirmed", // Kapora ödendi simülasyonu
-        totalPrice: totalPrice,
-        depositAmount: Math.round(totalPrice * 0.2)
-      });
+  const createMatchAndBooking = async (): Promise<string> => {
+    const slotStr = selectedSlots.map(h => `${h}:00`).join(", ");
+    const bookingRef = await createBooking({
+      fieldId: selectedFacility!.id!,
+      fieldName: (selectedFacility!.name as string) || "Bilinmeyen Saha",
+      userId: user!.uid,
+      userName: user!.displayName || userData?.firstName || "Kullanıcı",
+      date: format(selectedDate, "yyyy-MM-dd"),
+      timeSlot: slotStr,
+      status: "pending_payment",
+      totalPrice,
+      depositAmount: Math.round(totalPrice * 0.2),
+    });
 
-      // 2. Ardından MatchPost oluştur
-      const matchPostRef = await createMatchPost({
-        creatorId: user.uid,
-        creatorName: user.displayName || userData?.firstName || "Kullanıcı",
-        creatorProfileImage: user.photoURL || "",
-        bookingId: bookingRef.id,
-        facilityId: selectedFacility!.id!,
-        facilityName: (selectedFacility!.name as string) || "Bilinmeyen Saha",
-        facilityAddress: (selectedFacility!.address as string) || "",
-        pitchName: selectedPitch.name,
-        matchDate: format(selectedDate, "yyyy-MM-dd"),
-        startHour: selectedSlots[0],
-        endHour: selectedSlots[selectedSlots.length - 1] + 1,
-        title: matchForm.title,
-        description: matchForm.description,
-        neededPlayers: matchForm.maxPlayers - matchForm.currentPlayers,
-        currentPlayers: matchForm.currentPlayers,
-        maxPlayers: matchForm.maxPlayers,
-        preferredPositions: matchForm.preferredPositions,
-        skillLevel: matchForm.skillLevel,
-        costPerPlayer: Math.round(totalPrice / matchForm.maxPlayers),
-      });
+    const matchPostRef = await createMatchPost({
+      creatorId: user!.uid,
+      creatorName: user!.displayName || userData?.firstName || "Kullanıcı",
+      creatorProfileImage: user!.photoURL || "",
+      bookingId: bookingRef.id,
+      facilityId: selectedFacility!.id!,
+      facilityName: (selectedFacility!.name as string) || "Bilinmeyen Saha",
+      facilityAddress: (selectedFacility!.address as string) || "",
+      pitchName: selectedPitch.name,
+      matchDate: format(selectedDate, "yyyy-MM-dd"),
+      startHour: selectedSlots[0],
+      endHour: selectedSlots[selectedSlots.length - 1] + 1,
+      title: matchForm.title,
+      description: matchForm.description,
+      neededPlayers: matchForm.maxPlayers - matchForm.currentPlayers,
+      currentPlayers: matchForm.currentPlayers,
+      maxPlayers: matchForm.maxPlayers,
+      preferredPositions: matchForm.preferredPositions,
+      skillLevel: matchForm.skillLevel,
+      costPerPlayer: Math.round(totalPrice / matchForm.maxPlayers),
+    });
 
-      // 3. Seçilen oyunculara anında davet gönder
-      if (selectedPlayerIds.length > 0) {
-        const promises = selectedPlayerIds.map((playerId) => 
+    if (selectedPlayerIds.length > 0) {
+      await Promise.all(
+        selectedPlayerIds.map((playerId) =>
           sendNotification({
             userId: playerId,
             type: "invite",
             title: "Yeni Maç Daveti!",
-            body: `${user.displayName || userData?.firstName || "Bir kullanıcı"} seni ${selectedFacility!.name} sahasındaki maça davet ediyor!`,
+            body: `${user!.displayName || userData?.firstName || "Bir kullanıcı"} seni ${selectedFacility!.name} sahasındaki maça davet ediyor!`,
             relatedId: matchPostRef.id,
           })
-        );
-        await Promise.all(promises);
-        toast.success(`Maç kuruldu ve ${selectedPlayerIds.length} oyuncuya davet gönderildi!`);
-      } else {
-        toast.success("Maç ilanı başarıyla yayınlandı!");
-      }
-      
-      router.push("/groups");
-    } catch (error: any) {
-      toast.error(error.message || "Maç kurulurken bir hata oluştu.");
-    } finally {
-      setIsSubmitting(false);
-      setShowBookingModal(false);
+        )
+      );
     }
+
+    return bookingRef.id;
   };
 
   const dayNames = ["Paz", "Pzt", "Sal", "Çrş", "Per", "Cum", "Cmt"];
@@ -543,68 +526,18 @@ export default function MatchCreatePage() {
       </div>
 
       {/* REZERVASYON VE KAPORA MODALI */}
-      {showBookingModal && selectedFacility && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 60, padding: 16 }}>
-          <div style={{ background: "#fff", borderRadius: 24, padding: 32, maxWidth: 450, width: "100%", maxHeight: "90vh", overflow: "auto" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-              <h2 style={{ fontSize: 22, fontWeight: 900, color: "#111827" }}>Maç Kurulum Özeti</h2>
-              <button onClick={() => setShowBookingModal(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 24 }}>
-                <X size={24} />
-              </button>
-            </div>
-
-            <div style={{ background: "#E8F5E9", borderRadius: 12, padding: "14px 16px", display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 24 }}>
-              <AlertCircle size={18} style={{ color: "#2E7D32", flexShrink: 0, marginTop: 1 }} />
-              <p style={{ fontSize: 13, color: "#2E7D32", lineHeight: 1.5, fontWeight: 500 }}>
-                Maç ilanınız yayınlandıktan sonra sahayı rezerve etmiş olursunuz. İşlemi tamamlamak için kapora alınacaktır.
-              </p>
-            </div>
-
-            <div style={{ borderTop: "1px solid #f0f0f0", borderBottom: "1px solid #f0f0f0", padding: "16px 0", marginBottom: 24, display: "flex", flexDirection: "column", gap: 12 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15 }}>
-                <span style={{ color: "#6b7280" }}>Maç Başlığı</span>
-                <span style={{ fontWeight: 700, color: "#111827" }}>{matchForm.title}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15 }}>
-                <span style={{ color: "#6b7280" }}>Saha</span>
-                <span style={{ fontWeight: 700, color: "#111827" }}>{selectedFacility.name as string}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15 }}>
-                <span style={{ color: "#6b7280" }}>Tarih</span>
-                <span style={{ fontWeight: 700, color: "#111827" }}>{format(selectedDate, "dd.MM.yyyy")}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15 }}>
-                <span style={{ color: "#6b7280" }}>Saatler</span>
-                <span style={{ fontWeight: 700, color: "#2E7D32" }}>
-                  {selectedSlots.map(h => `${h}:00`).join(", ")}
-                </span>
-              </div>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 32 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15 }}>
-                <span style={{ color: "#6b7280" }}>Saha Ücreti</span>
-                <span style={{ fontWeight: 800, color: "#111827" }}>₺{totalPrice}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16 }}>
-                <span style={{ color: "#6b7280", fontWeight: 600 }}>Kapora (%20)</span>
-                <span style={{ fontWeight: 900, color: "#2E7D32", fontSize: 18 }}>₺{Math.round(totalPrice * 0.2)}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginTop: 8 }}>
-                <span style={{ color: "#9ca3af", fontWeight: 500 }}>Tahmini Kişi Başı</span>
-                <span style={{ fontWeight: 700, color: "#6b7280" }}>₺{Math.round(totalPrice / matchForm.maxPlayers)} / kişi</span>
-              </div>
-            </div>
-
-            <button
-              onClick={handleCreateMatch}
-              disabled={isSubmitting}
-              style={{ width: "100%", background: "#2E7D32", color: "white", padding: "16px", borderRadius: 16, border: "none", fontWeight: 800, fontSize: 16, cursor: isSubmitting ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all 0.2s", opacity: isSubmitting ? 0.7 : 1 }}
-            >
-              {isSubmitting ? "İşleniyor..." : (<><CreditCard size={20} /> Kapora Öde &amp; Maçı Kur</>)}
-            </button>
-          </div>
-        </div>
+      {selectedFacility && (
+        <BookingPaymentModal
+          isOpen={showBookingModal}
+          onClose={() => setShowBookingModal(false)}
+          fieldName={selectedFacility.name as string}
+          date={format(selectedDate, "dd.MM.yyyy")}
+          timeSlots={selectedSlots.map(h => `${h}:00`).join(", ")}
+          totalPrice={totalPrice}
+          matchTitle={matchForm.title}
+          maxPlayers={matchForm.maxPlayers}
+          onCreateBooking={createMatchAndBooking}
+        />
       )}
 
       {/* Auth Modal */}

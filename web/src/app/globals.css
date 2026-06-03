@@ -1249,3 +1249,169 @@ body {
     animation: none !important;
   }
 }
+
+/* ════════════════════════════════════════════════════════
+   MOBILE BOTTOM NAVIGATION  — Premium Design
+   ════════════════════════════════════════════════════════ */
+
+/* Hidden on desktop */
+.mobile-bottom-nav {
+  display: none;
+}
+
+@keyframes mob-pop {
+  0%   { transform: scale(0.8) translateY(4px); opacity: 0; }
+  60%  { transform: scale(1.08) translateY(-1px); }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+@keyframes mob-dot-in {
+  0%   { transform: scaleX(0); opacity: 0; }
+  100% { transform: scaleX(1); opacity: 1; }
+}
+
+@media (max-width: 768px) {
+
+  /* Padding so page content doesn't hide behind the bar */
+  body { padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
+
+  /* Hide the 4 quick-action cards (replaced by the bottom nav) */
+  .home-quick-actions { display: none !important; }
+
+  /* ── Bar Container ─────────────────────────────────── */
+  .mobile-bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    align-items: stretch;
+    justify-content: space-around;
+    height: calc(64px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+
+    /* Frosted glass panel */
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+
+    /* Top accent line — gradient from green to transparent */
+    border-top: 1px solid transparent;
+    background-clip: padding-box;
+    box-shadow:
+      0 -1px 0 rgba(46, 125, 50, 0.12),
+      0 -8px 32px rgba(0, 0, 0, 0.07),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+
+    z-index: 1000;
+  }
+
+  /* ── Nav Item ──────────────────────────────────────── */
+  .mob-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    flex: 1;
+    padding-top: 8px;
+    color: #9ca3af;
+    text-decoration: none;
+    position: relative;
+    transition: color 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mob-nav-item:active { opacity: 0.7; }
+
+  /* Active state */
+  .mob-nav-item--active {
+    color: #1B5E20;
+  }
+
+  /* ── Icon wrapper ──────────────────────────────────── */
+  .mob-nav-icon-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 28px;
+  }
+
+  .mob-nav-icon {
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .mob-nav-item--active .mob-nav-icon {
+    transform: translateY(-2px) scale(1.1);
+    animation: mob-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  /* Active pill indicator below icon */
+  .mob-nav-dot {
+    position: absolute;
+    bottom: -4px;
+    left: 50%;
+    translate: -50% 0;
+    width: 20px;
+    height: 3px;
+    border-radius: 99px;
+    background: linear-gradient(90deg, #2E7D32, #4CAF50);
+    box-shadow: 0 0 6px rgba(46, 125, 50, 0.5);
+    transform-origin: center;
+    animation: mob-dot-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  /* ── Label ─────────────────────────────────────────── */
+  .mob-nav-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    transition: opacity 0.2s;
+    margin-top: 1px;
+  }
+
+  .mob-nav-item--active .mob-nav-label {
+    opacity: 1;
+    font-weight: 700;
+  }
+
+  /* ── Highlighted "Maç Kur" center button ──────────── */
+  .mob-nav-item--highlight {
+    color: #2E7D32;
+  }
+
+  .mob-nav-item--highlight .mob-nav-icon-wrap {
+    width: 52px;
+    height: 52px;
+    border-radius: 18px;
+    margin-top: -24px;
+    background: linear-gradient(145deg, #1B5E20, #2E7D32, #4CAF50);
+    box-shadow:
+      0 4px 16px rgba(46, 125, 50, 0.45),
+      0 1px 0 rgba(255, 255, 255, 0.25) inset;
+    color: white;
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+                box-shadow 0.3s ease;
+  }
+
+  .mob-nav-item--highlight .mob-nav-icon {
+    color: white;
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .mob-nav-item--highlight:active .mob-nav-icon-wrap {
+    transform: scale(0.92);
+    box-shadow: 0 2px 8px rgba(46, 125, 50, 0.3);
+  }
+
+  .mob-nav-item--highlight .mob-nav-label {
+    color: #2E7D32;
+    font-weight: 700;
+    margin-top: 6px;
+  }
+
+  /* Active highlight doesn't need the dot */
+  .mob-nav-item--highlight .mob-nav-dot { display: none; }
+}

@@ -2,10 +2,11 @@
 
 import React, { useState, useEffect } from "react";
 import Navbar from "@/frontend/components/common/Navbar";
+import BookingPaymentModal from "@/frontend/components/common/BookingPaymentModal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { MapPin, Phone, Star, Heart, Share2, ChevronLeft, ChevronRight, Check, Car, Droplets, Utensils, Lightbulb, Wifi, Wind, ArrowRight, X, AlertCircle, CreditCard, Coffee } from "lucide-react";
+import { MapPin, Phone, Star, Heart, Share2, ChevronLeft, ChevronRight, Check, Car, Droplets, Utensils, Lightbulb, Wifi, Wind, ArrowRight, X, AlertCircle, Coffee } from "lucide-react";
 import { getFieldAverageRating, getFieldReviews, rateField, hasRatedField } from "@/backend/services/ratingService";
 import { getField } from "@/backend/services/fieldService";
 import { createBooking } from "@/backend/services/bookingService";
@@ -47,34 +48,21 @@ export default function FieldDetailPage({ params }: { params: Promise<{ fieldId:
   const [reviewForm, setReviewForm] = useState({ rating: 0, comment: "" });
   
   const [showBookingModal, setShowBookingModal] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleBooking = async () => {
-    if (!user) {
-      toast.error("Randevu için giriş yapmalısınız.");
-      return;
-    }
-    setIsSubmitting(true);
-    try {
-      for (const slotHour of selectedSlots) {
-        const slotLabel = timeSlots.find(s => s.hour === slotHour)?.label;
-        await createBooking({
-          fieldId,
-          fieldName: realField.name,
-          userId: user.uid,
-          userName: user.displayName || "Kullanıcı",
-          date: format(selectedDate, "yyyy-MM-dd"),
-          timeSlot: slotLabel || "",
-        });
-      }
-      toast.success("Randevu talebi başarıyla oluşturuldu!");
-      router.push("/profile");
-    } catch (error) {
-      toast.error("Randevu oluşturulurken bir hata oluştu.");
-    } finally {
-      setIsSubmitting(false);
-      setShowBookingModal(false);
-    }
+  const createBookingForPayment = async (): Promise<string> => {
+    const slotStr = selectedSlots.map(h => `${h}:00`).join(", ");
+    const ref = await createBooking({
+      fieldId,
+      fieldName: realField.name,
+      userId: user!.uid,
+      userName: user!.displayName || "Kullanıcı",
+      date: format(selectedDate, "yyyy-MM-dd"),
+      timeSlot: slotStr,
+      totalPrice,
+      depositAmount: Math.round(totalPrice * 0.2),
+      status: "pending_payment",
+    });
+    return ref.id;
   };
 
   const dates = getDates();
@@ -510,61 +498,15 @@ export default function FieldDetailPage({ params }: { params: Promise<{ fieldId:
         </div>
       )}
 
-      {showBookingModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 60, padding: 16 }}>
-          <div style={{ background: "#fff", borderRadius: 24, padding: 32, maxWidth: 450, width: "100%", maxHeight: "90vh", overflow: "auto" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-              <h2 style={{ fontSize: 22, fontWeight: 900, color: "#111827" }}>Rezervasyon Özeti</h2>
-              <button onClick={() => setShowBookingModal(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 24 }}>
-                <X size={24} />
-              </button>
-            </div>
-
-            <div style={{ background: "#E8F5E9", borderRadius: 12, padding: "14px 16px", display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 24 }}>
-              <AlertCircle size={18} style={{ color: "#2E7D32", flexShrink: 0, marginTop: 1 }} />
-              <p style={{ fontSize: 13, color: "#2E7D32", lineHeight: 1.5, fontWeight: 500 }}>
-                Randevu talebiniz saha sahibi tarafından onaylandıktan sonra kaporanız alınacaktır.
-              </p>
-            </div>
-
-            <div style={{ borderTop: "1px solid #f0f0f0", borderBottom: "1px solid #f0f0f0", padding: "16px 0", marginBottom: 24, display: "flex", flexDirection: "column", gap: 12 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15 }}>
-                <span style={{ color: "#6b7280" }}>Saha</span>
-                <span style={{ fontWeight: 700, color: "#111827" }}>{currentField.name}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15 }}>
-                <span style={{ color: "#6b7280" }}>Tarih</span>
-                <span style={{ fontWeight: 700, color: "#111827" }}>{format(selectedDate, "dd.MM.yyyy")}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15 }}>
-                <span style={{ color: "#6b7280" }}>Saatler</span>
-                <span style={{ fontWeight: 700, color: "#2E7D32" }}>
-                  {selectedSlots.map(h => `${h}:00`).join(", ")}
-                </span>
-              </div>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 32 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15 }}>
-                <span style={{ color: "#6b7280" }}>Saha Ücreti</span>
-                <span style={{ fontWeight: 800, color: "#111827" }}>₺{totalPrice}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16 }}>
-                <span style={{ color: "#6b7280", fontWeight: 600 }}>Kapora (%20)</span>
-                <span style={{ fontWeight: 900, color: "#2E7D32", fontSize: 18 }}>₺{Math.round(totalPrice * 0.2)}</span>
-              </div>
-            </div>
-
-            <button
-              onClick={handleBooking}
-              disabled={isSubmitting}
-              style={{ width: "100%", background: "#2E7D32", color: "white", padding: "16px", borderRadius: 16, border: "none", fontWeight: 800, fontSize: 16, cursor: isSubmitting ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all 0.2s", opacity: isSubmitting ? 0.7 : 1 }}
-            >
-              {isSubmitting ? "İşleniyor..." : (<><CreditCard size={20} /> Talebi Gönder & Kapora Öde</>)}
-            </button>
-          </div>
-        </div>
-      )}
+      <BookingPaymentModal
+        isOpen={showBookingModal}
+        onClose={() => setShowBookingModal(false)}
+        fieldName={realField.name}
+        date={format(selectedDate, "dd.MM.yyyy")}
+        timeSlots={selectedSlots.map(h => `${h}:00`).join(", ")}
+        totalPrice={totalPrice}
+        onCreateBooking={createBookingForPayment}
+      />
     </div>
   );
 }

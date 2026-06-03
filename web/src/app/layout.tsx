@@ -5,6 +5,7 @@ import { AuthProvider } from "@/frontend/context/AuthContext";
 import { Toaster } from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import Chatbot from "@/frontend/components/common/Chatbot";
+import MobileBottomNav from "@/frontend/components/common/MobileBottomNav";
 
 const jakarta = Plus_Jakarta_Sans({
   weight: ["400", "500", "600", "700", "800"],
@@ -30,6 +31,7 @@ export default function RootLayout({
           {children}
           <Toaster position="top-right" />
           <Chatbot />
+          <MobileBottomNav />
         </AuthProvider>
       </body>
     </html>

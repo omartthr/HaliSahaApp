@@ -9,6 +9,8 @@ import {
   deleteDoc,
   doc,
   onSnapshot,
+  query,
+  where,
   serverTimestamp,
   updateDoc,
 } from "firebase/firestore";
@@ -21,6 +23,7 @@ import {
   ChevronRight, Clock3, LayoutGrid, LogOut, MapPin, Plus,
   Settings, Star, Trash2, TrendingUp, XCircle, AlertCircle, Activity, X
 } from "lucide-react";
+import CustomSelect from "@/frontend/components/common/CustomSelect";
 import { useRouter } from "next/navigation";
 import GoogleLocationMap from "@/frontend/components/map/GoogleLocationMap";
 
@@ -62,7 +65,7 @@ const BOOKING_FILTERS: Array<{ id: BookingFilter; label: string }> = [
 ];
 
 const statusLabel = (s?: ReservationStatus) => {
-  if (s === "pending_payment") return "Bekliyor";
+  if (s === "pending_payment" || s === "pending") return "Bekliyor";
   if (s === "confirmed") return "Kapora Ödendi";
   if (s === "approved") return "Onaylandı";
   if (s === "cancelled") return "İptal";
@@ -72,7 +75,7 @@ const statusLabel = (s?: ReservationStatus) => {
 };
 
 const statusStyle = (s?: ReservationStatus): React.CSSProperties => {
-  if (s === "pending_payment") return { background: "#FFF3E0", color: "#E65100" };
+  if (s === "pending_payment" || s === "pending") return { background: "#FFF3E0", color: "#E65100" };
   if (s === "confirmed") return { background: "#E8F5E9", color: "#2E7D32" };
   if (s === "approved") return { background: "#E8F5E9", color: "#2E7D32" };
   if (s === "cancelled") return { background: "#FFEBEE", color: "#C62828" };
@@ -168,7 +171,7 @@ export default function AdminDashboardContent() {
   );
 
   const pendingReservations = useMemo(
-    () => sortedReservations.filter((r) => r.status === "pending_payment"),
+    () => sortedReservations.filter((r) => r.status === "pending_payment" || r.status === "pending"),
     [sortedReservations]
   );
 
@@ -207,10 +210,10 @@ export default function AdminDashboardContent() {
 
   useEffect(() => {
     if (!user) return;
-    const unsubFields = onSnapshot(collection(db, "facilities"), (snap) => {
+    const qFields = query(collection(db, "facilities"), where("ownerId", "==", user.uid));
+    const unsubFields = onSnapshot(qFields, (snap) => {
       const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Facility, "id">) }));
-      const owned = list.filter((f) => f.ownerId === user.uid);
-      setFacilities(owned);
+      setFacilities(list);
       setIsFallbackFacilityMode(false);
       setLoading(false);
     });
@@ -244,11 +247,39 @@ export default function AdminDashboardContent() {
     return () => unsubs.forEach(u => u());
   }, [facilities]);
 
-  const handleStatusUpdate = async (resId: string, newStatus: ReservationStatus) => {
+  const handleStatusUpdate = async (resId: string, newStatus: ReservationStatus, resUserId?: string, resFieldName?: string) => {
     try {
       await updateDoc(doc(db, "bookings", resId), { status: newStatus, updatedAt: serverTimestamp() });
       toast.success("Durum güncellendi.");
-    } catch (err) { toast.error("Hata: " + err); }
+    } catch (err) {
+      toast.error("Rezervasyon onayı hatası: " + err);
+      return; // If booking update fails, don't send notification
+    }
+      
+    // Bildirim Gönderme
+    if (resUserId && (newStatus === "approved" || newStatus === "cancelled")) {
+      try {
+        let title = "Rezervasyon Güncellendi";
+        let body = `Rezervasyon durumunuz güncellendi.`;
+        if (newStatus === "approved") {
+           title = "Rezervasyonunuz Onaylandı! ✅";
+           body = `${resFieldName || "Tesis"} için yaptığınız rezervasyon saha sahibi tarafından onaylandı. İyi maçlar!`;
+        } else if (newStatus === "cancelled") {
+           title = "Rezervasyonunuz İptal Edildi ❌";
+           body = `${resFieldName || "Tesis"} için yaptığınız rezervasyon maalesef saha sahibi tarafından iptal edildi.`;
+        }
+        await addDoc(collection(db, "notifications"), {
+           userId: resUserId,
+           title,
+           body,
+           type: "system",
+           isRead: false,
+           createdAt: serverTimestamp()
+        });
+      } catch (err) {
+        toast.error("Bildirim gönderme hatası: " + err);
+      }
+    }
   };
 
   const resetFacilityForm = () => {
@@ -676,17 +707,25 @@ export default function AdminDashboardContent() {
           <h3 style={{ ...sectionTitle, marginBottom: 16 }}>Yeni Saha Ekle</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <input type="text" placeholder="Saha adı (örn: Saha A) *" value={pitchForm.name} onChange={e => setPitchForm(s => ({...s, name: e.target.value}))} style={inputStyle} />
-            <select value={pitchForm.pitchType} onChange={e => setPitchForm(s => ({...s, pitchType: e.target.value}))} style={inputStyle}>
-              <option value="outdoor">Açık Saha</option>
-              <option value="indoor">Kapalı Saha</option>
-              <option value="covered">Yarı Kapalı Saha</option>
-            </select>
-            <select value={pitchForm.surfaceType} onChange={e => setPitchForm(s => ({...s, surfaceType: e.target.value}))} style={inputStyle}>
-              <option value="syntheticGrass">Sentetik Çim</option>
-              <option value="naturalGrass">Doğal Çim</option>
-              <option value="hybrid">Hibrit</option>
-              <option value="artificial">Yapay Zemin</option>
-            </select>
+            <CustomSelect
+              options={[
+                { value: "outdoor", label: "Açık Saha" },
+                { value: "indoor", label: "Kapalı Saha" },
+                { value: "covered", label: "Yarı Kapalı Saha" },
+              ]}
+              value={pitchForm.pitchType}
+              onChange={(val) => setPitchForm(s => ({ ...s, pitchType: val }))}
+            />
+            <CustomSelect
+              options={[
+                { value: "syntheticGrass", label: "Sentetik Çim" },
+                { value: "naturalGrass", label: "Doğal Çim" },
+                { value: "hybrid", label: "Hibrit" },
+                { value: "artificial", label: "Yapay Zemin" },
+              ]}
+              value={pitchForm.surfaceType}
+              onChange={(val) => setPitchForm(s => ({ ...s, surfaceType: val }))}
+            />
             <div style={{ display: "flex", gap: 10 }}>
               <input type="text" placeholder="Boyut (örn: 7v7)" value={pitchForm.size} onChange={e => setPitchForm(s => ({...s, size: e.target.value}))} style={{...inputStyle, flex: 1}} />
               <input type="number" placeholder="Kapasite (Kişi)" value={pitchForm.capacity} onChange={e => setPitchForm(s => ({...s, capacity: e.target.value}))} style={{...inputStyle, flex: 1}} />
@@ -1141,7 +1180,8 @@ function EmptyState({ icon, msg }: { icon: React.ReactNode; msg: string }) {
   );
 }
 
-function BookingCard({ res, onStatus, compact = false }: { res: Reservation; onStatus: (id: string, s: ReservationStatus) => Promise<void>; compact?: boolean }) {
+function BookingCard({ res, onStatus, compact = false }: { res: Reservation; onStatus: (id: string, s: ReservationStatus, userId?: string, fieldName?: string) => Promise<void>; compact?: boolean }) {
+  const isPending = res.status === "pending_payment" || res.status === "pending";
   return (
     <div className="auth-dynamo-glass match-dynamo-card match-card" style={{ borderRadius: 16, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
@@ -1164,15 +1204,15 @@ function BookingCard({ res, onStatus, compact = false }: { res: Reservation; onS
           </span>
         ) : null}
       </div>
-      {(res.status === "pending_payment" || res.status === "approved" || res.status === "confirmed") && (
+      {(isPending || res.status === "approved" || res.status === "confirmed") && (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {(res.status === "pending_payment" || res.status === "confirmed") && (
+          {(isPending || res.status === "confirmed") && (
             <>
-              <button onClick={() => void onStatus(res.id, "approved")}
+              <button onClick={() => void onStatus(res.id, "approved", res.userId, res.fieldName || res.facilityName)}
                 style={{ padding: "8px 16px", borderRadius: 10, background: "#2E7D32", color: "#fff", fontWeight: 700, fontSize: 13, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
                 <CheckCircle2 size={14} /> Onayla
               </button>
-              <button onClick={() => void onStatus(res.id, "cancelled")}
+              <button onClick={() => void onStatus(res.id, "cancelled", res.userId, res.fieldName || res.facilityName)}
                 style={{ padding: "8px 16px", borderRadius: 10, background: "#FFF5F5", color: "#C62828", fontWeight: 700, fontSize: 13, border: "1px solid #FCA5A5", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
                 <XCircle size={14} /> İptal
               </button>
