@@ -11,6 +11,7 @@ import { deleteUser } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getUserAverageRating, ratePlayer, hasRatedPlayer } from "@/backend/services/ratingService";
+import { updateUserProfile } from "@/backend/services/userService";
 
 const settingsItems = [
   { icon: UserIcon, label: "Profili Düzenle", color: "#2E7D32" },
@@ -27,7 +28,41 @@ const ProfilePage = () => {
   const [userRating, setUserRating] = useState<number>(0);
   const [ratingModal, setRatingModal] = useState<{ show: boolean; resId?: string; opponentIds?: string[] }>({ show: false });
   const [ratingScores, setRatingScores] = useState<{ [key: string]: number }>({});
+  const [editModal, setEditModal] = useState(false);
+  const [editForm, setEditForm] = useState({ firstName: "", lastName: "", username: "" });
+  const [updating, setUpdating] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    if (userData) {
+      setEditForm({
+        firstName: userData.firstName || "",
+        lastName: userData.lastName || "",
+        username: userData.username || "",
+      });
+    }
+  }, [userData]);
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setUpdating(true);
+    try {
+      await updateUserProfile(user.uid, {
+        firstName: editForm.firstName,
+        lastName: editForm.lastName,
+        username: editForm.username,
+      });
+      toast.success("Profil başarıyla güncellendi!");
+      setEditModal(false);
+      // Reload to reflect changes
+      window.location.reload();
+    } catch (error) {
+      toast.error("Profil güncellenirken bir hata oluştu.");
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   useEffect(() => {
     if (!authLoading && isAdmin) {
@@ -316,6 +351,9 @@ const ProfilePage = () => {
                     return (
                       <div
                         key={item.label}
+                        onClick={() => {
+                          if (item.label === "Profili Düzenle") setEditModal(true);
+                        }}
                         style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: idx < settingsItems.length - 1 ? "1px solid rgba(17,75,50,0.08)" : "none", cursor: "pointer" }}
                         className="hover:bg-gray-50 transition-colors"
                       >
@@ -394,6 +432,72 @@ const ProfilePage = () => {
                 Puanla
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* PROFİL DÜZENLE MODALI */}
+      {editModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 60, padding: 16 }}>
+          <div style={{ background: "#fff", borderRadius: 20, padding: 32, maxWidth: 400, width: "100%" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+              <h2 style={{ fontSize: 22, fontWeight: 900, color: "#111827" }}>Profili Düzenle</h2>
+              <button onClick={() => setEditModal(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 24 }}>
+                <X size={24} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleUpdateProfile} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>İsim</label>
+                <input 
+                  required
+                  value={editForm.firstName} 
+                  onChange={(e) => setEditForm({...editForm, firstName: e.target.value})}
+                  className="input-field" 
+                  style={{ width: "100%", padding: "10px 14px", borderRadius: 12, border: "1px solid #d1d5db" }} 
+                />
+              </div>
+              
+              <div>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Soyisim</label>
+                <input 
+                  required
+                  value={editForm.lastName} 
+                  onChange={(e) => setEditForm({...editForm, lastName: e.target.value})}
+                  className="input-field" 
+                  style={{ width: "100%", padding: "10px 14px", borderRadius: 12, border: "1px solid #d1d5db" }} 
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Kullanıcı Adı</label>
+                <input 
+                  required
+                  value={editForm.username} 
+                  onChange={(e) => setEditForm({...editForm, username: e.target.value})}
+                  className="input-field" 
+                  style={{ width: "100%", padding: "10px 14px", borderRadius: 12, border: "1px solid #d1d5db" }} 
+                />
+              </div>
+
+              <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
+                <button
+                  type="button"
+                  onClick={() => setEditModal(false)}
+                  style={{ flex: 1, padding: 12, borderRadius: 10, border: "1px solid #E5E7EB", background: "#fff", fontWeight: 700, cursor: "pointer" }}
+                >
+                  İptal
+                </button>
+                <button
+                  type="submit"
+                  disabled={updating}
+                  style={{ flex: 1, padding: 12, borderRadius: 10, border: "none", background: "#2E7D32", color: "#fff", fontWeight: 700, cursor: "pointer", opacity: updating ? 0.7 : 1 }}
+                >
+                  {updating ? "Kaydediliyor..." : "Kaydet"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
