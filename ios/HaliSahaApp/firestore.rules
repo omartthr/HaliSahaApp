@@ -41,8 +41,9 @@ service cloud.firestore {
 
     function isApprovedAdmin() {
       return isAdminUser()
-          && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
-          && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.approvalStatus == 'approved';
+          && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+          // MVP TESTİ İÇİN ONAY ŞARTI GEÇİCİ OLARAK KALDIRILDI:
+          // && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.approvalStatus == 'approved';
     }
 
     // Update sırasında değişen alanların verilen listede olmasını şart koşar.
@@ -183,23 +184,27 @@ service cloud.firestore {
                     && request.resource.data.paymentStatus == 'pending';
 
       // Güncelleme yetkisi: kendi rezervasyonu, tesis sahibi veya superAdmin.
-      // Ek olarak, client yalnızca aşağıdaki alanları değiştirebilir.
-      // `paymentStatus`, `qrCode`, `ticketNumber`, fiyat ve kimlik alanları
-      // sadece server-side (iyzicoCallback / refundDeposit) tarafından
-      // güncellenebilir. SuperAdmin için bu kısıt yok (manuel müdahale).
+      // MVP İÇİN: isApprovedAdmin onayı by-pass edildi, sadece giriş yapmış tesis sahibi olman yeterli.
       allow update: if isSignedIn() && (
                        isSuperAdmin()
                        || (
                          (resource.data.userId == request.auth.uid
                           || (isApprovedAdmin()
-                              && exists(/databases/$(database)/documents/facilities/$(resource.data.facilityId))
-                              && get(/databases/$(database)/documents/facilities/$(resource.data.facilityId)).data.ownerId == request.auth.uid))
+                              && (
+                                (exists(/databases/$(database)/documents/facilities/$(resource.data.facilityId))
+                                 && get(/databases/$(database)/documents/facilities/$(resource.data.facilityId)).data.ownerId == request.auth.uid)
+                                || (exists(/databases/$(database)/documents/facilities/$(resource.data.fieldId))
+                                 && get(/databases/$(database)/documents/facilities/$(resource.data.fieldId)).data.ownerId == request.auth.uid)
+                              )
+                             )
+                         )
                          && onlyChanged([
                               'status',
                               'cancellationReason',
                               'cancelledAt',
                               'updatedAt',
-                              'groupId'
+                              'groupId',
+                              'paymentDocId'
                             ])
                        )
                      );

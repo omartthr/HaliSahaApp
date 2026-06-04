@@ -34,7 +34,9 @@ export async function createBooking(data: {
 }) {
   return addDoc(collection(db, COLLECTION), {
     ...data,
-    status: data.status ?? "pending_payment",
+    facilityId: data.fieldId, // Firestore güvenlik kuralları owner kontrolü için 'facilityId' arıyor!
+    status: "pending", 
+    paymentStatus: "pending", 
     createdAt: serverTimestamp(),
   });
 }

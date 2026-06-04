@@ -24,3 +24,10 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   if (!snap.exists()) return null;
   return { id: snap.id, ...snap.data() } as UserProfile;
 }
+
+import { updateDoc } from "firebase/firestore";
+
+export async function updateUserProfile(uid: string, data: Partial<UserProfile>) {
+  const userRef = doc(db, "users", uid);
+  await updateDoc(userRef, data);
+}

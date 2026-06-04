@@ -53,9 +53,14 @@ const LoginPage = () => {
       
       const existingProfile = await getUserProfile(user.uid);
       if (!existingProfile && !admin) {
+        // Fallback to providerData or email if displayName is missing
+        const displayName = user.displayName || user.providerData?.[0]?.displayName || "";
+        const emailName = user.email?.split('@')[0] || "kullanici";
+        
         await createUserProfile(user.uid, {
-          firstName: user.displayName?.split(' ')[0] || "Kullanıcı",
-          lastName: user.displayName?.split(' ').slice(1).join(' ') || "",
+          firstName: displayName ? displayName.split(' ')[0] : emailName,
+          lastName: displayName ? displayName.split(' ').slice(1).join(' ') : "",
+          username: emailName + Math.floor(Math.random() * 1000),
           email: user.email,
           userType: "player",
           createdAt: new Date().toISOString(),

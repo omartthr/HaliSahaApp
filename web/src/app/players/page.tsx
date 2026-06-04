@@ -5,7 +5,7 @@ import Navbar from "@/frontend/components/common/Navbar";
 import { getAllPlayers, UserProfile } from "@/backend/services/userService";
 import { sendInviteNotification } from "@/backend/services/notificationService";
 import { useAuth } from "@/frontend/context/AuthContext";
-import { Search, Filter, Star, Trophy, MapPin, Send, ChevronLeft, UserPlus, Check } from "lucide-react";
+import { Search, Filter, Star, Trophy, MapPin, Send, ChevronLeft, UserPlus, Check, MessageCircle } from "lucide-react";
 import { toast } from "react-hot-toast";
 import Link from "next/link";
 import CustomSelect from "@/frontend/components/common/CustomSelect";
@@ -217,12 +217,42 @@ export default function PlayersPage() {
                       </div>
                     </div>
 
-                    <div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button 
+                        onClick={async () => {
+                          if (!user) return toast.error("Giriş yapmalısınız.");
+                          try {
+                            const { getOrCreateDirectChat } = await import("@/backend/services/groupService");
+                            await getOrCreateDirectChat(user.uid, player.id, user.displayName || "Kullanıcı", player.firstName + " " + player.lastName);
+                            window.location.href = "/messages";
+                          } catch(err) {
+                            toast.error("Sohbet başlatılamadı.");
+                          }
+                        }}
+                        style={{ 
+                          padding: "8px 16px", 
+                          background: "rgba(22, 163, 74, 0.1)", 
+                          color: "#15803d", 
+                          border: "none", 
+                          borderRadius: 20, 
+                          fontWeight: 700, 
+                          fontSize: 13, 
+                          cursor: "pointer", 
+                          display: "flex", 
+                          alignItems: "center", 
+                          gap: 6, 
+                          transition: "all 0.2s" 
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = "rgba(22, 163, 74, 0.2)"}
+                        onMouseLeave={e => e.currentTarget.style.background = "rgba(22, 163, 74, 0.1)"}
+                      >
+                        Mesaj At <MessageCircle size={14} />
+                      </button>
                       <button 
                         onClick={() => handleInvite(player.id)}
                         disabled={isInviting}
                         style={{ 
-                          padding: "8px 20px", 
+                          padding: "8px 16px", 
                           background: isInviting ? "#E8F5E9" : "#2E7D32", 
                           color: isInviting ? "#2E7D32" : "white", 
                           border: "none", 
