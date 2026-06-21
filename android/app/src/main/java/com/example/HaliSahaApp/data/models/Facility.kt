@@ -20,16 +20,20 @@ data class Facility(
     val images: List<String> = emptyList(),             // Fotoğraf URL'leri
     val amenities: FacilityAmenities = FacilityAmenities(), // Özellikler
     val operatingHours: OperatingHours = OperatingHours(),
-    val status: FacilityStatus = FacilityStatus.PENDING,
+    val status: FacilityStatus = FacilityStatus.pending,
     val averageRating: Double = 0.0,
     val totalReviews: Int = 0,
     val createdAt: Date = Date(),
     val updatedAt: Date = Date(),
-    val isActive: Boolean = true
+    val isActive: Boolean = true,
+    val autoConfirmBookings: Boolean? = null
 ) {
     // MARK: - Computed Properties
     // Not: LatLng sınıfı için Google Maps bağımlılığı gerekir.
     // UI katmanında ihtiyaç duyduğunda MapView için dönüştürebilirsin.
+
+    val effectiveAutoConfirmBookings: Boolean
+        get() = autoConfirmBookings ?: true
 
     val mainImage: String?
         get() = images.firstOrNull()
@@ -58,7 +62,7 @@ data class Facility(
                 hasCafe = true,
                 hasLighting = true
             ),
-            status = FacilityStatus.APPROVED,
+            status = FacilityStatus.approved,
             averageRating = 4.5,
             totalReviews = 128
         )
@@ -67,10 +71,10 @@ data class Facility(
 
 // MARK: - Facility Status
 enum class FacilityStatus(val rawValue: String, val displayName: String, val color: String) {
-    PENDING("pending", "Onay Bekliyor", "orange"),
-    APPROVED("approved", "Aktif", "green"),
-    REJECTED("rejected", "Reddedildi", "red"),
-    SUSPENDED("suspended", "Askıya Alındı", "gray");
+    @com.google.firebase.firestore.PropertyName("pending") pending("pending", "Onay Bekliyor", "orange"),
+    @com.google.firebase.firestore.PropertyName("approved") approved("approved", "Aktif", "green"),
+    @com.google.firebase.firestore.PropertyName("rejected") rejected("rejected", "Reddedildi", "red"),
+    @com.google.firebase.firestore.PropertyName("suspended") suspended("suspended", "Askıya Alındı", "gray");
 }
 
 // MARK: - Facility Amenities (Özellikler)

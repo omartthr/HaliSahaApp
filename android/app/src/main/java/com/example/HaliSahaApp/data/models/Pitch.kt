@@ -59,25 +59,25 @@ data class Pitch(
 
 // MARK: - Pitch Type Enum
 enum class PitchType(val rawValue: String, val displayName: String, val icon: String) {
-    INDOOR("indoor", "Kapalı", "home_work"),      // house.fill karşılığı
-    OUTDOOR("outdoor", "Açık", "wb_sunny"),       // sun.max.fill karşılığı
-    COVERED("covered", "Yarı Kapalı", "umbrella"); // umbrella.fill karşılığı
+    @com.google.firebase.firestore.PropertyName("indoor") INDOOR("indoor", "Kapalı", "home_work"),      // house.fill karşılığı
+    @com.google.firebase.firestore.PropertyName("outdoor") OUTDOOR("outdoor", "Açık", "wb_sunny"),       // sun.max.fill karşılığı
+    @com.google.firebase.firestore.PropertyName("covered") COVERED("covered", "Yarı Kapalı", "umbrella"); // umbrella.fill karşılığı
 }
 
 // MARK: - Surface Type Enum
 enum class SurfaceType(val rawValue: String, val displayName: String) {
-    SYNTHETIC_GRASS("syntheticGrass", "Sentetik Çim"),
-    NATURAL_GRASS("naturalGrass", "Doğal Çim"),
-    HYBRID("hybrid", "Hibrit"),
-    ARTIFICIAL("artificial", "Yapay Zemin");
+    @com.google.firebase.firestore.PropertyName("syntheticGrass") SYNTHETIC_GRASS("syntheticGrass", "Sentetik Çim"),
+    @com.google.firebase.firestore.PropertyName("naturalGrass") NATURAL_GRASS("naturalGrass", "Doğal Çim"),
+    @com.google.firebase.firestore.PropertyName("hybrid") HYBRID("hybrid", "Hibrit"),
+    @com.google.firebase.firestore.PropertyName("artificial") ARTIFICIAL("artificial", "Yapay Zemin");
 }
 
 // MARK: - Pitch Size Enum
 enum class PitchSize(val rawValue: String, val displayName: String, val playerCount: Int, val dimensions: String) {
-    FIVE_A_SIDE("5v5", "5v5 (10 Kişilik)", 10, "25x15m"),
-    SIX_A_SIDE("6v6", "6v6 (12 Kişilik)", 12, "35x20m"),
-    SEVEN_A_SIDE("7v7", "7v7 (14 Kişilik)", 14, "50x30m"),
-    EIGHT_A_SIDE("8v8", "8v8 (16 Kişilik)", 16, "60x40m");
+    @com.google.firebase.firestore.PropertyName("5v5") FIVE_A_SIDE("5v5", "5v5 (10 Kişilik)", 10, "25x15m"),
+    @com.google.firebase.firestore.PropertyName("6v6") SIX_A_SIDE("6v6", "6v6 (12 Kişilik)", 12, "35x20m"),
+    @com.google.firebase.firestore.PropertyName("7v7") SEVEN_A_SIDE("7v7", "7v7 (14 Kişilik)", 14, "50x30m"),
+    @com.google.firebase.firestore.PropertyName("8v8") EIGHT_A_SIDE("8v8", "8v8 (16 Kişilik)", 16, "60x40m");
 }
 
 // MARK: - Pitch Pricing
@@ -88,10 +88,15 @@ data class PitchPricing(
     val depositPercentage: Double = 0.2,
     val currency: String = "TRY"
 ) {
-    // Fiyat hesaplama mantığı
-    fun calculatePrice(hour: Int, isWeekend: Boolean): Double {
-        val basePrice = if (hour >= 18) eveningPrice else daytimePrice
-        return if (isWeekend) basePrice * weekendMultiplier else basePrice
+    fun calculatePrice(startHour: Int, duration: Int, isWeekend: Boolean): Double {
+        // 18:00 ve sonrası akşam tarifesi, öncesi gündüz tarifesi
+        val basePrice = if (startHour >= 18) eveningPrice else daytimePrice
+
+        // Hafta sonu çarpanını uygula
+        val hourlyPrice = if (isWeekend) basePrice * weekendMultiplier else basePrice
+
+        // Toplam süreyi çarp
+        return hourlyPrice * duration.toDouble()
     }
 
     fun calculateDeposit(totalPrice: Double): Double = totalPrice * depositPercentage

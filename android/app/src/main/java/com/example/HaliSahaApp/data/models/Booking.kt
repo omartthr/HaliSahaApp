@@ -1,11 +1,16 @@
 package com.example.HaliSahaApp.data.models
 
 import com.google.firebase.firestore.DocumentId
+import com.google.firebase.firestore.Exclude
+import com.google.firebase.firestore.PropertyName
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
 
 // MARK: - Booking Model
+// NOT: Firestore toObject() ile enum deserialization sorunlu olabiliyor.
+// Bu yüzden status ve paymentStatus alanları String olarak saklanıyor
+// ve computed property ile enum'a dönüştürülüyor (iOS'taki Codable yaklaşımına benzer).
 data class Booking(
     @DocumentId
     val id: String? = null,
@@ -24,9 +29,9 @@ data class Booking(
 
     // Rezervasyon detayları
     val date: Date = Date(),
-    val startHour: Int = 0,
-    val endHour: Int = 0,
-    val duration: Int = 1,
+    val startHour: Long = 0,  // Firestore int64 → Long (Int yerine)
+    val endHour: Long = 0,    // Firestore int64 → Long (Int yerine)
+    val duration: Long = 1,   // Firestore int64 → Long (Int yerine)
 
     // Fiyatlandırma
     val totalPrice: Double = 0.0,
@@ -34,13 +39,17 @@ data class Booking(
     val remainingAmount: Double = 0.0,
     val currency: String = "TRY",
 
-    // Durum bilgileri
-    val status: BookingStatus = BookingStatus.PENDING,
-    val paymentStatus: PaymentStatus = PaymentStatus.PENDING,
+    // Durum bilgileri — String olarak saklanıyor (Firestore uyumluluğu için)
+    @get:PropertyName("status") @set:PropertyName("status")
+    var statusRaw: String = "pending",
+
+    @get:PropertyName("paymentStatus") @set:PropertyName("paymentStatus")
+    var paymentStatusRaw: String = "pending",
+
     val cancellationReason: String? = null,
 
     // QR Kod / Bilet
-    val qrCode: String = UUID.randomUUID().toString(),
+    val qrCode: String = "",
     val ticketNumber: String = "",
 
     // Tarihler
@@ -48,6 +57,16 @@ data class Booking(
     val updatedAt: Date = Date(),
     val cancelledAt: Date? = null
 ) {
+    // MARK: - Enum Computed Properties
+    // iOS'taki BookingStatus / PaymentStatus enum dönüşümlerinin Android muadili
+    // @Exclude: Firestore serializer'ın bu getter'ları görmezden gelmesini sağlar
+    // (yoksa @PropertyName ile çakışır → "conflicting getters" hatası)
+    val status: BookingStatus
+        @Exclude get() = BookingStatus.entries.find { it.rawValue == statusRaw } ?: BookingStatus.pending
+
+    val paymentStatus: PaymentStatus
+        @Exclude get() = PaymentStatus.entries.find { it.rawValue == paymentStatusRaw } ?: PaymentStatus.pending
+
     // MARK: - Computed Properties (Kotlin Getters)
     val timeSlotString: String
         get() = String.format(Locale.getDefault(), "%02d:00 - %02d:00", startHour, endHour)
@@ -62,17 +81,17 @@ data class Booking(
         get() {
             val calendar = Calendar.getInstance()
             calendar.time = date
-            calendar.set(Calendar.HOUR_OF_DAY, endHour)
+            calendar.set(Calendar.HOUR_OF_DAY, endHour.toInt())
             calendar.set(Calendar.MINUTE, 0)
             return calendar.time.before(Date())
         }
 
     val canBeCancelled: Boolean
         get() {
-            if (status == BookingStatus.CANCELLED) return false
+            if (status == BookingStatus.cancelled) return false
             val calendar = Calendar.getInstance()
             calendar.time = date
-            calendar.set(Calendar.HOUR_OF_DAY, startHour)
+            calendar.set(Calendar.HOUR_OF_DAY, startHour.toInt())
 
             val diffInMs = calendar.time.time - Date().time
             val diffInHours = TimeUnit.MILLISECONDS.toHours(diffInMs)
@@ -80,7 +99,7 @@ data class Booking(
         }
 
     val isRefundable: Boolean
-        get() = canBeCancelled && paymentStatus == PaymentStatus.DEPOSIT_PAID
+        get() = canBeCancelled && paymentStatus == PaymentStatus.depositPaid
 
     // MARK: - Helper Methods & Mock Data
     companion object {
@@ -107,8 +126,8 @@ data class Booking(
             totalPrice = 800.0,
             depositAmount = 160.0,
             remainingAmount = 640.0,
-            status = BookingStatus.CONFIRMED,
-            paymentStatus = PaymentStatus.DEPOSIT_PAID,
+            statusRaw = BookingStatus.confirmed.rawValue,
+            paymentStatusRaw = PaymentStatus.depositPaid.rawValue,
             ticketNumber = "HS-2024-000123"
         )
     }
@@ -116,21 +135,21 @@ data class Booking(
 
 // MARK: - Booking Status Enum
 enum class BookingStatus(val rawValue: String, val displayName: String, val color: String, val icon: String) {
-    PENDING("pending", "Onay Bekliyor", "orange", "schedule"),
-    CONFIRMED("confirmed", "Onaylandı", "green", "check_circle"),
-    COMPLETED("completed", "Tamamlandı", "blue", "sports_score"),
-    CANCELLED("cancelled", "İptal Edildi", "red", "cancel"),
-    NO_SHOW("noShow", "Gelmedi", "gray", "person_off");
+    pending("pending", "Onay Bekliyor", "orange", "schedule"),
+    confirmed("confirmed", "Onaylandı", "green", "check_circle"),
+    completed("completed", "Tamamlandı", "blue", "sports_score"),
+    cancelled("cancelled", "İptal Edildi", "red", "cancel"),
+    noShow("noShow", "Gelmedi", "gray", "person_off");
 }
 
 // MARK: - Payment Status Enum
 enum class PaymentStatus(val rawValue: String, val displayName: String) {
-    PENDING("pending", "Ödeme Bekleniyor"),
-    DEPOSIT_PAID("depositPaid", "Kapora Ödendi"),
-    FULLY_PAID("fullyPaid", "Ödendi"),
-    REFUNDED("refunded", "İade Edildi"),
-    PARTIAL_REFUND("partialRefund", "Kısmi İade"),
-    FAILED("failed", "Başarısız");
+    pending("pending", "Ödeme Bekleniyor"),
+    depositPaid("depositPaid", "Kapora Ödendi"),
+    fullyPaid("fullyPaid", "Ödendi"),
+    refunded("refunded", "İade Edildi"),
+    partialRefund("partialRefund", "Kısmi İade"),
+    failed("failed", "Başarısız");
 }
 
 // MARK: - Cancellation Policy Utility
@@ -138,11 +157,11 @@ object CancellationPolicy {
     private const val FREE_REFUND_HOURS_LIMIT = 24
 
     fun canGetRefund(booking: Booking): Pair<Boolean, Double> {
-        if (booking.status == BookingStatus.CANCELLED) return Pair(false, 0.0)
+        if (booking.status == BookingStatus.cancelled) return Pair(false, 0.0)
 
         val calendar = Calendar.getInstance()
         calendar.time = booking.date
-        calendar.set(Calendar.HOUR_OF_DAY, booking.startHour)
+        calendar.set(Calendar.HOUR_OF_DAY, booking.startHour.toInt())
 
         val diffInMs = calendar.time.time - Date().time
         val diffInHours = TimeUnit.MILLISECONDS.toHours(diffInMs)

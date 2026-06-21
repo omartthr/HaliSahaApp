@@ -416,16 +416,18 @@ fun PasswordStrengthIndicator(strength: PasswordStrength) {
                         .width(20.dp)
                         .height(4.dp)
                         .clip(CircleShape)
+                        // BURADAKİ score DEĞİŞKENİNİ ENUM'A EKLEDİK
                         .background(
-                            if (index < strength.score) Color(strength.color) else Color.Gray.copy(alpha = 0.3f)
+                            if (index < strength.score) strength.color else Color.Gray.copy(alpha = 0.3f)
                         )
                 )
             }
         }
+        // label DEĞİŞKENİNİ DE ENUM'A EKLEDİK
         Text(
             text = strength.label,
             style = MaterialTheme.typography.bodySmall,
-            color = Color(strength.color)
+            color = strength.color
         )
     }
 }

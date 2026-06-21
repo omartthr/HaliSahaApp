@@ -62,11 +62,24 @@ object AuthService {
                 collection = firebaseService.usersCollection,
                 documentId = userId
             )
+
+            // Hesap aktif mi kontrol et (iOS'taki gibi)
+            if (!user.isActive) {
+                throw AuthError.AccountDisabled
+            }
+
             _currentUser.value = user
             _isAuthenticated.value = true
+            _authError.value = null
+        } catch (e: AuthError) {
+            _currentUser.value = null
+            _isAuthenticated.value = false
+            _authError.value = e
+            auth.signOut()
         } catch (e: Exception) {
             // Kullanıcı Firestore'da yoksa
             println("User profile not found: ${e.localizedMessage}")
+            _currentUser.value = null
             _isAuthenticated.value = false
         }
     }
@@ -97,8 +110,8 @@ object AuthService {
                 lastName = lastName,
                 username = username,
                 phone = phone,
-                preferredPosition = preferredPosition,
-                userType = UserType.PLAYER
+                preferredPosition = preferredPosition.rawValue,
+                userType = UserType.PLAYER.rawValue
             )
 
             firebaseService.createDocument(
@@ -164,7 +177,7 @@ object AuthService {
             lastName = "",
             username = "guest",
             phone = "",
-            userType = UserType.GUEST
+            userType = UserType.GUEST.rawValue
         )
         _currentUser.value = guestUser
         _isAuthenticated.value = false
@@ -196,7 +209,7 @@ object AuthService {
                 lastName = lastName,
                 username = generateUsername(email),
                 phone = phone,
-                userType = UserType.ADMIN
+                userType = UserType.ADMIN.rawValue
             )
 
             firebaseService.createDocument(
@@ -277,6 +290,8 @@ sealed class AuthError(message: String) : Exception(message) {
     object NetworkError : AuthError("İnternet bağlantınızı kontrol edin.")
     object TooManyRequests : AuthError("Çok fazla deneme. Lütfen bekleyin.")
     object NotAuthenticated : AuthError("Oturum açmanız gerekiyor.")
+    object ProfileNotFound : AuthError("Kullanıcı profili bulunamadı. Lütfen tekrar kayıt olun veya destek ile iletişime geçin.")
+    object AccountDisabled : AuthError("Hesabınız pasif durumda. Lütfen destek ile iletişime geçin.")
     object SignOutFailed : AuthError("Çıkış yapılamadı.")
     object NotImplemented : AuthError("Bu özellik henüz aktif değil.")
     class Unknown(message: String) : AuthError(message)
