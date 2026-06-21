@@ -37,6 +37,7 @@ object FirebaseService {
     val matchPostsCollection: CollectionReference get() = db.collection(FirestoreCollection.MATCH_POSTS)
     val reviewsCollection: CollectionReference get() = db.collection(FirestoreCollection.REVIEWS)
     val notificationsCollection: CollectionReference get() = db.collection(FirestoreCollection.NOTIFICATIONS)
+    val adminsCollection: CollectionReference get() = db.collection("admins")
 
     // MARK: - Sub-collection References
     fun pitchesCollection(facilityId: String): CollectionReference {
@@ -119,7 +120,9 @@ object FirebaseService {
             val snapshot = query.get().await()
             snapshot.documents.mapNotNull { it.toObject(T::class.java) }
         } catch (e: Exception) {
-            throw FirebaseError.DecodingError
+            println("fetchDocuments error: ${e.message}")
+            e.printStackTrace()
+            throw FirebaseError.Unknown(e.localizedMessage ?: "Veri çekilirken hata oluştu")
         }
     }
 }

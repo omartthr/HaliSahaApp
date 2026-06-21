@@ -1,5 +1,6 @@
 package com.example.HaliSahaApp.ui.theme
 
+import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -8,7 +9,12 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+import com.example.HaliSahaApp.utils.AppColors
 
 private val DarkColorScheme = darkColorScheme(
     primary = Purple80,
@@ -39,14 +45,42 @@ fun HaliSahaAppTheme(
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
+    com.example.HaliSahaApp.utils.AppColors.updateColors(darkTheme)
 
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+    val colorScheme = if (darkTheme) {
+        darkColorScheme(
+            primary = AppColors.Primary,
+            secondary = AppColors.Secondary,
+            tertiary = AppColors.Accent,
+            background = AppColors.Background,
+            surface = AppColors.Surface,
+            onPrimary = Color.White,
+            onSecondary = Color.White,
+            onTertiary = Color.White,
+            onBackground = AppColors.TextPrimary,
+            onSurface = AppColors.TextPrimary
+        )
+    } else {
+        lightColorScheme(
+            primary = AppColors.Primary,
+            secondary = AppColors.Secondary,
+            tertiary = AppColors.Accent,
+            background = AppColors.Background,
+            surface = AppColors.Surface,
+            onPrimary = Color.White,
+            onSecondary = Color.White,
+            onTertiary = Color.White,
+            onBackground = AppColors.TextPrimary,
+            onSurface = AppColors.TextPrimary
+        )
+    }
+
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as Activity).window
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+        }
     }
 
     MaterialTheme(

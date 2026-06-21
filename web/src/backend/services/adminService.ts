@@ -44,16 +44,67 @@ export async function rejectAdmin(adminId: string) {
   });
 }
 
-/** Yeni kullanıcı kaydı (Firestore profil) */
-export async function createUserProfile(uid: string, data: object) {
-  return setDoc(
-    doc(db, "users", uid),
-    {
-      ...data,
-      updatedAt: serverTimestamp(),
-    },
-    { merge: true }
+/**
+ * Web'de seçilen Türkçe mevki etiketini iOS `PlayerPosition` enum raw değerine çevirir.
+ * iOS tarafı `preferredPosition`'ı ("goalkeeper" vb.) zorunlu enum olarak decode eder.
+ */
+const POSITION_TR_TO_RAW: Record<string, string> = {
+  Kaleci: "goalkeeper",
+  Defans: "defender",
+  "Orta Saha": "midfielder",
+  Forvet: "forward",
+};
+
+function toPositionRaw(value?: string): string {
+  if (!value) return "unspecified";
+  return POSITION_TR_TO_RAW[value] ?? value; // zaten enum raw olabilir
+}
+
+/**
+ * Yeni kullanıcı kaydı (Firestore profil).
+ *
+ * ÖNEMLİ: iOS `User` modeli (User.swift) bir dizi alanı ZORUNLU (non-optional) bekler.
+ * Bu alanlar eksikse iOS dökümanı decode edemez ve kullanıcı (ör. maç başvuruları
+ * ekranında) hiç görünmez. Bu yüzden web kaydında iOS ile birebir uyumlu, tüm zorunlu
+ * alanları varsayılanlarıyla içeren tam bir profil yazıyoruz.
+ */
+export async function createUserProfile(
+  uid: string,
+  data: Record<string, unknown>
+) {
+  const preferredPosition = toPositionRaw(
+    (data.preferredPosition as string) ?? (data.position as string)
   );
+
+  // iOS User modeliyle uyumlu zorunlu alan varsayılanları.
+  const base: Record<string, unknown> = {
+    email: "",
+    firstName: "",
+    lastName: "",
+    username: "",
+    phone: "",
+    profileImageURL: null,
+    userType: "player",
+    followers: [],
+    following: [],
+    favoriteFields: [],
+    reliabilityScore: 5.0,
+    totalMatches: 0,
+    attendedMatches: 0,
+    isActive: true,
+  };
+
+  // `createdAt` iOS tarafında Date (Timestamp) olarak decode edilir; caller ISO
+  // string gönderse bile yok sayıp serverTimestamp() ile gerçek Timestamp yazıyoruz.
+  const merged: Record<string, unknown> = {
+    ...base,
+    ...data,
+    preferredPosition, // normalize edilmiş enum raw — "position" da korunur (web gösterimi)
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+
+  return setDoc(doc(db, "users", uid), merged, { merge: true });
 }
 
 /** Yeni admin kaydı (Firestore) */

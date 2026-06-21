@@ -11,8 +11,6 @@ import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ConfirmationNumber
 import androidx.compose.material.icons.filled.DateRange
@@ -25,6 +23,8 @@ import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Lightbulb
@@ -46,6 +46,9 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
@@ -77,9 +80,9 @@ object AppConstants {
     const val MAX_IMAGES_PER_REVIEW = 5
 
     // MARK: - Map
-    const val DEFAULT_LATITUDE = 41.0082  // İstanbul
-    const val DEFAULT_LONGITUDE = 28.9784
-    const val DEFAULT_MAP_ZOOM = 12f      // Google Maps Zoom seviyesi (Swift'teki Span yerine)
+    const val DEFAULT_LATITUDE = 39.9334  // Ankara
+    const val DEFAULT_LONGITUDE = 32.8597
+    const val DEFAULT_MAP_ZOOM = 11f      // Google Maps Zoom seviyesi
     const val NEARBY_RADIUS_KM = 10.0
 
     // MARK: - Animation (Millis cinsinden)
@@ -129,22 +132,47 @@ object UIConstants {
 object AppColors {
 
     // MARK: - Fallback Colors (Hex)
-    val Primary = Color(0xFF2E7D32)      // Yeşil
-    val Secondary = Color(0xFF1565C0)    // Mavi
-    val Accent = Color(0xFFFF6F00)       // Turuncu
-    val Background = Color(0xFFF5F5F5)   // Açık gri
-    val Surface = Color.White
+    var Primary by mutableStateOf(Color(0xFF2E7D32))      // Yeşil
+    var Secondary by mutableStateOf(Color(0xFF1565C0))    // Mavi
+    var Accent by mutableStateOf(Color(0xFFFF6F00))       // Turuncu
+    var Background by mutableStateOf(Color(0xFFF5F5F5))   // Açık gri
+    var Surface by mutableStateOf(Color.White)
+    var CardBackground by mutableStateOf(Color.White)
 
     // MARK: - Text Colors
-    val TextPrimary = Color(0xFF212121)
-    val TextSecondary = Color(0xFF757575)
-    val TextTertiary = Color(0xFFBDBDBD)
+    var TextPrimary by mutableStateOf(Color(0xFF212121))
+    var TextSecondary by mutableStateOf(Color(0xFF757575))
+    var TextTertiary by mutableStateOf(Color(0xFFBDBDBD))
 
     // MARK: - Status Colors
-    val Success = Color(0xFF4CAF50)
-    val Warning = Color(0xFFFF9800)
-    val Error = Color(0xFFF44336)
-    val Info = Color(0xFF2196F3)
+    var Success by mutableStateOf(Color(0xFF4CAF50))
+    var Warning by mutableStateOf(Color(0xFFFF9800))
+    var Error by mutableStateOf(Color(0xFFF44336))
+    var Info by mutableStateOf(Color(0xFF2196F3))
+
+    fun updateColors(isDark: Boolean) {
+        if (isDark) {
+            Primary = Color(0xFF2E7D32)
+            Secondary = Color(0xFF1565C0)
+            Accent = Color(0xFFFF6F00)
+            Background = Color(0xFF000000)
+            Surface = Color(0xFF1C1C1E)
+            CardBackground = Color(0xFF1C1C1E)
+            TextPrimary = Color(0xFFFFFFFF)
+            TextSecondary = Color(0xFFA0A0A5)
+            TextTertiary = Color(0xFF48484A)
+        } else {
+            Primary = Color(0xFF2E7D32)
+            Secondary = Color(0xFF1565C0)
+            Accent = Color(0xFFFF6F00)
+            Background = Color(0xFFF5F5F5)
+            Surface = Color.White
+            CardBackground = Color.White
+            TextPrimary = Color(0xFF212121)
+            TextSecondary = Color(0xFF757575)
+            TextTertiary = Color(0xFFBDBDBD)
+        }
+    }
 
     // Hex String to Color Helper
     fun fromHex(hex: String): Color {
@@ -192,6 +220,9 @@ object AppIcons {
     val Close = Icons.Filled.Close
     val Back = Icons.AutoMirrored.Filled.ArrowBack
     val Forward = Icons.AutoMirrored.Filled.ArrowForward
+    val ArrowLeft = Icons.AutoMirrored.Filled.ArrowBack
+    val ChevronRight = Icons.Filled.KeyboardArrowRight
+    val ChevronLeft = Icons.Filled.KeyboardArrowLeft
     val Down = Icons.Filled.KeyboardArrowDown
     val Up = Icons.Filled.KeyboardArrowUp
     val Check = Icons.Filled.Check
@@ -214,6 +245,8 @@ object AppIcons {
 
     // MARK: - Status Icons
     val Success = Icons.Filled.CheckCircle
+    val CheckCircle = Icons.Filled.CheckCircle
+    val Time = Icons.Filled.Schedule
     val Warning = Icons.Filled.Warning
     val Error = Icons.Filled.Error
     val Info = Icons.Filled.Info
@@ -254,7 +287,7 @@ object AppStrings {
     // MARK: - Tab Bar
     const val TAB_EXPLORE = "Keşfet"
     const val TAB_MAP = "Harita"
-    const val TAB_BOOKINGS = "Randevularım"
+    const val TAB_BOOKINGS = "Randevular"
     const val TAB_CHAT = "Sohbet"
     const val TAB_PROFILE = "Profil"
 

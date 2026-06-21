@@ -135,9 +135,9 @@ data class MatchInviteData(
 
 // MARK: - Match Invite Status Enum
 enum class MatchInviteStatus(val rawValue: String, val displayName: String, val color: String) {
-    PENDING("pending", "Bekliyor", "orange"),
-    ACCEPTED("accepted", "Kabul Edildi", "green"),
-    DECLINED("declined", "Reddedildi", "red"),
-    EXPIRED("expired", "Süresi Doldu", "gray"),
-    CANCELLED("cancelled", "İptal Edildi", "gray");
+    @com.google.firebase.firestore.PropertyName("pending") PENDING("pending", "Bekliyor", "orange"),
+    @com.google.firebase.firestore.PropertyName("accepted") ACCEPTED("accepted", "Kabul Edildi", "green"),
+    @com.google.firebase.firestore.PropertyName("declined") DECLINED("declined", "Reddedildi", "red"),
+    @com.google.firebase.firestore.PropertyName("expired") EXPIRED("expired", "Süresi Doldu", "gray"),
+    @com.google.firebase.firestore.PropertyName("cancelled") CANCELLED("cancelled", "İptal Edildi", "gray");
 }

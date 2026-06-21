@@ -30,7 +30,7 @@ data class MatchPost(
     val currentPlayers: Int = 0,
     val maxPlayers: Int = 0,
     val preferredPositions: List<PlayerPosition> = emptyList(),
-    val skillLevel: SkillLevel = SkillLevel.ANY,
+    val skillLevel: SkillLevel = SkillLevel.any,
     val ageRange: AgeRange? = null,
     val costPerPlayer: Double? = null,
 
@@ -40,7 +40,7 @@ data class MatchPost(
     val rejectedIds: List<String> = emptyList(),
 
     // Durum
-    val status: MatchPostStatus = MatchPostStatus.ACTIVE,
+    val status: MatchPostStatus = MatchPostStatus.active,
     val createdAt: Date = Date(),
     val updatedAt: Date = Date(),
     val expiresAt: Date = Date()
@@ -64,7 +64,7 @@ data class MatchPost(
 
     // MARK: - Helper Methods
     fun canApply(userId: String): Boolean {
-        if (status != MatchPostStatus.ACTIVE || isExpired || isFull) return false
+        if (status != MatchPostStatus.active || isExpired || isFull) return false
         return userId !in applicantIds && userId !in acceptedIds && userId != creatorId
     }
 
@@ -112,7 +112,7 @@ data class MatchPost(
             currentPlayers = 10,
             maxPlayers = 14,
             preferredPositions = listOf(PlayerPosition.DEFENDER, PlayerPosition.MIDFIELDER),
-            skillLevel = SkillLevel.INTERMEDIATE,
+            skillLevel = SkillLevel.intermediate,
             costPerPlayer = 100.0
         )
     }
@@ -121,19 +121,19 @@ data class MatchPost(
 // MARK: - Enums & Secondary Models
 
 enum class MatchPostStatus(val rawValue: String, val displayName: String, val color: String) {
-    ACTIVE("active", "Aktif", "green"),
-    FULL("full", "Kadro Tamamlandı", "blue"),
-    COMPLETED("completed", "Tamamlandı", "gray"),
-    CANCELLED("cancelled", "İptal Edildi", "red"),
-    EXPIRED("expired", "Süresi Doldu", "gray");
+    @com.google.firebase.firestore.PropertyName("active") active("active", "Aktif", "green"),
+    @com.google.firebase.firestore.PropertyName("full") full("full", "Kadro Tamamlandı", "blue"),
+    @com.google.firebase.firestore.PropertyName("completed") completed("completed", "Tamamlandı", "gray"),
+    @com.google.firebase.firestore.PropertyName("cancelled") cancelled("cancelled", "İptal Edildi", "red"),
+    @com.google.firebase.firestore.PropertyName("expired") expired("expired", "Süresi Doldu", "gray");
 }
 
 enum class SkillLevel(val rawValue: String, val displayName: String, val icon: String) {
-    BEGINNER("beginner", "Başlangıç", "⭐"),
-    INTERMEDIATE("intermediate", "Orta Seviye", "⭐⭐"),
-    ADVANCED("advanced", "İleri Seviye", "⭐⭐⭐"),
-    PROFESSIONAL("professional", "Profesyonel", "🏆"),
-    ANY("any", "Farketmez", "🎯");
+    @com.google.firebase.firestore.PropertyName("beginner") beginner("beginner", "Başlangıç", "⭐"),
+    @com.google.firebase.firestore.PropertyName("intermediate") intermediate("intermediate", "Orta Seviye", "⭐⭐"),
+    @com.google.firebase.firestore.PropertyName("advanced") advanced("advanced", "İleri Seviye", "⭐⭐⭐"),
+    @com.google.firebase.firestore.PropertyName("professional") professional("professional", "Profesyonel", "🏆"),
+    @com.google.firebase.firestore.PropertyName("any") any("any", "Farketmez", "🎯");
 }
 
 data class AgeRange(
@@ -160,14 +160,14 @@ data class MatchPostApplication(
     val userPosition: PlayerPosition = PlayerPosition.UNSPECIFIED,
     val userReliabilityScore: Double = 5.0,
     val message: String? = null,
-    val status: ApplicationStatus = ApplicationStatus.PENDING,
+    val status: ApplicationStatus = ApplicationStatus.pending,
     val createdAt: Date = Date(),
     val updatedAt: Date = Date()
 )
 
 enum class ApplicationStatus(val rawValue: String, val displayName: String) {
-    PENDING("pending", "Bekliyor"),
-    ACCEPTED("accepted", "Kabul Edildi"),
-    REJECTED("rejected", "Reddedildi"),
-    WITHDRAWN("withdrawn", "Geri Çekildi");
+    @com.google.firebase.firestore.PropertyName("pending") pending("pending", "Bekliyor"),
+    @com.google.firebase.firestore.PropertyName("accepted") accepted("accepted", "Kabul Edildi"),
+    @com.google.firebase.firestore.PropertyName("rejected") rejected("rejected", "Reddedildi"),
+    @com.google.firebase.firestore.PropertyName("withdrawn") withdrawn("withdrawn", "Geri Çekildi");
 }

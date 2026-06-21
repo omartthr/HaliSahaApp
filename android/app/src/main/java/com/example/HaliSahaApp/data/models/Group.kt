@@ -2,6 +2,7 @@ package com.example.HaliSahaApp.data.models
 
 import android.text.format.DateUtils
 import com.google.firebase.firestore.DocumentId
+import com.google.firebase.firestore.PropertyName
 import java.util.*
 
 // MARK: - Group Model
@@ -58,9 +59,9 @@ data class Group(
 
 // MARK: - Group Type
 enum class GroupType(val rawValue: String, val displayName: String, val icon: String) {
-    TEAM("team", "Takım", "groups"),
-    MATCH_GROUP("match", "Maç Grubu", "sports_soccer"),
-    PRIVATE_CHAT("private", "Özel Grup", "lock");
+    @PropertyName("team") TEAM("team", "Takım", "groups"),
+    @PropertyName("match") MATCH_GROUP("match", "Maç Grubu", "sports_soccer"),
+    @PropertyName("private") PRIVATE_CHAT("private", "Özel Grup", "lock");
 }
 
 // MARK: - Last Message Preview
@@ -91,11 +92,11 @@ data class LastMessagePreview(
 
 // MARK: - Message Type (Swift kodunda implicit idi, burada tanımlıyoruz)
 enum class MessageType(val rawValue: String) {
-    TEXT("text"),
-    IMAGE("image"),
-    MATCH_INVITE("matchInvite"),
-    JOIN_REQUEST("joinRequest"),
-    SYSTEM("system");
+    @PropertyName("text") TEXT("text"),
+    @PropertyName("image") IMAGE("image"),
+    @PropertyName("matchInvite") MATCH_INVITE("matchInvite"),
+    @PropertyName("joinRequest") JOIN_REQUEST("joinRequest"),
+    @PropertyName("system") SYSTEM("system");
 }
 
 // MARK: - Group Member
@@ -113,9 +114,9 @@ data class GroupMember(
 
 // MARK: - Group Member Role
 enum class GroupMemberRole(val rawValue: String, val displayName: String) {
-    CREATOR("creator", "Kurucu"),
-    ADMIN("admin", "Yönetici"),
-    MEMBER("member", "Üye");
+    @PropertyName("creator") CREATOR("creator", "Kurucu"),
+    @PropertyName("admin") ADMIN("admin", "Yönetici"),
+    @PropertyName("member") MEMBER("member", "Üye");
 
     val canInvite: Boolean get() = this == CREATOR || this == ADMIN
     val canRemoveMember: Boolean get() = this == CREATOR || this == ADMIN

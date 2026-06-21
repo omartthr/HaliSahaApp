@@ -62,6 +62,61 @@ data class AppNotification(
             data = NotificationData(bookingId = booking.id, facilityId = booking.facilityId)
         )
 
+        fun bookingCancelled(userId: String, booking: Booking, reason: String? = null): AppNotification {
+            val body = if (!reason.isNullOrEmpty()) {
+                "${booking.facilityName} – ${booking.formattedDate} tarihli rezervasyonunuz iptal edildi. Sebep: $reason"
+            } else {
+                "${booking.facilityName} – ${booking.formattedDate} tarihli rezervasyonunuz iptal edildi."
+            }
+            return AppNotification(
+                userId = userId,
+                title = "Rezervasyon İptali ❌",
+                body = body,
+                type = NotificationType.BOOKING_CANCELLED,
+                data = NotificationData(bookingId = booking.id, facilityId = booking.facilityId)
+            )
+        }
+
+        fun newBookingForAdmin(adminId: String, booking: Booking): AppNotification {
+            val actionText = if (booking.status == BookingStatus.pending) {
+                "için ödeme yaptı ve onayınızı bekliyor."
+            } else {
+                "için ayırdı."
+            }
+            return AppNotification(
+                userId = adminId,
+                title = "Yeni Rezervasyon 🎫",
+                body = "${booking.userFullName} – ${booking.pitchName} sahasını ${booking.formattedDate} (${booking.timeSlotString}) $actionText",
+                type = NotificationType.BOOKING_CONFIRMED,
+                data = NotificationData(bookingId = booking.id, facilityId = booking.facilityId, pitchId = booking.pitchId)
+            )
+        }
+
+        fun bookingCancelledByUser(adminId: String, booking: Booking) = AppNotification(
+            userId = adminId,
+            title = "Rezervasyon İptal Edildi ❌",
+            body = "${booking.userFullName} – ${booking.pitchName} için ${booking.formattedDate} tarihli rezervasyonunu iptal etti.",
+            type = NotificationType.BOOKING_CANCELLED,
+            data = NotificationData(bookingId = booking.id, facilityId = booking.facilityId, pitchId = booking.pitchId)
+        )
+
+        fun reviewReceived(adminId: String, facilityName: String, review: Review): AppNotification {
+            val stars = String.format(Locale.US, "%.1f", review.overallRating)
+            val snippet = if (!review.comment.isNullOrEmpty()) {
+                val truncated = if (review.comment.length > 100) "${review.comment.take(100)}…" else review.comment
+                "${review.userName} ($stars★): \"$truncated\""
+            } else {
+                "${review.userName} tesisini $stars yıldızla değerlendirdi."
+            }
+            return AppNotification(
+                userId = adminId,
+                title = "Yeni Değerlendirme ⭐️",
+                body = snippet,
+                type = NotificationType.REVIEW_RECEIVED,
+                data = NotificationData(facilityId = review.facilityId, pitchId = review.pitchId, reviewId = review.id)
+            )
+        }
+
         fun bookingReminder(userId: String, booking: Booking, hoursLeft: Int) = AppNotification(
             userId = userId,
             title = "Maç Hatırlatması ⚽",
@@ -114,20 +169,20 @@ data class AppNotification(
 
 // MARK: - Notification Type Enum
 enum class NotificationType(val rawValue: String, val icon: String, val color: String) {
-    BOOKING_CONFIRMED("bookingConfirmed", "check_circle", "green"),
-    BOOKING_CANCELLED("bookingCancelled", "cancel", "red"),
-    BOOKING_REMINDER("bookingReminder", "notifications_active", "orange"),
-    MATCH_INVITE("matchInvite", "sports_soccer", "blue"),
-    JOIN_REQUEST("joinRequest", "person_add", "blue"),
-    JOIN_REQUEST_ACCEPTED("joinRequestAccepted", "verified", "green"),
-    JOIN_REQUEST_REJECTED("joinRequestRejected", "block", "red"),
-    NEW_MESSAGE("newMessage", "chat", "purple"),
-    NEW_FOLLOWER("newFollower", "person_add_alt", "pink"),
-    FACILITY_APPROVED("facilityApproved", "business", "green"),
-    FACILITY_REJECTED("facilityRejected", "domain_disabled", "red"),
-    REVIEW_RECEIVED("reviewReceived", "grade", "yellow"),
-    PROMOTIONAL("promotional", "redeem", "indigo"),
-    SYSTEM("system", "notifications", "gray");
+    @com.google.firebase.firestore.PropertyName("bookingConfirmed") BOOKING_CONFIRMED("bookingConfirmed", "check_circle", "green"),
+    @com.google.firebase.firestore.PropertyName("bookingCancelled") BOOKING_CANCELLED("bookingCancelled", "cancel", "red"),
+    @com.google.firebase.firestore.PropertyName("bookingReminder") BOOKING_REMINDER("bookingReminder", "notifications_active", "orange"),
+    @com.google.firebase.firestore.PropertyName("matchInvite") MATCH_INVITE("matchInvite", "sports_soccer", "blue"),
+    @com.google.firebase.firestore.PropertyName("joinRequest") JOIN_REQUEST("joinRequest", "person_add", "blue"),
+    @com.google.firebase.firestore.PropertyName("joinRequestAccepted") JOIN_REQUEST_ACCEPTED("joinRequestAccepted", "verified", "green"),
+    @com.google.firebase.firestore.PropertyName("joinRequestRejected") JOIN_REQUEST_REJECTED("joinRequestRejected", "block", "red"),
+    @com.google.firebase.firestore.PropertyName("newMessage") NEW_MESSAGE("newMessage", "chat", "purple"),
+    @com.google.firebase.firestore.PropertyName("newFollower") NEW_FOLLOWER("newFollower", "person_add_alt", "pink"),
+    @com.google.firebase.firestore.PropertyName("facilityApproved") FACILITY_APPROVED("facilityApproved", "business", "green"),
+    @com.google.firebase.firestore.PropertyName("facilityRejected") FACILITY_REJECTED("facilityRejected", "domain_disabled", "red"),
+    @com.google.firebase.firestore.PropertyName("reviewReceived") REVIEW_RECEIVED("reviewReceived", "grade", "yellow"),
+    @com.google.firebase.firestore.PropertyName("promotional") PROMOTIONAL("promotional", "redeem", "indigo"),
+    @com.google.firebase.firestore.PropertyName("system") SYSTEM("system", "notifications", "gray");
 
     val category: NotificationCategory
         get() = when (this) {
@@ -139,9 +194,9 @@ enum class NotificationType(val rawValue: String, val icon: String, val color: S
 
 // MARK: - Notification Category Enum
 enum class NotificationCategory(val rawValue: String, val displayName: String) {
-    BOOKING("booking", "Rezervasyonlar"),
-    SOCIAL("social", "Sosyal"),
-    SYSTEM("system", "Sistem");
+    @com.google.firebase.firestore.PropertyName("booking") BOOKING("booking", "Rezervasyonlar"),
+    @com.google.firebase.firestore.PropertyName("social") SOCIAL("social", "Sosyal"),
+    @com.google.firebase.firestore.PropertyName("system") SYSTEM("system", "Sistem");
 }
 
 // MARK: - Notification Data
